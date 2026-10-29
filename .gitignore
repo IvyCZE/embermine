@@ -1,0 +1,21 @@
+# Local planning material (not needed to build the app; stays on the owner's machine only)
+EMBERMINE.md
+docs/
+assets/icon/original/
+assets/icon/preview.png
+assets/wallpapers/original/
+
+# Agent and Mission working files
+AGENTS.md
+.factory/
+
+# Build output and local tooling
+build/
+out/
+*.apk
+*.aab
+*.keystore
+*.jks
+.gradle/
+local.properties
+node_modules/

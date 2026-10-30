@@ -12,6 +12,9 @@ universal APK, turn off allWarningsAsErrors, and add the EmbermineVersion helper
 Import ExposedDropdownMenu in compose-base DropdownMenu.kt: material3 1.5
 moved it from a member of ExposedDropdownMenuBoxScope to an extension.
 
+Port ShakeSensitivitySlider and FontSizeSlider to the SliderState overload of
+Slider: material3 1.5 hid the value/thumb/track overload.
+
 diff --git a/gradle/libs.versions.toml b/gradle/libs.versions.toml
 index fd0aba7a9e1d38d794081747c5b656c5c6b45619..45cdde6c83a41fd1fdc01bf475d0932fbb4033bf 100644
 --- a/gradle/libs.versions.toml
@@ -37,6 +40,42 @@ index 77f9cc9d6fc0d1e0a614763e9a15b494238c4563..ace370d65f16c4448e59d3e4ef867d6d
  import androidx.compose.material3.ExposedDropdownMenuBoxScope
  import androidx.compose.material3.HorizontalDivider
  import androidx.compose.material3.Icon
+diff --git a/mobile/android/android-components/components/feature/summarize/src/main/java/mozilla/components/feature/summarize/settings/ShakeSensitivitySlider.kt b/mobile/android/android-components/components/feature/summarize/src/main/java/mozilla/components/feature/summarize/settings/ShakeSensitivitySlider.kt
+index e6368976f1c6a87519bdfdcf1de9e137d29b20da..902b103d257991fab4799c46116b372c24de2ec2 100644
+--- a/mobile/android/android-components/components/feature/summarize/src/main/java/mozilla/components/feature/summarize/settings/ShakeSensitivitySlider.kt
++++ b/mobile/android/android-components/components/feature/summarize/src/main/java/mozilla/components/feature/summarize/settings/ShakeSensitivitySlider.kt
+@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
+ import androidx.compose.material3.ExperimentalMaterial3Api
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Slider
++import androidx.compose.material3.SliderState
+ import androidx.compose.material3.Text
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.derivedStateOf
+@@ -117,8 +118,13 @@ private fun ShakeSensitivitySlider(
+             label = "shakeSensitivityThumb",
+         )
+ 
++    val sliderState = remember {
++        SliderState(value = displayedPosition, steps = SLIDER_STEPS_BETWEEN, trackRange = SLIDER_MIN..SLIDER_MAX)
++    }
++    sliderState.value = displayedPosition
++
+     Slider(
+-        value = displayedPosition,
++        state = sliderState,
+         onValueChange = { newInput ->
+             isDragging = true
+             rawPosition = newInput
+@@ -129,8 +135,6 @@ private fun ShakeSensitivitySlider(
+             rawPosition = snapped.toFloat()
+             onValueChange(snapped.toShakeSensitivity())
+         },
+-        valueRange = SLIDER_MIN..SLIDER_MAX,
+-        steps = SLIDER_STEPS_BETWEEN,
+         modifier =
+             Modifier.fillMaxWidth().semantics {
+                 contentDescription = sliderContentDescription
 diff --git a/mobile/android/fenix/app/build.gradle b/mobile/android/fenix/app/build.gradle
 index e8032b0120463613dd5c1e03660a60536f98a801..4d8cdf341a237422f8311e6b1c42842007eba42c 100644
 --- a/mobile/android/fenix/app/build.gradle
@@ -130,6 +169,40 @@ index 0000000000000000000000000000000000000000..6fbfa3e8d9458cbcc5a4bc4f94ee1874
 +     */
 +    fun current(): String = format(BuildConfig.EMBERMINE_VERSION_NAME, BuildConfig.EMBERMINE_FIREFOX_VERSION)
 +}
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/FontSizeSlider.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/FontSizeSlider.kt
+index eb1acc92b9a6c586a9e65a78a0c1532802e6846c..b7cdd569a912caa2e02e5313a232a92bde1629b0 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/FontSizeSlider.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/FontSizeSlider.kt
+@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
+ import androidx.compose.material3.ExperimentalMaterial3Api
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Slider
++import androidx.compose.material3.SliderState
+ import androidx.compose.material3.Surface
+ import androidx.compose.material3.Text
+ import androidx.compose.runtime.Composable
+@@ -150,15 +151,19 @@ private fun FontSizeSlider(
+         modifier = Modifier.fillMaxWidth(),
+         verticalAlignment = Alignment.CenterVertically,
+     ) {
++        val sliderState = remember(start, end) {
++            SliderState(value = value, trackRange = start.toFloat()..end.toFloat())
++        }
++        sliderState.value = value
++
+         Slider(
+-            value = value,
++            state = sliderState,
+             onValueChange = { newInput ->
+                 // The slider input is continuous, but we want the value to change by 5.
+                 val newSliderValue = newInput.snapToStep(start, step)
+ 
+                 onValueChange(newSliderValue.toFloat())
+             },
+-            valueRange = start.toFloat()..end.toFloat(),
+             modifier =
+                 Modifier.weight(1f).semantics {
+                     testTagsAsResourceId = true
 diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineVersionTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineVersionTest.kt
 new file mode 100644
 index 0000000000000000000000000000000000000000..167d46a7c1b46f1a6405b8a4f7954696067f9bc0

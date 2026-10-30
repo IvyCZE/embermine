@@ -59,6 +59,11 @@ class TagTests(unittest.TestCase):
         tag, sha = rr.find_tag("159.0", remote.get)
         self.assertEqual((tag, sha), ("FIREFOX-ANDROID_159_0_RELEASE", "a" * 40))
 
+    def test_android_only_dot_release(self) -> None:
+        remote = {"FIREFOX-ANDROID_158_0_2_RELEASE": SHA}
+        tag, sha = rr.find_tag("158.0.2", remote.get)
+        self.assertEqual((tag, sha), ("FIREFOX-ANDROID_158_0_2_RELEASE", SHA))
+
     def test_falls_back_to_desktop_tag(self) -> None:
         remote = {"FIREFOX_159_0_RELEASE": SHA}
         tag, sha = rr.find_tag("159.0", remote.get)

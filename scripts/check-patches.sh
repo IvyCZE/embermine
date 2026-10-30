@@ -32,13 +32,5 @@ trap cleanup EXIT
 
 git -C "$FIREFOX_BASE" worktree add --quiet --detach "$wt" "$tag" >/dev/null 2>&1
 
-for p in "${patches[@]}"; do
-  # shellcheck disable=SC2046
-  if git -C "$wt" $(git_am_identity_args) am --3way "$p" >"$tmp/am.log" 2>&1; then
-    echo "ok   $(basename "$p")"
-  else
-    cat "$tmp/am.log" >&2
-    die "$(basename "$p") does not apply cleanly to $tag"
-  fi
-done
+"$EMBERMINE_REPO_ROOT/scripts/apply-patches.sh" "$wt" || die "the series does not apply cleanly to $tag"
 echo "all ${#patches[@]} patch(es) apply cleanly to $tag"

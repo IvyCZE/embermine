@@ -1,0 +1,115 @@
+name: ci
+
+# Builds and tests Embermine on every push and pull request. Never publishes anything.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+
+  # JVM tests of the Embermine Kotlin classes. Runs next to the build, so it prepares its own tree.
+  unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Add 8 GB swap
+        run: |
+          sudo fallocate -l 8G /swapfile-extra
+          sudo chmod 600 /swapfile-extra
+          sudo mkswap /swapfile-extra >/dev/null
+          sudo swapon /swapfile-extra
+          free -m
+
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup \
+            /opt/hostedtoolcache/CodeQL /usr/local/share/boost /usr/local/lib/node_modules \
+            /usr/share/swift /usr/local/share/powershell /opt/microsoft /opt/google/chrome
+          sudo docker image prune --all --force >/dev/null || true
+          df -h /
+
+      - name: Python script tests
+        run: python3 -m unittest discover -s scripts/tests -t . -v
+
+      - name: Resolve Firefox tag, commit and GeckoView build id
+        id: res
+        run: python3 scripts/resolve-release.py --github-output --cross-check
+
+      - name: Fetch Firefox source (shallow)
+        env:
+          TAG: ${{ steps.res.outputs.tag }}
+          SHA: ${{ steps.res.outputs.sha }}
+        run: bash scripts/fetch-source.sh "$TAG" "$SHA" fx
+
+      - name: Apply patches
+        run: bash scripts/apply-patches.sh fx
+
+      - name: Run generators
+        run: bash scripts/run-generators.sh fx
+
+      - name: Restore ~/.mozbuild
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.mozbuild
+          key: mozbuild-${{ runner.os }}-${{ steps.res.outputs.version }}-v1
+          restore-keys: mozbuild-${{ runner.os }}-
+
+      - name: Setup Gradle cache
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: true
+
+      - name: Configure (no-compile) and export
+        env:
+          BUILDID: ${{ steps.res.outputs.buildid }}
+        run: bash scripts/configure-tree.sh fx "$BUILDID"
+
+      - name: Gradle unit tests (org.mozilla.fenix.embermine)
+        working-directory: fx/mobile/android/fenix
+        run: |
+          set -euo pipefail
+          free -m
+          # If memory runs out, the OOM killer must hit Gradle, not the runner agent.
+          echo 1000 | sudo tee "/proc/$$/oom_score_adj" >/dev/null
+          ./gradlew --no-daemon --max-workers=3 \
+            -Dorg.gradle.jvmargs="-Xmx6g -Xms1g -XX:MaxMetaspaceSize=1536m -XX:+UseParallelGC" \
+            -Pkotlin.daemon.jvmargs=-Xmx3g \
+            :app:testDebugUnitTest --tests "org.mozilla.fenix.embermine.*" \
+            -PdisableDebugSigning
+
+      # A green Gradle run proves nothing when the test filter matched no class.
+      - name: Check that the tests really ran
+        if: ${{ !cancelled() }}
+        run: |
+          mkdir -p unit-test-results
+          find fx/obj-embermine/gradle/build/mobile/android/fenix -name 'TEST-*.xml' -path '*test-results*' \
+            -exec cp --parents {} unit-test-results/ \;
+          python3 scripts/junit_summary.py unit-test-results \
+            --require-class org.mozilla.fenix.embermine.EmbermineVersionTest
+
+      - name: Upload unit test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: unit-test-results
+          path: unit-test-results
+          if-no-files-found: warn
+          retention-days: 30

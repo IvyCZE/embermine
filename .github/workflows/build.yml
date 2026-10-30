@@ -1,0 +1,219 @@
+name: build
+
+# Reusable build: resolve Firefox release -> fetch -> patch -> generate -> Gradle build against
+# Mozilla's prebuilt GeckoView -> sign -> APKs + apk-info.txt + build-info.json.
+# It never creates releases or tags; publishing belongs to release.yml.
+
+on:
+  workflow_call:
+    inputs:
+      firefox-version:
+        description: Firefox version to build (default is firefox-version.txt)
+        type: string
+        default: ""
+      rebuild:
+        description: Rebuild number 2..9 for a release build (version gets the suffix -rN)
+        type: string
+        default: ""
+      release:
+        description: Release build (plain version, owner key mandatory) instead of a dev build
+        type: boolean
+        default: false
+    secrets:
+      KEYSTORE_BASE64:
+        required: false
+      KEYSTORE_PASSWORD:
+        required: false
+      KEY_ALIAS:
+        required: false
+      KEY_PASSWORD:
+        required: false
+    outputs:
+      version:
+        description: Embermine version name of the build
+        value: ${{ jobs.build.outputs.version }}
+      firefox-version:
+        description: Firefox version the build is based on
+        value: ${{ jobs.build.outputs.firefox-version }}
+      tag:
+        description: Firefox release tag that was built
+        value: ${{ jobs.build.outputs.tag }}
+      sha:
+        description: Commit of the Firefox release tag
+        value: ${{ jobs.build.outputs.sha }}
+      buildid:
+        description: GeckoView build id
+        value: ${{ jobs.build.outputs.buildid }}
+      artifact:
+        description: Name of the artifact with APKs, apk-info.txt and build-info.json
+        value: ${{ jobs.build.outputs.artifact }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      firefox-version: ${{ steps.ver.outputs.firefox_version }}
+      tag: ${{ steps.res.outputs.tag }}
+      sha: ${{ steps.res.outputs.sha }}
+      buildid: ${{ steps.res.outputs.buildid }}
+      artifact: embermine-build
+    steps:
+      # The runner dies without logs when Gradle runs out of memory, so the swap file is mandatory.
+      - name: Add 8 GB swap
+        run: |
+          date -u
+          nproc
+          sudo swapon --show
+          sudo fallocate -l 8G /swapfile-extra
+          sudo chmod 600 /swapfile-extra
+          sudo mkswap /swapfile-extra >/dev/null
+          sudo swapon /swapfile-extra
+          sudo swapon --show
+          free -m
+
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup \
+            /opt/hostedtoolcache/CodeQL /usr/local/share/boost /usr/local/lib/node_modules \
+            /usr/share/swift /usr/local/share/powershell /opt/microsoft /opt/google/chrome
+          sudo docker image prune --all --force >/dev/null || true
+          df -h /
+
+      - name: Embermine version and versionCode
+        id: ver
+        env:
+          FIREFOX_VERSION_INPUT: ${{ inputs.firefox-version }}
+          REBUILD_INPUT: ${{ inputs.rebuild }}
+          RELEASE_INPUT: ${{ inputs.release }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          fx="${FIREFOX_VERSION_INPUT:-$(tr -d '[:space:]' < firefox-version.txt)}"
+          rebuild="${REBUILD_INPUT#r}"
+          args=(--firefox "$fx" --github-output)
+          if [ "$RELEASE_INPUT" = true ]; then
+            if [ -n "$rebuild" ]; then args+=(--rebuild "$rebuild"); fi
+          else
+            [ -z "$rebuild" ] || { echo "error: a rebuild number needs release mode"; exit 1; }
+            args+=(--dev-run "$RUN_NUMBER")
+          fi
+          python3 scripts/version.py "${args[@]}"
+
+      - name: Resolve Firefox tag, commit and GeckoView build id
+        id: res
+        env:
+          FIREFOX_VERSION: ${{ steps.ver.outputs.firefox_version }}
+        run: python3 scripts/resolve-release.py --version "$FIREFOX_VERSION" --github-output --cross-check
+
+      - name: Fetch Firefox source (shallow)
+        env:
+          TAG: ${{ steps.res.outputs.tag }}
+          SHA: ${{ steps.res.outputs.sha }}
+        run: bash scripts/fetch-source.sh "$TAG" "$SHA" fx
+
+      - name: Apply patches
+        run: bash scripts/apply-patches.sh fx --list "$RUNNER_TEMP/applied-patches.txt"
+
+      - name: Run generators
+        run: bash scripts/run-generators.sh fx
+
+      - name: Restore ~/.mozbuild
+        uses: actions/cache@v6
+        with:
+          path: ~/.mozbuild
+          key: mozbuild-${{ runner.os }}-${{ steps.ver.outputs.firefox_version }}-v1
+          restore-keys: mozbuild-${{ runner.os }}-
+
+      # Caches ~/.gradle
+      - name: Setup Gradle cache
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: false
+          cache-cleanup: on-success
+
+      - name: Configure (no-compile) and export
+        env:
+          BUILDID: ${{ steps.res.outputs.buildid }}
+        run: bash scripts/configure-tree.sh fx "$BUILDID"
+
+      - name: Gradle assembleRelease
+        working-directory: fx/mobile/android/fenix
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+          FIREFOX_VERSION: ${{ steps.ver.outputs.firefox_version }}
+          VERSION_CODE_BASE: ${{ steps.ver.outputs.version_code_base }}
+        run: |
+          set -euo pipefail
+          t0=$(date +%s)
+          free -m
+          # If memory runs out, the OOM killer must hit Gradle, not the runner agent.
+          echo 1000 | sudo tee "/proc/$$/oom_score_adj" >/dev/null
+          rc=0
+          ./gradlew --no-daemon --max-workers=3 \
+            -Dorg.gradle.jvmargs="-Xmx6g -Xms1g -XX:MaxMetaspaceSize=1536m -XX:+UseParallelGC" \
+            -Pkotlin.daemon.jvmargs=-Xmx3g \
+            assembleRelease \
+            -PversionName="$VERSION" \
+            -PembermineVersionCode="$VERSION_CODE_BASE" \
+            -PembermineFirefoxVersion="$FIREFOX_VERSION" \
+            -PdisableDebugSigning || rc=$?
+          echo "gradle took $(($(date +%s) - t0))s rc=$rc"
+          free -m
+          df -h /
+          exit "$rc"
+
+      - name: Sign APKs
+        id: sign
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+          RELEASE_INPUT: ${{ inputs.release }}
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          export PATH="$JAVA_HOME/bin:$PATH"
+          args=(--in-dir fx/obj-embermine/gradle/build/mobile/android/fenix/app/outputs/apk/release --out-dir dist --version "$VERSION")
+          if [ "$RELEASE_INPUT" = true ]; then args+=(--require-owner-key); fi
+          ls -la "${args[1]}"
+          bash scripts/sign.sh "${args[@]}"
+
+      - name: APK and build reports
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+          FIREFOX_VERSION: ${{ steps.ver.outputs.firefox_version }}
+          VERSION_CODE_BASE: ${{ steps.ver.outputs.version_code_base }}
+          TAG: ${{ steps.res.outputs.tag }}
+          SHA: ${{ steps.res.outputs.sha }}
+          BUILDID: ${{ steps.res.outputs.buildid }}
+          SIGNING: ${{ steps.sign.outputs.signing }}
+        run: |
+          set -euo pipefail
+          export PATH="$JAVA_HOME/bin:$PATH"
+          bash scripts/apk-info.sh --dir dist --out dist/apk-info.txt
+          python3 scripts/build_info.py \
+            --firefox-version "$FIREFOX_VERSION" --embermine-version "$VERSION" \
+            --version-code-base "$VERSION_CODE_BASE" --tag "$TAG" --sha "$SHA" --buildid "$BUILDID" \
+            --signing "$SIGNING" --applied "$RUNNER_TEMP/applied-patches.txt" --out dist/build-info.json
+
+      - name: Upload APKs and reports
+        uses: actions/upload-artifact@v7
+        with:
+          name: embermine-build
+          path: |
+            dist/embermine-*.apk
+            dist/apk-info.txt
+            dist/build-info.json
+          if-no-files-found: error
+          retention-days: 30

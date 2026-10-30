@@ -93,6 +93,7 @@ def git_ls_remote(tag: str, repo: str = FIREFOX_REPO) -> Optional[str]:
 def find_tag(version: str, ls_remote: Callable[[str], Optional[str]]) -> tuple[str, str]:
     for tag in tag_candidates(version):
         sha = ls_remote(tag)
+        print(f"tag {tag}: {sha or 'not found'}", file=sys.stderr)
         if sha:
             return tag, sha
     raise ResolveError(f"no release tag found for Firefox {version} (tried {tag_candidates(version)})")

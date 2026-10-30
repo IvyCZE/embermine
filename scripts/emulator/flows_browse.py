@@ -121,3 +121,17 @@ def page_captures(s: Session, *, private: bool) -> None:
         s.dev.sleep(2.5)
         shot.take(settle=1.0)
         close_overlay(s)
+
+
+def main_menu_while_loading(s: Session) -> None:
+    """The main menu opened while a page is still loading, where Refresh turns into Stop."""
+    with s.capture("14-main-menu-loading", label="main menu while a page is loading (Stop state)") as shot:
+        go_home(s)
+        s.open_url(f"{s.server}/slow")
+        s.dev.sleep(4.0)
+        s.dev.tap(t.MENU_BUTTON)
+        if s.dev.wait_for(t.MENU_SETTINGS, timeout=10) is None:
+            raise StepError("main menu did not open")
+        stop = uidump.find_first(s.dev.dump("menu-loading", save=True), Selector(label=r"Stop"))
+        shot.take(settle=1.0, note="Stop item on screen" if stop else "no Stop item found in the menu dump (page may have finished loading)")
+        close_overlay(s)

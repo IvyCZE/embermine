@@ -3,13 +3,22 @@
 /page      a long page that loads at once
 /slow      sends the start of a page, then stalls, so the page-load line stays visible
 /refresh   loads at once the first time and stalls on every later request (pull-to-refresh)
+/small.bin a 1 MB download that finishes at once
+/big.bin   a large download streamed slowly, so it is still running when the Downloads screen is photographed;
+           honours Range requests, so a paused download can resume
 """
 from __future__ import annotations
 
+import re
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 STALL_SECONDS = 25.0
+SMALL_FILE_BYTES = 1_000_000
+BIG_FILE_BYTES = 400 * 1024 * 1024
+STREAM_CHUNK_BYTES = 64 * 1024
+STREAM_DELAY_SECONDS = 0.05  # about 1.2 MB/s, so the big file needs more than five minutes
+_RANGE = re.compile(r"bytes=(\d+)-")
 
 _PARAGRAPH = (
     "<p>Embermine test page. This text only exists to make the page tall enough to scroll and to give the "
@@ -52,9 +61,55 @@ class Handler(BaseHTTPRequestHandler):
         except OSError:
             pass
 
+    def _download(self, name: str, size: int, *, head: bool) -> None:
+        start = 0
+        status = 200
+        match = _RANGE.fullmatch(self.headers.get("Range", "").strip())
+        if match is not None:
+            start = int(match[1])
+            status = 206
+        if start >= size and match is not None:
+            self.send_response(416)
+            self.send_header("Content-Range", f"bytes */{size}")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        self.send_response(status)
+        self.send_header("Content-Type", "application/octet-stream")
+        self.send_header("Content-Disposition", f'attachment; filename="{name}"')
+        self.send_header("Accept-Ranges", "bytes")
+        self.send_header("ETag", f'"{name}"')
+        self.send_header("Content-Length", str(size - start))
+        if status == 206:
+            self.send_header("Content-Range", f"bytes {start}-{size - 1}/{size}")
+        self.end_headers()
+        if head:
+            return
+        sent = start
+        try:
+            while sent < size and not self.server.stop.is_set():
+                piece = min(self.server.chunk, size - sent)
+                self.wfile.write(b"\0" * piece)
+                self.wfile.flush()
+                sent += piece
+                if self.server.delay:
+                    self.server.stop.wait(self.server.delay)
+        except OSError:
+            pass  # the client paused or cancelled the download
+
+    def do_HEAD(self) -> None:  # noqa: N802 - http.server API
+        self._route(head=True)
+
     def do_GET(self) -> None:  # noqa: N802 - http.server API
+        self._route(head=False)
+
+    def _route(self, *, head: bool) -> None:
         path = self.path.split("?", 1)[0]
-        if path == "/page":
+        if path == "/small.bin":
+            self._download("embermine-small-test-file.bin", self.server.small_size, head=head)
+        elif path == "/big.bin":
+            self._download("embermine-large-test-file.bin", self.server.big_size, head=head)
+        elif path == "/page":
             body = page_html("Embermine test page")
             self._send_head(len(body))
             self.wfile.write(body)
@@ -85,6 +140,10 @@ class WalkServer(ThreadingHTTPServer):
     def __init__(self, port: int, host: str = "127.0.0.1", stall: float = STALL_SECONDS) -> None:
         super().__init__((host, port), Handler)
         self.stall = stall
+        self.small_size = SMALL_FILE_BYTES
+        self.big_size = BIG_FILE_BYTES
+        self.chunk = STREAM_CHUNK_BYTES
+        self.delay = STREAM_DELAY_SECONDS
         self.lock = threading.Lock()
         self.refresh_hits = 0
         self.requests: list[str] = []

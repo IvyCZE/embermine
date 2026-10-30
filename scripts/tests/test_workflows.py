@@ -25,6 +25,16 @@ class CiWorkflowTests(unittest.TestCase):
                 self.assertNotRegex(body, r"contents:\s*write")
                 self.assertNotRegex(body, r"gh release|action-gh-release|git push|create-release|git tag")
 
+    def test_legacy_emulator_job_runs_the_api_30_walk_after_the_build(self) -> None:
+        ci = text("ci.yml")
+        job = ci[ci.index("  emulator-legacy:") : ci.index("  unit-tests:")]
+        self.assertIn("needs: build", job)
+        self.assertIn("api-level: 30", job)
+        self.assertIn("target: google_apis", job)
+        self.assertIn("arch: x86_64", job)
+        self.assertIn("--variant legacy", job)
+        self.assertIn("name: screenshots-legacy", job)
+
     def test_build_steps_cannot_be_skipped_after_a_failure(self) -> None:
         for name in ("ci.yml", "build.yml"):
             body = text(name)

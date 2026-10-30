@@ -97,6 +97,65 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  # The same APK on Android 11 (API 30), where Material You colours do not exist: homepage, Customize and the
+  # wallpaper picker. Uploads the separately named screenshots-legacy set.
+  emulator-legacy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: embermine-build
+          path: apk
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -la apk
+
+      - name: Run the emulator walk
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-boot-timeout: 900
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: python3 -m scripts.emulator.run --variant legacy --apk-dir apk --out shots --debug debug
+
+      - name: Summary
+        if: ${{ !cancelled() }}
+        run: |
+          cat shots/screens-index.md >> "$GITHUB_STEP_SUMMARY" || true
+          ls -la shots
+
+      - name: Upload screenshots and reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: screenshots-legacy
+          path: shots
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload debug files
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: emulator-debug-legacy
+          path: debug
+          if-no-files-found: ignore
+          retention-days: 7
+
   # JVM tests of the Embermine Kotlin classes. Runs next to the build, so it prepares its own tree.
   unit-tests:
     runs-on: ubuntu-latest

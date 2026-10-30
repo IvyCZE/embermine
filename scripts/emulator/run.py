@@ -1,6 +1,6 @@
 """Entry point of the emulator job: install the APK, walk the app and write screenshots and reports.
 
-usage: python3 -m scripts.emulator.run --variant light|dark --apk-dir DIR --out DIR --debug DIR
+usage: python3 -m scripts.emulator.run --variant light|dark|legacy --apk-dir DIR --out DIR --debug DIR
 
 Install and launch failures end the run with a non-zero exit code. Every capture after that is fail-soft:
 a screen that cannot be reached is listed as MISSING (with the reason) in screens-index.md.
@@ -14,7 +14,19 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from scripts.emulator import coinstall, devsetup, flows_browse, flows_motion, flows_settings, launcher, logcat_scan
+from scripts.emulator import (
+    coinstall,
+    devsetup,
+    flows_browse,
+    flows_downloads,
+    flows_layout,
+    flows_motion,
+    flows_secret,
+    flows_settings,
+    flows_tabs,
+    launcher,
+    logcat_scan,
+)
 from scripts.emulator.device import Adb, Device
 from scripts.emulator.naming import ScreenIndex, capture_name, check_index_matches_files
 from scripts.emulator.session import LaunchError, Session
@@ -33,7 +45,46 @@ class Flow:
     private: bool = False
 
 
-def flow_list() -> list[Flow]:
+TAB_TRAY_STEMS = [
+    ("12-tab-tray-header", "tab tray header", False),
+    ("06-tab-tray-overflow-menu", "tab tray overflow menu", False),
+    ("07-tab-selection-mode", "tab selection mode", False),
+    ("tab-grid-group-header", "tab grid with a group card", False),
+    ("08-tab-group-menu", "tab group menu", False),
+    ("02-tab-groups-list", "tab groups list", False),
+    ("03-tab-group-sheet", "tab group sheet", False),
+    ("01-synced-tabs", "synced tabs", False),
+]
+DOWNLOAD_STEMS = [
+    ("download-notification", "download notification", False),
+    ("15-downloads", "downloads screen", False),
+    ("downloads-active", "downloads screen, download in progress", False),
+    ("downloads-paused", "downloads screen, download paused", False),
+]
+SECRET_STEMS = [
+    ("secret-settings-before", "secret settings, before unlock", False),
+    ("secret-settings-unlocked", "secret settings, after unlock", False),
+    ("secret-settings-screen", "secret settings screen", False),
+    ("secret-settings-after-restart", "secret settings, after restart", False),
+]
+
+
+def legacy_flow_list() -> list[Flow]:
+    """API 30: the homepage with its default wallpaper, Customize and the wallpaper picker."""
+    f_browse, f_set = flows_browse, flows_settings
+    return [
+        Flow("homepage", f_browse.homepage, [("04-homepage", "homepage", False)]),
+        Flow(
+            "settings",
+            f_set.legacy_pages,
+            [("customize", "customize screen", False), ("settings-homepage", "homepage settings page", False), ("wallpaper-picker", "wallpaper picker", False)],
+        ),
+    ]
+
+
+def flow_list(variant: str = "light") -> list[Flow]:
+    if variant == "legacy":
+        return legacy_flow_list()
     f_browse, f_set, f_motion = flows_browse, flows_settings, flows_motion
 
     def motion(s: Session, position: str) -> None:
@@ -51,8 +102,12 @@ def flow_list() -> list[Flow]:
         Flow("homepage", f_browse.homepage, [("04-homepage", "homepage", False)]),
         Flow("search", f_browse.search_bar_and_selector, [("search-bar", "search bar", False), ("11-search-selector", "search engine selector", False)]),
         Flow("pages", lambda s: f_browse.page_captures(s, private=False), [(p, p, False) for p in page_stems]),
+        Flow("main menu while loading", f_browse.main_menu_while_loading, [("14-main-menu-loading", "main menu while loading", False)]),
         Flow("private homepage", lambda s: f_browse.homepage(s, private=True), [("04-homepage", "homepage", True)], private=True),
         Flow("private pages", lambda s: f_browse.page_captures(s, private=True), [(p, p, True) for p in page_stems], private=True),
+        Flow("private tab tray", flows_tabs.private_tab_tray, [("12-tab-tray-header", "tab tray header", True)], private=True),
+        Flow("tab tray", flows_tabs.tab_tray, TAB_TRAY_STEMS),
+        Flow("downloads", flows_downloads.downloads, DOWNLOAD_STEMS),
         Flow("history", f_set.history, [("09-history", "history", False)]),
         Flow(
             "settings",
@@ -67,8 +122,10 @@ def flow_list() -> list[Flow]:
                 ("about", "about screen", False),
             ],
         ),
+        Flow("bottom navigation bar", flows_layout.bottom_navigation_bar, [("bottom-navigation-bar", "bottom navigation bar", False)]),
         Flow("about:config", f_set.about_config, [("about-config", "about:config page", False)]),
         Flow("motion", lambda s: f_motion.both_positions(s, motion), motion_expected),
+        Flow("secret settings", flows_secret.secret_settings, SECRET_STEMS),
     ]
 
 
@@ -131,7 +188,7 @@ def write_coinstall(s: Session, out: Path, firefox_version: str, work: Path) -> 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--variant", choices=("light", "dark"), required=True)
+    parser.add_argument("--variant", choices=("light", "dark", "legacy"), required=True)
     parser.add_argument("--apk-dir", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--debug", type=Path, required=True)
@@ -151,6 +208,7 @@ def main(argv: list[str] | None = None) -> int:
     dev = Device(adb, dump_dir=args.debug / "ui", log=log)
     index = ScreenIndex(title=f"screens-index ({args.variant})")
     server = WalkServer(SERVER_PORT)
+    legacy = args.variant == "legacy"
     session: Session | None = None
     exit_code = 0
     try:
@@ -158,28 +216,38 @@ def main(argv: list[str] | None = None) -> int:
         package, label = devsetup.apk_package_and_label(args.apk_dir / "apk-info.txt", apk.name)
         app_label = r"Embermine|Firefox" if not label else rf"{label}|Embermine|Firefox"
         session = Session(dev, package, args.variant, args.out, args.debug, index, server=f"http://10.0.2.2:{SERVER_PORT}")
-        index.header = [
-            f"Variant: {args.variant} theme, API 34 google_apis x86_64 emulator, Pixel 6 profile",
-            f"App under test: {apk.name} (package {package}, label {label!r})",
-            "Combination naming: dynamic-off means the 'Use wallpaper colors' switch does not exist yet; the green system palette is forced.",
-        ]
+        if legacy:
+            index.header = [
+                "Variant: legacy, light theme, API 30 google_apis x86_64 emulator, Pixel 6 profile (no Material You on this Android version)",
+                f"App under test: {apk.name} (package {package}, label {label!r})",
+                "Combination naming: dynamic-off means the 'Use wallpaper colors' switch is off or absent; no system palette is forced.",
+            ]
+        else:
+            index.header = [
+                f"Variant: {args.variant} theme, API 34 google_apis x86_64 emulator, Pixel 6 profile",
+                f"App under test: {apk.name} (package {package}, label {label!r})",
+                "Combination naming: dynamic-off means the 'Use wallpaper colors' switch does not exist yet; the green system palette is forced.",
+            ]
         devsetup.wake_and_stay_on(adb)
         devsetup.suppress_error_dialogs(adb)
-        night = devsetup.set_night_mode(adb, args.variant, log)
+        night = devsetup.set_night_mode(adb, "light" if legacy else args.variant, log)
         index.header.append(f"uimode night: {night}")
-        index.header += ["Palette: " + line for line in devsetup.force_palette(adb, log, time.sleep)]
+        if not legacy:
+            index.header += ["Palette: " + line for line in devsetup.force_palette(adb, log, time.sleep)]
         devsetup.install_apk(adb, apk, log)
-        devsetup.grant_notifications(adb, package, log)
-        index.header.append("Wi-Fi: " + (devsetup.disable_wifi(adb, log, time.sleep) or "disabled with svc wifi disable"))
+        if not legacy:
+            devsetup.grant_notifications(adb, package, log)
+            index.header.append("Wi-Fi: " + (devsetup.disable_wifi(adb, log, time.sleep) or "disabled with svc wifi disable"))
         server.start()
 
         session.launch_from_launcher()
         flows_browse.onboarding_first_screen(session)
         flows_browse.complete_onboarding(session)
         deadline = time.monotonic() + FLOW_BUDGET_SECONDS
-        for flow in flow_list():
+        for flow in flow_list(args.variant):
             run_flow(session, flow, deadline)
-        launcher.themed_icon_capture(session, app_label)
+        if not legacy:
+            launcher.themed_icon_capture(session, app_label)
     except LaunchError as exc:
         log(f"FATAL: {exc}")
         index.header.append(f"RUN ABORTED: {exc}")
@@ -191,10 +259,11 @@ def main(argv: list[str] | None = None) -> int:
                 write_logcat_report(session, args.out)
             except Exception as exc:  # noqa: BLE001
                 log(f"logcat report failed: {exc}")
-            if exit_code == 0:
+            if exit_code == 0 and not legacy:
                 write_coinstall(session, args.out, firefox_version, args.debug / "coinstall-work")
             (args.debug / "visited-urls.txt").write_text("\n".join(session.visited) + "\n", encoding="utf-8")
-        index.add_report("network-hosts.txt", "DNS and TLS SNI host names of the scripted session, written by the workflow from the packet capture")
+        if not legacy:
+            index.add_report("network-hosts.txt", "DNS and TLS SNI host names of the scripted session, written by the workflow from the packet capture")
         index.write(args.out / "screens-index.md")
         text = (args.out / "screens-index.md").read_text(encoding="utf-8")
         for problem in check_index_matches_files(text, args.out, deferred=frozenset({"network-hosts.txt"})):

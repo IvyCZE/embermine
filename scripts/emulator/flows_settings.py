@@ -74,6 +74,14 @@ def settings_pages(s: Session) -> None:
     subpage(s, "about", r"About (Firefox|Embermine)", "about screen")
 
 
+def legacy_pages(s: Session) -> None:
+    """The settings captures of the API 30 job: Customize, the Homepage page and the wallpaper picker."""
+    open_settings(s)
+    subpage(s, "customize", r"Customize", "customize screen")
+    ensure_settings_list(s)
+    homepage_settings(s)
+
+
 def homepage_settings(s: Session) -> None:
     with s.capture("settings-homepage", label="homepage settings page") as shot:
         open_row(s, r"Homepage")

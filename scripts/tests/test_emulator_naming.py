@@ -21,6 +21,9 @@ class CaptureNameTests(unittest.TestCase):
     def test_extra_screen_without_number(self) -> None:
         self.assertEqual(capture_name("settings-subpage-search", theme="dark"), "settings-subpage-search_dynamic-off_dark.png")
 
+    def test_legacy_theme_names_the_api_30_set(self) -> None:
+        self.assertEqual(capture_name("customize", theme="legacy"), "customize_dynamic-off_legacy.png")
+
     def test_rejects_bad_input(self) -> None:
         for kwargs in ({"screen": "Bad Name", "theme": "light"}, {"screen": "ok", "theme": "sepia"}, {"screen": "a_b", "theme": "dark"}):
             with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):

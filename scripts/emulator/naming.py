@@ -6,11 +6,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 _SCREEN = re.compile(r"^(\d{2}-)?[a-z0-9]+(-[a-z0-9]+)*$")
-THEMES = ("light", "dark")
+THEMES = ("light", "dark", "legacy")  # "legacy" is the API 30 job, which has no light/dark pair
 
 
 def capture_name(screen: str, *, theme: str, dynamic: bool = False, private: bool = False) -> str:
-    """`<NN>-<screen>_dynamic-<on|off>_<light|dark>[_private].png`; `screen` already carries NN when it has one."""
+    """`<NN>-<screen>_dynamic-<on|off>_<light|dark|legacy>[_private].png`; `screen` already carries NN when it has one."""
     if not _SCREEN.match(screen):
         raise ValueError(f"invalid screen name: {screen!r}")
     if theme not in THEMES:

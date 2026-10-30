@@ -233,9 +233,15 @@ def main(argv: list[str] | None = None) -> int:
         night = devsetup.set_night_mode(adb, "light" if legacy else args.variant, log)
         index.header.append(f"uimode night: {night}")
         if not legacy:
-            index.header += ["Palette: " + line for line in devsetup.force_palette(adb, log, time.sleep)]
+            try:
+                palette = devsetup.force_palette(adb, log, time.sleep)
+            except devsetup.PaletteError as exc:
+                index.header += ["Palette: " + line for line in exc.evidence]
+                raise
+            index.header += ["Palette: " + line for line in palette]
         devsetup.install_apk(adb, apk, log)
         if not legacy:
+            devsetup.confirm_palette(adb, log, time.sleep)
             devsetup.grant_notifications(adb, package, log)
             index.header.append("Wi-Fi: " + (devsetup.disable_wifi(adb, log, time.sleep) or "disabled with svc wifi disable"))
         server.start()
@@ -247,7 +253,11 @@ def main(argv: list[str] | None = None) -> int:
         for flow in flow_list(args.variant):
             run_flow(session, flow, deadline)
         if not legacy:
+            final = devsetup.read_palette_state(adb)
+            index.header.append("Palette at the end of the walk: " + "; ".join(final.overlay_lines()) + f"; {devsetup.describe_state(final)}")
             launcher.themed_icon_capture(session, app_label)
+            if not final.applied:
+                raise LaunchError("the forced palette was lost during the walk: " + "; ".join(final.problems()))
     except LaunchError as exc:
         log(f"FATAL: {exc}")
         index.header.append(f"RUN ABORTED: {exc}")

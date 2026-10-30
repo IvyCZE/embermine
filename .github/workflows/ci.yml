@@ -69,7 +69,7 @@ jobs:
           mkdir -p shots debug
           ls -la /tmp/em.pcap
           python3 -m scripts.emulator.netreport --pcap /tmp/em.pcap --out shots/network-hosts.txt \
-            --session "scripted walk of the $VARIANT variant with default settings (onboarding declined, two settings changed: allow screenshots in private browsing, and the toolbar position; neither touches the network), Wi-Fi disabled" \
+            --session "scripted walk of the $VARIANT variant with default settings (onboarding declined; settings changed: allow screenshots in private browsing, the toolbar position top then bottom, the toolbar layout Expanded then back to Simple, and the secret settings unlock by five taps on the About logo; none of these touches the network). Pages: https://example.com plus a local test server on 10.0.2.2 that serves the page-load, pull-to-refresh and download files. Also: tab tray, downloads, history and settings screens, and the co-install check, which downloads the official Firefox APK from archive.mozilla.org and the F-Droid Fennec APK from f-droid.org on the host (not from the emulator). Wi-Fi disabled" \
             --visited debug/visited-urls.txt
           cp /tmp/em.pcap debug/ || true
 

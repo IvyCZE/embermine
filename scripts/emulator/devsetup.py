@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 from scripts.emulator.device import Adb
@@ -28,6 +29,24 @@ def palette_json(seed: str = GREEN_SEED) -> str:
 
 
 ARGB_TOKEN = re.compile(r"0x(ff[0-9a-fA-F]{6})")
+OVERLAY_LINE = re.compile(r"^\s*\[(.)\]\s+(\S+)")
+# ThemeOverlayController maps system_palette -> neutral and accent_color -> accent.
+ACCENT_OVERLAY = "com.android.systemui:accent"
+PALETTE_OVERLAY = "com.android.systemui:neutral"
+REQUIRED_OVERLAYS = (ACCENT_OVERLAY, PALETTE_OVERLAY)
+PALETTE_ATTEMPTS = 5
+PALETTE_POLLS = 8
+POLL_SECONDS = 4
+# From this attempt on, overlays that stay disabled are also enabled directly.
+ENABLE_FROM_ATTEMPT = 3
+
+
+class PaletteError(LaunchError):
+    """The forced palette is not active; the evidence lines belong in screens-index.md."""
+
+    def __init__(self, message: str, evidence: list[str]) -> None:
+        super().__init__(message)
+        self.evidence = evidence
 
 
 def is_greenish(argb_hex: str) -> bool:
@@ -40,7 +59,8 @@ def accent_lines(adb: Adb) -> list[str]:
 
 
 def resolved_accent(adb: Adb) -> str:
-    """Opaque ARGB value of system_accent1_500 as resolved by the overlay manager, '' when unknown.
+    """Opaque ARGB value of system_accent1_500 as defined by the overlay manager, '' when unknown.
+    The dump reports the value of a disabled overlay too, so it never proves the palette is active.
     Resource ids (0x0106....) also appear on these lines and are not colors, hence the ff alpha filter."""
     for line in accent_lines(adb):
         tokens = ARGB_TOKEN.findall(line)
@@ -49,46 +69,120 @@ def resolved_accent(adb: Adb) -> str:
     return ""
 
 
-def force_palette(adb: Adb, log: Callable[[str], None], sleep: Callable[[float], None], seed: str = GREEN_SEED) -> list[str]:
-    """Force a green palette and return evidence lines (setting read-back, accent overlays, resolved tone).
+def overlay_states(listing: str) -> dict[str, bool]:
+    """Overlay name -> enabled, from `cmd overlay list` lines like '[x] name' (enabled) and '[ ] name'."""
+    states: dict[str, bool] = {}
+    for line in listing.splitlines():
+        match = OVERLAY_LINE.match(line)
+        if match:
+            states[match[2]] = match[1].lower() == "x"
+    return states
 
-    The overlay manager applies the setting asynchronously and sometimes after a long delay on a busy
-    emulator, so the setting is rewritten until the resolved accent tone is green."""
+
+@dataclass
+class PaletteState:
+    readback_ok: bool
+    overlays: dict[str, bool]
+    accent: str
+
+    @property
+    def overlays_enabled(self) -> bool:
+        return all(self.overlays.get(name, False) for name in REQUIRED_OVERLAYS)
+
+    @property
+    def green(self) -> bool:
+        return bool(self.accent) and is_greenish(self.accent)
+
+    @property
+    def applied(self) -> bool:
+        """Only an enabled accent and palette overlay count; the green dump value alone does not."""
+        return self.readback_ok and self.overlays_enabled and self.green
+
+    def overlay_lines(self) -> list[str]:
+        lines = []
+        for name in REQUIRED_OVERLAYS:
+            marker = "[x]" if self.overlays.get(name) else "[ ]" if name in self.overlays else "(not listed)"
+            lines.append(f"{marker} {name}")
+        return lines
+
+    def problems(self) -> list[str]:
+        found = []
+        if not self.readback_ok:
+            found.append("setting read-back differs")
+        found += [f"{name} {'is disabled' if name in self.overlays else 'is not listed'}" for name in REQUIRED_OVERLAYS if not self.overlays.get(name)]
+        if not self.green:
+            found.append(f"accent tone {('0x' + self.accent) if self.accent else 'unknown'} is not green")
+        return found
+
+
+def read_palette_state(adb: Adb, seed: str = GREEN_SEED) -> PaletteState:
+    readback = adb.shell(f"settings get secure {PALETTE_SETTING}").strip()
+    return PaletteState(
+        readback_ok=seed.lower() in readback.lower(),
+        overlays=overlay_states(adb.shell("cmd overlay list android")),
+        accent=resolved_accent(adb),
+    )
+
+
+def describe_state(state: PaletteState) -> str:
+    return "applied" if state.applied else "NOT applied (" + "; ".join(state.problems()) + ")"
+
+
+def force_palette(adb: Adb, log: Callable[[str], None], sleep: Callable[[float], None], seed: str = GREEN_SEED) -> list[str]:
+    """Force a green palette and return evidence lines; raise PaletteError when it never becomes active.
+
+    The overlay manager applies the setting asynchronously, sometimes after a long delay on a busy
+    emulator, and sometimes leaves the accent overlay disabled although the dump already shows the green
+    value. The palette therefore counts as applied only when `cmd overlay list` shows the accent and
+    palette overlays enabled, and the setting is rewritten (after a delete) until that holds."""
     value = palette_json(seed)
-    accent = ""
-    for attempt in range(1, 5):
+    state = PaletteState(False, {}, "")
+    for attempt in range(1, PALETTE_ATTEMPTS + 1):
         # adb joins its arguments into one remote command line, so the JSON gets its own layer of quoting.
         adb.shell(f"settings put secure {PALETTE_SETTING} '{value}'")
-        for _ in range(8):
-            sleep(4)
-            accent = resolved_accent(adb)
-            if accent and is_greenish(accent):
+        for _ in range(PALETTE_POLLS):
+            sleep(POLL_SECONDS)
+            state = read_palette_state(adb, seed)
+            if state.applied:
                 break
-        if accent and is_greenish(accent):
+        if state.applied:
             break
-        log(f"palette attempt {attempt}: accent tone {accent or 'unknown'}")
-        if attempt < 4:
+        log(f"palette attempt {attempt}: {describe_state(state)}")
+        if attempt < PALETTE_ATTEMPTS:
+            if attempt >= ENABLE_FROM_ATTEMPT:
+                for name in REQUIRED_OVERLAYS:
+                    if not state.overlays.get(name):
+                        log(f"cmd overlay enable {name}: {adb.shell(f'cmd overlay enable --user current {name}').strip() or 'ok'}")
             adb.shell(f"settings delete secure {PALETTE_SETTING}")
             sleep(3)
-    readback = adb.shell(f"settings get secure {PALETTE_SETTING}").strip()
-    overlays = [
-        line.strip()
-        for line in adb.shell("cmd overlay list android").splitlines()
-        if re.search(r"accent|palette|theme_customization|color", line, re.IGNORECASE)
-    ]
-    evidence = [
-        f"forced palette seed #{seed} (system_palette + accent_color, color_source preset)",
-        f"{PALETTE_SETTING} read back: {readback}",
-        f"palette applied: {'yes' if seed.lower() in readback.lower() else 'NO (read-back differs)'}",
-        f"resolved system_accent1_500: {('0x' + accent) if accent else 'not reported'}"
-        + (" (green)" if accent and is_greenish(accent) else " (NOT green)"),
-    ]
-    if overlays:
-        evidence.append("color overlays: " + "; ".join(overlays[:6]))
+    evidence = palette_evidence(adb, state, seed)
     for line in evidence:
         log(line)
-    log("overlay dump accent lines: " + " | ".join(accent_lines(adb)[:3]))
+    if not state.applied:
+        raise PaletteError(f"forced palette is not active after {PALETTE_ATTEMPTS} attempts: " + "; ".join(state.problems()), evidence)
     return evidence
+
+
+def palette_evidence(adb: Adb, state: PaletteState, seed: str = GREEN_SEED) -> list[str]:
+    readback = adb.shell(f"settings get secure {PALETTE_SETTING}").strip()
+    accent = state.accent
+    return [
+        f"forced palette seed #{seed} (system_palette + accent_color, color_source preset)",
+        f"{PALETTE_SETTING} read back: {readback}",
+        "overlays from cmd overlay list android: " + "; ".join(state.overlay_lines()),
+        f"system_accent1_500 reported by cmd overlay dump (also shown for a disabled overlay): {('0x' + accent) if accent else 'not reported'}"
+        + (" (green)" if state.green else " (NOT green)"),
+        f"palette applied: {'yes' if state.applied else 'NO (' + '; '.join(state.problems()) + ')'}",
+    ]
+
+
+def confirm_palette(adb: Adb, log: Callable[[str], None], sleep: Callable[[float], None], seed: str = GREEN_SEED) -> list[str]:
+    """Check that the forced palette is still active and force it again when it was lost; returns evidence lines."""
+    state = read_palette_state(adb, seed)
+    if state.applied:
+        return palette_evidence(adb, state, seed)
+    log(f"palette lost: {describe_state(state)}")
+    return force_palette(adb, log, sleep, seed)
 
 
 def set_night_mode(adb: Adb, theme: str, log: Callable[[str], None]) -> str:

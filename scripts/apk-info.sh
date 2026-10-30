@@ -43,8 +43,10 @@ for apk in "${apks[@]}"; do
   badging="$("$aapt2" dump badging "$apk")"
   certs="$("$apksigner" verify --verbose --print-certs "$apk")" || die "apksigner verify failed for $apk"
 
-  digests="$(printf '%s\n' "$certs" | sed -n 's/^Signer #[0-9]* certificate SHA-256 digest: //p')"
-  [ "$(printf '%s\n' "$digests" | grep -c .)" -eq 1 ] || die "expected exactly one signer in $apk"
+  # apksigner words the line per scheme ("Signer #1 certificate ..." or "V3.0 Signer: certificate ..."),
+  # so collect the digests of every scheme and require that they are all the same single certificate
+  digests="$(printf '%s\n' "$certs" | sed -n 's/^.*certificate SHA-256 digest: //p' | sort -u)"
+  [ "$(printf '%s\n' "$digests" | grep -c .)" -eq 1 ] || die "expected exactly one signer certificate in $apk"
   signer_colon="$(printf '%s' "$digests" | tr 'a-f' 'A-F' | sed 's/../&:/g; s/:$//')"
 
   package_line="$(printf '%s\n' "$badging" | grep -m1 '^package:')"

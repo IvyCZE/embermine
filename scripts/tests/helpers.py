@@ -75,8 +75,16 @@ case "$1" in
   verify)
     echo "Verifies"
     echo "Verified using v2 scheme (APK Signature Scheme v2): true"
-    echo "Signer #1 certificate DN: CN=Embermine"
-    echo "Signer #1 certificate SHA-256 digest: ${STUB_DIGEST:-f76f699374d50bb5cf6ac6754ec59faa3eb17774adffbec973b9ddd264bdc2a0}"
+    digest="${STUB_DIGEST:-f76f699374d50bb5cf6ac6754ec59faa3eb17774adffbec973b9ddd264bdc2a0}"
+    if [ "${STUB_VERIFY_STYLE:-v3}" = legacy ]; then
+      echo "Signer #1 certificate DN: CN=Embermine"
+      echo "Signer #1 certificate SHA-256 digest: $digest"
+    else
+      echo "V2 Signer: certificate SHA-256 digest: $digest"
+      echo "V3.0 Signer: certificate SHA-256 digest: $digest"
+      echo "V3.0 Signer: public key SHA-256 digest: 21ca16a3c4747b041a719912f79d600ef524778ac4f486c3e17ea1bcab4d57f9"
+      [ -z "${STUB_SECOND_DIGEST:-}" ] || echo "V3.1 Signer: certificate SHA-256 digest: $STUB_SECOND_DIGEST"
+    fi
     ;;
 esac
 """

@@ -30,7 +30,7 @@ class ApkInfoTests(TempDirTestCase):
         self.badging.write_text(BADGING)
         self.manifest.write_text(MANIFEST_WITHOUT)
 
-    def run_info(self) -> tuple[subprocess.CompletedProcess[str], str]:
+    def run_info(self, **env: str) -> tuple[subprocess.CompletedProcess[str], str]:
         out = self.tmp / "apk-info.txt"
         proc = subprocess.run(
             ["bash", str(SCRIPTS / "apk-info.sh"), "--dir", str(self.apks), "--out", str(out)],
@@ -43,6 +43,7 @@ class ApkInfoTests(TempDirTestCase):
                 STUB_LOG=str(self.tmp / "log"),
                 STUB_BADGING=str(self.badging),
                 STUB_MANIFEST=str(self.manifest),
+                **env,
             ),
         )
         return proc, out.read_text() if out.exists() else ""
@@ -75,3 +76,13 @@ class ApkInfoTests(TempDirTestCase):
             apk.unlink()
         proc, _ = self.run_info()
         self.assertNotEqual(proc.returncode, 0)
+
+    def test_legacy_signer_wording_is_understood(self) -> None:
+        proc, text = self.run_info(STUB_VERIFY_STYLE="legacy")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("signer-sha256-hex: f76f699374d50bb5cf6ac6754ec59faa3eb17774adffbec973b9ddd264bdc2a0", text)
+
+    def test_different_certificates_across_schemes_fail(self) -> None:
+        proc, _ = self.run_info(STUB_SECOND_DIGEST="ab" * 32)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("exactly one signer", proc.stderr)

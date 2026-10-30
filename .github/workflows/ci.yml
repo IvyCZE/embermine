@@ -69,7 +69,7 @@ jobs:
           mkdir -p shots debug
           ls -la /tmp/em.pcap
           python3 -m scripts.emulator.netreport --pcap /tmp/em.pcap --out shots/network-hosts.txt \
-            --session "scripted walk of the $VARIANT variant with default settings (onboarding declined, two settings changed: "Allow screenshots in private browsing" and the toolbar position, neither touches the network), Wi-Fi disabled" \
+            --session "scripted walk of the $VARIANT variant with default settings (onboarding declined, two settings changed: allow screenshots in private browsing, and the toolbar position; neither touches the network), Wi-Fi disabled" \
             --visited debug/visited-urls.txt
           cp /tmp/em.pcap debug/ || true
 

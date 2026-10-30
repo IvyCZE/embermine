@@ -92,6 +92,7 @@ jobs:
           ./gradlew --no-daemon --max-workers=3 \
             -Dorg.gradle.jvmargs="-Xmx6g -Xms1g -XX:MaxMetaspaceSize=1536m -XX:+UseParallelGC" \
             -Pkotlin.daemon.jvmargs=-Xmx3g \
+            --continue \
             :app:testDebugUnitTest --tests "org.mozilla.fenix.embermine.*" \
             -PdisableDebugSigning
 

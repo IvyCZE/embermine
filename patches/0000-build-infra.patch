@@ -9,6 +9,9 @@ versionCode/versionName/BuildConfig fields from Gradle properties
 generateFennecVersionCode, limit ABI splits to arm64-v8a and x86_64 without a
 universal APK, turn off allWarningsAsErrors, and add the EmbermineVersion helper.
 
+Import ExposedDropdownMenu in compose-base DropdownMenu.kt: material3 1.5
+moved it from a member of ExposedDropdownMenuBoxScope to an extension.
+
 diff --git a/gradle/libs.versions.toml b/gradle/libs.versions.toml
 index fd0aba7a9e1d38d794081747c5b656c5c6b45619..45cdde6c83a41fd1fdc01bf475d0932fbb4033bf 100644
 --- a/gradle/libs.versions.toml
@@ -22,6 +25,18 @@ index fd0aba7a9e1d38d794081747c5b656c5c6b45619..45cdde6c83a41fd1fdc01bf475d0932f
  androidx-compose-material3-adaptive = { module = "androidx.compose.material3.adaptive:adaptive" }
  androidx-compose-material3-adaptivelayout = { module = "androidx.compose.material3.adaptive:adaptive-layout" }
  androidx-compose-material3-adaptivenavigation = { module = "androidx.compose.material3.adaptive:adaptive-navigation" }
+diff --git a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/menu/DropdownMenu.kt b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/menu/DropdownMenu.kt
+index 77f9cc9d6fc0d1e0a614763e9a15b494238c4563..ace370d65f16c4448e59d3e4ef867d6d9040e959 100644
+--- a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/menu/DropdownMenu.kt
++++ b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/menu/DropdownMenu.kt
+@@ -25,6 +25,7 @@ import androidx.compose.foundation.verticalScroll
+ import androidx.compose.material3.DropdownMenu as MaterialDropdownMenu
+ import androidx.compose.material3.DropdownMenuItem as MaterialDropdownMenuItem
+ import androidx.compose.material3.ExperimentalMaterial3Api
++import androidx.compose.material3.ExposedDropdownMenu
+ import androidx.compose.material3.ExposedDropdownMenuBoxScope
+ import androidx.compose.material3.HorizontalDivider
+ import androidx.compose.material3.Icon
 diff --git a/mobile/android/fenix/app/build.gradle b/mobile/android/fenix/app/build.gradle
 index e8032b0120463613dd5c1e03660a60536f98a801..4d8cdf341a237422f8311e6b1c42842007eba42c 100644
 --- a/mobile/android/fenix/app/build.gradle

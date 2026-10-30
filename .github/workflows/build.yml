@@ -3,6 +3,8 @@ name: build
 # Reusable build: resolve Firefox release -> fetch -> patch -> generate -> Gradle build against
 # Mozilla's prebuilt GeckoView -> sign -> APKs + apk-info.txt + build-info.json.
 # It never creates releases or tags; publishing belongs to release.yml.
+# Artifact "embermine-build" holds the APKs, apk-info.txt and build-info.json. It is not a job output:
+# the KEY_ALIAS secret is "embermine", and GitHub drops outputs that contain a secret value.
 
 on:
   workflow_call:
@@ -44,9 +46,6 @@ on:
       buildid:
         description: GeckoView build id
         value: ${{ jobs.build.outputs.buildid }}
-      artifact:
-        description: Name of the artifact with APKs, apk-info.txt and build-info.json
-        value: ${{ jobs.build.outputs.artifact }}
 
 permissions:
   contents: read
@@ -61,7 +60,6 @@ jobs:
       tag: ${{ steps.res.outputs.tag }}
       sha: ${{ steps.res.outputs.sha }}
       buildid: ${{ steps.res.outputs.buildid }}
-      artifact: embermine-build
     steps:
       # The runner dies without logs when Gradle runs out of memory, so the swap file is mandatory.
       - name: Add 8 GB swap

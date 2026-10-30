@@ -19,3 +19,9 @@ out/
 .gradle/
 local.properties
 node_modules/
+
+# Python and patch-tooling leftovers
+__pycache__/
+*.pyc
+*.orig
+*.rej

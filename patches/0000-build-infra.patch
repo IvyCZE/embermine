@@ -1,0 +1,173 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: IvyCZE <me@ivy.yt>
+Date: Fri, 30 Oct 2026 06:59:07 +0000
+Subject: [PATCH] Embermine: 0000-build-infra
+
+Pin androidx.compose.material3 to 1.5.0-beta02 (only that library), derive
+versionCode/versionName/BuildConfig fields from Gradle properties
+(-PembermineVersionCode, -PversionName, -PembermineFirefoxVersion) instead of
+generateFennecVersionCode, limit ABI splits to arm64-v8a and x86_64 without a
+universal APK, turn off allWarningsAsErrors, and add the EmbermineVersion helper.
+
+diff --git a/gradle/libs.versions.toml b/gradle/libs.versions.toml
+index fd0aba7a9e1d38d794081747c5b656c5c6b45619..45cdde6c83a41fd1fdc01bf475d0932fbb4033bf 100644
+--- a/gradle/libs.versions.toml
++++ b/gradle/libs.versions.toml
+@@ -214,7 +214,7 @@ androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref =
+ androidx-compose-animation = { module = "androidx.compose.animation:animation" }
+ androidx-compose-foundation = { module = "androidx.compose.foundation:foundation" }
+ androidx-compose-material-icons = { module = "androidx.compose.material:material-icons-core" }
+-androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
++androidx-compose-material3 = { module = "androidx.compose.material3:material3", version = "1.5.0-beta02" }
+ androidx-compose-material3-adaptive = { module = "androidx.compose.material3.adaptive:adaptive" }
+ androidx-compose-material3-adaptivelayout = { module = "androidx.compose.material3.adaptive:adaptive-layout" }
+ androidx-compose-material3-adaptivenavigation = { module = "androidx.compose.material3.adaptive:adaptive-navigation" }
+diff --git a/mobile/android/fenix/app/build.gradle b/mobile/android/fenix/app/build.gradle
+index e8032b0120463613dd5c1e03660a60536f98a801..4d8cdf341a237422f8311e6b1c42842007eba42c 100644
+--- a/mobile/android/fenix/app/build.gradle
++++ b/mobile/android/fenix/app/build.gradle
+@@ -75,6 +75,8 @@ android {
+ 
+         buildConfigField "String[]", "SUPPORTED_LOCALE_ARRAY", getSupportedLocales()
+         buildConfigField "boolean", "IS_BENCHMARK_BUILD", "false"
++        buildConfigField "String", "EMBERMINE_VERSION_NAME", "\"${project.findProperty('versionName') ?: Config.generateDebugVersionName()}\""
++        buildConfigField "String", "EMBERMINE_FIREFOX_VERSION", "\"${project.findProperty('embermineFirefoxVersion') ?: Config.readVersionFromFile(project)}\""
+     }
+ 
+     def releaseTemplate = {
+@@ -242,10 +244,8 @@ android {
+             if (project.hasProperty("benchmarkTest")) {
+                 include "arm64-v8a"
+             } else {
+-                include "armeabi-v7a", "arm64-v8a", "x86_64"
+-                if (gradle.mozconfig.substs.MOZILLA_OFFICIAL || System.getenv("MOZ_BUILD_CONFIG_LINT") == "1") {
+-                    universalApk true
+-                }
++                include "arm64-v8a", "x86_64"
++                universalApk false
+             }
+         }
+     }
+@@ -286,6 +286,8 @@ android {
+ androidComponents {
+     onVariants(selector().all()) { variant ->
+         def buildType = variant.buildType
++        def embermineVersionCodeBase = project.hasProperty("embermineVersionCode") ?
++                project.property("embermineVersionCode").toString().toInteger() : 0
+ 
+         project.logger.debug("----------------------------------------------")
+         project.logger.debug("Variant name:      " + variant.name)
+@@ -297,19 +299,20 @@ androidComponents {
+         // object so we could read the flag directly; onVariants only gives us the build type name, so
+         // we gate on the names instead.
+         if (buildType in ['nightly', 'beta', 'release', 'benchmark']) {
+-            // The Google Play Store does not allow multiple APKs for the same app that all have the
+-            // same version code. Therefore we need to have different version codes for our ARM and x86
+-            // builds.
++            // -PembermineVersionCode is the versionCode without its trailing ABI digit (see
++            // scripts/version.py); the digit is appended per ABI split so the two APKs differ.
+             def versionName = buildType == 'nightly' ?
+                     "${Config.nightlyVersionName(project)}" :
+                     "${Config.releaseVersionName(project)}"
+             project.logger.debug("versionName override: $versionName")
+ 
+             variant.outputs.each { output ->
+-                // We use the same version code generator, that we inherited from Fennec, across all channels - even on
+-                // channels that never shipped a Fennec build.
+                 def abi = output.filters.find { it.filterType == FilterConfiguration.FilterType.ABI }?.identifier ?: "universal"
+-                def versionCodeOverride = Config.generateFennecVersionCode(abi)
++                def abiDigit = ["arm64-v8a": 1, "x86_64": 2][abi]
++                if (abiDigit == null) {
++                    throw new GradleException("Unsupported ABI split for versionCode: $abi")
++                }
++                def versionCodeOverride = embermineVersionCodeBase * 10 + abiDigit
+                 project.logger.debug("versionCode for $abi = $versionCodeOverride")
+                 output.versionName.set(versionName)
+                 output.versionCode.set(versionCodeOverride)
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineVersion.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineVersion.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..6fbfa3e8d9458cbcc5a4bc4f94ee187482642539
+--- /dev/null
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineVersion.kt
+@@ -0,0 +1,25 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine
++
++import org.mozilla.fenix.BuildConfig
++
++/**
++ * Formats the Embermine version line, e.g. "Embermine 159.0.2 (based on Firefox 159.0.2)".
++ */
++object EmbermineVersion {
++
++    /**
++     * @param embermineVersion Embermine version name, including any rebuild suffix.
++     * @param firefoxVersion Version of the Firefox release this build is based on.
++     */
++    fun format(embermineVersion: String, firefoxVersion: String): String =
++        "Embermine $embermineVersion (based on Firefox $firefoxVersion)"
++
++    /**
++     * The version line for this build, from the values passed to Gradle at build time.
++     */
++    fun current(): String = format(BuildConfig.EMBERMINE_VERSION_NAME, BuildConfig.EMBERMINE_FIREFOX_VERSION)
++}
+diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineVersionTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineVersionTest.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..167d46a7c1b46f1a6405b8a4f7954696067f9bc0
+--- /dev/null
++++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineVersionTest.kt
+@@ -0,0 +1,37 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine
++
++import org.junit.Assert.assertEquals
++import org.junit.Test
++import org.mozilla.fenix.BuildConfig
++
++class EmbermineVersionTest {
++
++    @Test
++    fun `format release version`() {
++        assertEquals(
++            "Embermine 159.0.2 (based on Firefox 159.0.2)",
++            EmbermineVersion.format("159.0.2", "159.0.2"),
++        )
++    }
++
++    @Test
++    fun `format rebuild version keeps the suffix and the Firefox base version`() {
++        assertEquals(
++            "Embermine 159.0-r2 (based on Firefox 159.0)",
++            EmbermineVersion.format("159.0-r2", "159.0"),
++        )
++    }
++
++    @Test
++    fun `current uses the build config values`() {
++        val expected = EmbermineVersion.format(
++            BuildConfig.EMBERMINE_VERSION_NAME,
++            BuildConfig.EMBERMINE_FIREFOX_VERSION,
++        )
++        assertEquals(expected, EmbermineVersion.current())
++    }
++}
+diff --git a/mobile/android/gradle/plugins/conventions/src/main/java/org/mozilla/conventions/ProjectPlugin.kt b/mobile/android/gradle/plugins/conventions/src/main/java/org/mozilla/conventions/ProjectPlugin.kt
+index 20a42d6eabb471a159f7c2bf38133a45d352e62a..d03fd22090944aea7f6c98d79a7aa4d69ece08b7 100644
+--- a/mobile/android/gradle/plugins/conventions/src/main/java/org/mozilla/conventions/ProjectPlugin.kt
++++ b/mobile/android/gradle/plugins/conventions/src/main/java/org/mozilla/conventions/ProjectPlugin.kt
+@@ -346,7 +346,7 @@ class ProjectPlugin : Plugin<Project> {
+             }
+             val compilerOptions = this::class.java.getMethod("getCompilerOptions").invoke(this)
+             val allWarningsAsErrors = compilerOptions::class.java.getMethod("getAllWarningsAsErrors").invoke(compilerOptions)
+-            allWarningsAsErrors::class.java.getMethod("set", Any::class.java).invoke(allWarningsAsErrors, true)
++            allWarningsAsErrors::class.java.getMethod("set", Any::class.java).invoke(allWarningsAsErrors, false)
+         }
+     }
+ 

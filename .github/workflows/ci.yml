@@ -20,10 +20,87 @@ jobs:
     uses: ./.github/workflows/build.yml
     secrets: inherit
 
+  # Walks the x86_64 APK on an API 34 emulator and uploads screenshots plus reports (screens-index.md,
+  # network-hosts.txt, coinstall.txt, logcat-crash.txt). Screens are fail-soft; install and launch failures fail the job.
+  emulator:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [light, dark]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: embermine-build
+          path: apk
+
+      - name: Enable KVM and install tshark
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          sudo DEBIAN_FRONTEND=noninteractive apt-get -qq update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get -qq install -y tshark >/dev/null
+          ls -la apk
+
+      - name: Run the emulator walk
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-boot-timeout: 900
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -tcpdump /tmp/em.pcap
+          script: python3 -m scripts.emulator.run --variant ${{ matrix.variant }} --apk-dir apk --out shots --debug debug
+
+      - name: Network hosts
+        if: ${{ !cancelled() }}
+        env:
+          VARIANT: ${{ matrix.variant }}
+        run: |
+          mkdir -p shots debug
+          ls -la /tmp/em.pcap
+          python3 -m scripts.emulator.netreport --pcap /tmp/em.pcap --out shots/network-hosts.txt \
+            --session "scripted walk of the $VARIANT variant with default settings (onboarding declined, two settings changed: "Allow screenshots in private browsing" and the toolbar position, neither touches the network), Wi-Fi disabled" \
+            --visited debug/visited-urls.txt
+          cp /tmp/em.pcap debug/ || true
+
+      - name: Summary
+        if: ${{ !cancelled() }}
+        run: |
+          cat shots/screens-index.md >> "$GITHUB_STEP_SUMMARY" || true
+          ls -la shots
+
+      - name: Upload screenshots and reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: screenshots-${{ matrix.variant }}
+          path: shots
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload debug files
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: emulator-debug-${{ matrix.variant }}
+          path: debug
+          if-no-files-found: ignore
+          retention-days: 7
+
   # JVM tests of the Embermine Kotlin classes. Runs next to the build, so it prepares its own tree.
   unit-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 50
     steps:
       - name: Add 8 GB swap
         run: |

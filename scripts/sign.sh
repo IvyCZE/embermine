@@ -6,8 +6,10 @@
 # Key selection:
 #   KEYSTORE_BASE64 empty or unset  -> throwaway key generated in a temp dir (forks, PRs);
 #                                      refused with --require-owner-key (release path)
-#   KEYSTORE_BASE64 set             -> owner PKCS12 key, which needs KEYSTORE_PASSWORD, KEY_ALIAS and
-#                                      KEY_PASSWORD too; any decode or signing error fails, there is no fallback
+#   KEYSTORE_BASE64 set             -> owner PKCS12 key, which needs KEYSTORE_PASSWORD and KEY_PASSWORD too;
+#                                      any decode or signing error fails, there is no fallback
+# The key alias is read from the keystore (it must hold exactly one private key entry). KEY_ALIAS is only
+# an optional override: a secret with the alias value would make GitHub mask that word in every log line.
 # BUILD_TOOLS: directory with zipalign and apksigner (default: newest under $ANDROID_HOME/build-tools).
 # Secrets only travel through environment variables and files in a private temp dir; nothing here
 # prints them and tracing must stay off.
@@ -26,10 +28,21 @@ decide_mode() {
     return
   fi
   local var
-  for var in KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+  for var in KEYSTORE_PASSWORD KEY_PASSWORD; do
     [ -n "${!var:-}" ] || die "KEYSTORE_BASE64 is set but $var is empty"
   done
   echo owner
+}
+
+# Alias of the single private key entry of a PKCS12 keystore (password in EMBERMINE_KS_PASS).
+keystore_alias() {
+  local listing aliases
+  listing="$(keytool -list -keystore "$1" -storetype PKCS12 -storepass:env EMBERMINE_KS_PASS)" ||
+    die "keytool cannot read the keystore"
+  aliases="$(printf '%s\n' "$listing" | sed -n 's/^\([^,]*\), .*PrivateKeyEntry,.*$/\1/p')"
+  [ "$(printf '%s\n' "$aliases" | grep -c .)" -eq 1 ] ||
+    die "expected exactly one private key entry in the keystore, found: $(printf '%s\n' "$aliases" | grep -c .)"
+  printf '%s\n' "$aliases"
 }
 
 build_tool() {
@@ -83,10 +96,14 @@ if [ "$mode" = owner ]; then
   (umask 077 && printf '%s' "$KEYSTORE_BASE64" | base64 -d >"$keystore") ||
     die "KEYSTORE_BASE64 is set but cannot be decoded"
   [ -s "$keystore" ] || die "KEYSTORE_BASE64 decoded to an empty keystore"
-  # shellcheck disable=SC2153 # KEY_ALIAS is the secret from the environment, not a typo of key_alias
-  key_alias="$KEY_ALIAS"
   export EMBERMINE_KS_PASS="$KEYSTORE_PASSWORD"
   export EMBERMINE_KEY_PASS="$KEY_PASSWORD"
+  if [ -n "${KEY_ALIAS:-}" ]; then
+    key_alias="$KEY_ALIAS"
+  else
+    key_alias="$(keystore_alias "$keystore")"
+  fi
+  echo "key alias: $key_alias"
 else
   echo "signing mode: throwaway test key (no signing secrets available)"
   keystore="$work/throwaway.p12"

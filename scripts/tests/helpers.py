@@ -49,6 +49,18 @@ cp "${@: -2:1}" "${@: -1}"
 
 STUB_KEYTOOL = """#!/usr/bin/env bash
 echo "keytool $*" >>"$STUB_LOG"
+if [ "$1" = "-list" ]; then
+  echo "Keystore type: PKCS12"
+  echo "Keystore provider: SUN"
+  echo
+  echo "Your keystore contains ${STUB_KEY_ENTRIES:-owner-alias} entries"
+  echo
+  for alias in ${STUB_KEY_ENTRIES-owner-alias}; do
+    echo "$alias, Oct 29, 2026, PrivateKeyEntry, "
+    echo "Certificate fingerprint (SHA-256): AA:BB"
+  done
+  exit 0
+fi
 while [ $# -gt 0 ]; do
   [ "$1" = "-keystore" ] && : >"$2"
   shift

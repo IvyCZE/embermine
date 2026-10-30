@@ -3,8 +3,8 @@ name: build
 # Reusable build: resolve Firefox release -> fetch -> patch -> generate -> Gradle build against
 # Mozilla's prebuilt GeckoView -> sign -> APKs + apk-info.txt + build-info.json.
 # It never creates releases or tags; publishing belongs to release.yml.
-# Artifact "embermine-build" holds the APKs, apk-info.txt and build-info.json. It is not a job output:
-# the KEY_ALIAS secret is "embermine", and GitHub drops outputs that contain a secret value.
+# Artifact "embermine-build" holds the APKs, apk-info.txt and build-info.json. The key alias is read from
+# the keystore, not from a secret: a secret equal to a word used in paths and names gets masked everywhere.
 
 on:
   workflow_call:
@@ -25,8 +25,6 @@ on:
       KEYSTORE_BASE64:
         required: false
       KEYSTORE_PASSWORD:
-        required: false
-      KEY_ALIAS:
         required: false
       KEY_PASSWORD:
         required: false
@@ -178,7 +176,6 @@ jobs:
           RELEASE_INPUT: ${{ inputs.release }}
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           set -euo pipefail

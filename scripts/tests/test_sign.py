@@ -56,7 +56,6 @@ class SignTests(TempDirTestCase):
         return {
             "KEYSTORE_BASE64": OWNER_KEYSTORE,
             "KEYSTORE_PASSWORD": OWNER_PASSWORD,
-            "KEY_ALIAS": "owner-alias",
             "KEY_PASSWORD": OWNER_KEY_PASSWORD,
         }
 
@@ -83,7 +82,7 @@ class SignTests(TempDirTestCase):
         self.assertEqual(proc.stdout.strip(), "owner")
 
     def test_decide_partial_secrets_fail(self) -> None:
-        for missing in ("KEYSTORE_PASSWORD", "KEY_ALIAS", "KEY_PASSWORD"):
+        for missing in ("KEYSTORE_PASSWORD", "KEY_PASSWORD"):
             with self.subTest(missing=missing):
                 env = self.owner_env()
                 del env[missing]
@@ -113,9 +112,30 @@ class SignTests(TempDirTestCase):
         proc = self.sign(**self.owner_env())
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("owner key", proc.stdout)
-        self.assertNotIn("keytool", self.logged())
+        self.assertNotIn("keytool -genkeypair", self.logged())
         self.assertIn("--ks-key-alias owner-alias", self.logged())
+        self.assertIn("-storepass:env EMBERMINE_KS_PASS", self.logged())
         self.assertEqual(list(self.runner_temp.iterdir()), [], "decoded keystore must be removed")
+
+    def test_alias_comes_from_the_keystore_without_a_key_alias_variable(self) -> None:
+        proc = self.sign(STUB_KEY_ENTRIES="embermine", **self.owner_env())
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("key alias: embermine", proc.stdout)
+        self.assertIn("--ks-key-alias embermine", self.logged())
+
+    def test_key_alias_variable_overrides_the_keystore(self) -> None:
+        proc = self.sign(KEY_ALIAS="explicit", **self.owner_env())
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("--ks-key-alias explicit", self.logged())
+        self.assertNotIn("keytool -list", self.logged())
+
+    def test_keystore_without_exactly_one_private_key_fails(self) -> None:
+        for entries in ("", "one two"):
+            with self.subTest(entries=entries):
+                proc = self.sign(STUB_KEY_ENTRIES=entries, **self.owner_env())
+                self.assertNotEqual(proc.returncode, 0)
+                self.assertIn("exactly one private key entry", proc.stderr)
+                self.assertNotIn("apksigner sign", self.logged())
 
     def test_secret_values_never_reach_output_or_arguments(self) -> None:
         proc = self.sign(**self.owner_env())

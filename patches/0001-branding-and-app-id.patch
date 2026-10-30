@@ -1,0 +1,153 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: IvyCZE <me@ivy.yt>
+Date: Fri, 30 Oct 2026 23:02:46 +0000
+Subject: [PATCH] Embermine: 0001-branding-and-app-id
+
+Release applicationId yt.ivy.embermine, no sharedUserId, shortcuts target the new package, app name strings say Embermine, app icon picker hidden.
+
+diff --git a/mobile/android/fenix/app/build.gradle b/mobile/android/fenix/app/build.gradle
+index 4d8cdf341a237422f8311e6b1c42842007eba42c..e81e7e66717484dfa32db9422e7c5d6da72d282f 100644
+--- a/mobile/android/fenix/app/build.gradle
++++ b/mobile/android/fenix/app/build.gradle
+@@ -46,7 +46,7 @@ android {
+             arg("room.schemaLocation", "$projectDir/schemas".toString())
+         }
+ 
+-        applicationId "org.mozilla"
++        applicationId "yt.ivy.embermine"
+         minSdk config.minSdkVersion
+         targetSdk config.targetSdkVersion
+         versionCode 1
+@@ -141,18 +141,9 @@ android {
+         }
+         release releaseTemplate >> {
+             buildConfigField "boolean", "USE_RELEASE_VERSIONING", "true"
+-            applicationIdSuffix ".firefox"
+             def deepLinkSchemeValue = "fenix"
+             buildConfigField "String", "DEEP_LINK_SCHEME", "\"$deepLinkSchemeValue\""
+             manifestPlaceholders.putAll([
+-                    // This release type is meant to replace Firefox (Release channel) and therefore needs to inherit
+-                    // its sharedUserId for all eternity. See:
+-                    // https://searchfox.org/mozilla-esr68/search?q=moz_android_shared_id&case=false&regexp=false&path=
+-                    // Shipping an app update without sharedUserId can have
+-                    // fatal consequences. For example see:
+-                    //  - https://issuetracker.google.com/issues/36924841
+-                    //  - https://issuetracker.google.com/issues/36905922
+-                    "sharedUserId": "org.mozilla.firefox.sharedID",
+                     "deepLinkScheme": deepLinkSchemeValue,
+             ])
+         }
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt
+index 6c864fd870764fc5c04a2831f66107f691f8aca2..06a66bdfdeb9b27a9b7744f8a80b40573b85aff4 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt
+@@ -125,7 +125,8 @@ private fun WallpaperGroupHeading(
+     // or invest in a method of localizing the remote strings themselves.
+     if (collection.name == Wallpaper.CLASSIC_FIREFOX_COLLECTION) {
+         Text(
+-            text = stringResource(R.string.wallpaper_classic_title, stringResource(R.string.firefox)),
++            // Mozilla's wallpaper collection keeps its name; R.string.firefox now resolves to the app name.
++            text = stringResource(R.string.wallpaper_classic_title, "Firefox"),
+             color = MaterialTheme.colorScheme.onSurface,
+             style = FirefoxTheme.typography.subtitle2,
+         )
+diff --git a/mobile/android/fenix/app/src/main/res/values/static_strings.xml b/mobile/android/fenix/app/src/main/res/values/static_strings.xml
+index 876460272967b07c441b70c471cebf6a613e9149..8fc4243ace6a2dbdb4a16e596b80e1953c2e8513 100644
+--- a/mobile/android/fenix/app/src/main/res/values/static_strings.xml
++++ b/mobile/android/fenix/app/src/main/res/values/static_strings.xml
+@@ -4,8 +4,8 @@
+    - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+ <resources xmlns:tools="http://schemas.android.com/tools">
+     <!-- Name of the application -->
+-    <string name="app_name" translatable="false">Firefox Fenix</string>
+-    <string name="firefox" translatable="false">Firefox</string>
++    <string name="app_name" translatable="false">Embermine</string>
++    <string name="firefox" translatable="false">Embermine</string>
+ 
+     <!-- Preference for developers -->
+     <string name="preference_leakcanary" translatable="false">LeakCanary</string>
+@@ -446,7 +446,7 @@
+     <string name="customize_toggle_weather" translatable="false">Weather</string>
+ 
+     <!--  Firefox brand name  -->
+-    <string name="app_name_firefox" tools:ignore="BrandUsage">Firefox</string>
++    <string name="app_name_firefox" tools:ignore="BrandUsage">Embermine</string>
+ 
+     <!--  Proper name for the Wrexham wallpaper section title. As it is a brand name we do not want it translated.-->
+     <string name="wallpaper_wrexham_title" translatable="false">Wrexham A.F.C.</string>
+diff --git a/mobile/android/fenix/app/src/main/res/xml/customization_preferences.xml b/mobile/android/fenix/app/src/main/res/xml/customization_preferences.xml
+index 87758782a9d52bad18d758daa7ad5ab9b6b2fb04..161fe29bf39bcd6a99759f5ac96e5fc556f19ed3 100644
+--- a/mobile/android/fenix/app/src/main/res/xml/customization_preferences.xml
++++ b/mobile/android/fenix/app/src/main/res/xml/customization_preferences.xml
+@@ -10,7 +10,8 @@
+         android:title="@string/preferences_app_icon"
+         android:key="@string/pref_key_customization_category_app_icon"
+         app:allowDividerBelow="false"
+-        app:iconSpaceReserved="false">
++        app:iconSpaceReserved="false"
++        app:isPreferenceVisible="false">
+         <org.mozilla.fenix.iconpicker.ui.AppIconPreference
+             android:key="@string/pref_key_app_icon" />
+     </androidx.preference.PreferenceCategory>
+diff --git a/mobile/android/fenix/app/src/release/AndroidManifest.xml b/mobile/android/fenix/app/src/release/AndroidManifest.xml
+index bd5999c8d4d98200196d48202e1b0b7184714884..01410e9b0d915a2a3c4d1ec12d3151719bcb62ec 100644
+--- a/mobile/android/fenix/app/src/release/AndroidManifest.xml
++++ b/mobile/android/fenix/app/src/release/AndroidManifest.xml
+@@ -3,13 +3,6 @@
+    - License, v. 2.0. If a copy of the MPL was not distributed with this
+    - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+ 
+-<!--
+-  sharedUserId: This release type is meant to replace Firefox (Release channel) and therefore needs to inherit
+-                its sharedUserId for all eternity. Shipping an app update without sharedUserId can have
+-                fatal consequences. For example see:
+-                - https://issuetracker.google.com/issues/36924841
+-                - https://issuetracker.google.com/issues/36905922
+--->
+-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+-    android:sharedUserId="${sharedUserId}">
++<!-- Embermine is a separate package and must not share a UID with Firefox. -->
++<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+ </manifest>
+diff --git a/mobile/android/fenix/app/src/release/res/values/static_strings.xml b/mobile/android/fenix/app/src/release/res/values/static_strings.xml
+index c13e4d45252dee3b08c2cd552d8ffb2a49f32255..7884d63d0c135c6ab2794863547014afe202ca3b 100644
+--- a/mobile/android/fenix/app/src/release/res/values/static_strings.xml
++++ b/mobile/android/fenix/app/src/release/res/values/static_strings.xml
+@@ -4,5 +4,5 @@
+    - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+ <resources>
+     <!-- Name of the application -->
+-    <string name="app_name" translatable="false">Firefox</string>
++    <string name="app_name" translatable="false">Embermine</string>
+ </resources>
+diff --git a/mobile/android/fenix/app/src/release/res/xml/shortcuts.xml b/mobile/android/fenix/app/src/release/res/xml/shortcuts.xml
+index 31d6b91379cbfe57cad0a80a849964a02052abe3..8d3caa4a046d636297735804f3033d029b89c081 100644
+--- a/mobile/android/fenix/app/src/release/res/xml/shortcuts.xml
++++ b/mobile/android/fenix/app/src/release/res/xml/shortcuts.xml
+@@ -11,7 +11,7 @@
+         android:shortcutShortLabel="@string/home_screen_shortcut_passwords">
+         <intent
+             android:action="org.mozilla.fenix.OPEN_PASSWORD_MANAGER"
+-            android:targetPackage="org.mozilla.firefox"
++            android:targetPackage="yt.ivy.embermine"
+             android:targetClass="org.mozilla.fenix.IntentReceiverActivity" />
+     </shortcut>
+     <shortcut
+@@ -21,7 +21,7 @@
+         android:shortcutShortLabel="@string/home_screen_shortcut_open_new_tab_2">
+         <intent
+             android:action="org.mozilla.fenix.OPEN_TAB"
+-            android:targetPackage="org.mozilla.firefox"
++            android:targetPackage="yt.ivy.embermine"
+             android:targetClass="org.mozilla.fenix.IntentReceiverActivity" />
+     </shortcut>
+     <shortcut
+@@ -31,7 +31,7 @@
+         android:shortcutShortLabel="@string/home_screen_shortcut_open_new_private_tab_2">
+         <intent
+             android:action="org.mozilla.fenix.OPEN_PRIVATE_TAB"
+-            android:targetPackage="org.mozilla.firefox"
++            android:targetPackage="yt.ivy.embermine"
+             android:targetClass="org.mozilla.fenix.IntentReceiverActivity" />
+     </shortcut>
+ </shortcuts>

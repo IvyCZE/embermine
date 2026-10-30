@@ -47,6 +47,10 @@ class TabCardTests(unittest.TestCase):
         plural = dump(node(desc="2 tab groups open. Tap to switch tabs.", bounds="[0,0][200,100]"))
         self.assertIsNotNone(uidump.find_first(plural, flows_tabs.BANNER_GROUPS))
 
+    def test_group_sheet_handle_selector(self) -> None:
+        sheet = dump(node(desc="View tab group, collapse drag handle", bounds="[477,1196][603,1322]"))
+        self.assertIsNotNone(uidump.find_first(sheet, flows_tabs.SHEET_HANDLE))
+
     def test_group_card_and_selection_title_selectors(self) -> None:
         self.assertIsNotNone(uidump.find_first(dump(node(text="Group 1", bounds="[0,0][200,100]")), flows_tabs.GROUP_CARD))
         row = dump(node(desc="Add to Group 1 tab group, 2 tabs, color Yellow", bounds="[0,0][200,100]"))

@@ -30,7 +30,7 @@ SAVE_BUTTON = Selector(label=r"Save")
 GROUP_CARD = Selector(label=r"(Add to )?Group \d+.*")
 GROUP_MORE = Selector(desc=r"More options")
 GROUP_MENU_UNGROUP = Selector(label=r"Ungroup")
-SHEET_ADD_TAB = Selector(desc=r"Add tab")
+SHEET_HANDLE = Selector(desc=r"View tab group, collapse drag handle")
 LOCK_BANNER_DISMISS = Selector(label=r"No thanks")
 ONBOARDING_DISMISS = Selector(desc=r"Dismiss tab group onboarding")
 SYNCED_MENU_ACCOUNT = Selector(label=r"Account settings")
@@ -192,7 +192,7 @@ def tab_tray(s: Session) -> None:
         ensure_tray(s, BANNER_GROUPS, "tab groups")
         require_group(s, group_failure)
         s.dev.tap(GROUP_CARD, timeout=8, settle=2.0)
-        if s.dev.wait_for(SHEET_ADD_TAB, timeout=8) is None:
+        if s.dev.wait_for(SHEET_HANDLE, timeout=8) is None:
             raise StepError("the tab group sheet did not open")
         shot.take(settle=0.5)
         s.dev.back()

@@ -100,10 +100,10 @@ index fbde05393f668a79225f728a1cbd5752a6bd8ab6..c93ef7318af542a76e5ffc4ef5ffbdae
  
      fun verifyCurrentTimestamp() {
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/about/AboutFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/about/AboutFragment.kt
-index f650d7937d4705ab2db92589e143cfc75301affb..1ffc02d2cb009b65ea96cf068875a3bfe6d6103d 100644
+index f650d7937d4705ab2db92589e143cfc75301affb..6854f568ee9963ab9302d424fd528955a817f1e3 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/about/AboutFragment.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/about/AboutFragment.kt
-@@ -5,33 +5,30 @@
+@@ -5,33 +5,29 @@
  package org.mozilla.fenix.settings.about
  
  import android.content.Context
@@ -117,7 +117,6 @@ index f650d7937d4705ab2db92589e143cfc75301affb..1ffc02d2cb009b65ea96cf068875a3bf
  import android.widget.Toast
  import androidx.annotation.VisibleForTesting
 -import androidx.core.content.pm.PackageInfoCompat
-+import androidx.core.text.HtmlCompat
  import androidx.fragment.app.Fragment
  import androidx.lifecycle.Lifecycle
  import androidx.navigation.fragment.findNavController
@@ -140,7 +139,7 @@ index f650d7937d4705ab2db92589e143cfc75301affb..1ffc02d2cb009b65ea96cf068875a3bf
  import org.mozilla.fenix.settings.about.AboutItemType.SUPPORT
  import org.mozilla.fenix.settings.about.AboutItemType.WHATS_NEW
  import org.mozilla.fenix.utils.Settings
-@@ -149,65 +146,31 @@ class AboutFragment(private val toastHandler: ToastHandler = DefaultToastHandler
+@@ -149,65 +145,28 @@ class AboutFragment(private val toastHandler: ToastHandler = DefaultToastHandler
      }
  
      private fun populateAboutHeader() {
@@ -191,10 +190,7 @@ index f650d7937d4705ab2db92589e143cfc75301affb..1ffc02d2cb009b65ea96cf068875a3bf
 -        binding.aboutText.text = aboutText
 -        binding.aboutContent.text = content
 -        binding.buildDate.text = buildDate
-+        binding.aboutContent.text = HtmlCompat.fromHtml(
-+            getString(R.string.embermine_about_main_line),
-+            HtmlCompat.FROM_HTML_MODE_COMPACT,
-+        )
++        binding.aboutContent.text = getText(R.string.embermine_about_main_line)
 +        binding.aboutContent.movementMethod = LinkMovementMethod.getInstance()
 +        binding.aboutText.text = versionLines.joinToString("\n")
 +        binding.buildDate.text = BuildConfig.BUILD_DATE
@@ -222,7 +218,7 @@ index f650d7937d4705ab2db92589e143cfc75301affb..1ffc02d2cb009b65ea96cf068875a3bf
                  getString(R.string.about_support),
              ),
              AboutPageItem(
-@@ -215,19 +178,9 @@ class AboutFragment(private val toastHandler: ToastHandler = DefaultToastHandler
+@@ -215,19 +174,9 @@ class AboutFragment(private val toastHandler: ToastHandler = DefaultToastHandler
                  getString(R.string.about_crashes),
              ),
              AboutPageItem(
@@ -243,7 +239,7 @@ index f650d7937d4705ab2db92589e143cfc75301affb..1ffc02d2cb009b65ea96cf068875a3bf
              AboutPageItem(
                  AboutItem.ExternalLink(LICENSING_INFO, ABOUT_LICENSE_URL),
                  getString(R.string.about_licensing_information),
-@@ -262,8 +215,7 @@ class AboutFragment(private val toastHandler: ToastHandler = DefaultToastHandler
+@@ -262,8 +211,7 @@ class AboutFragment(private val toastHandler: ToastHandler = DefaultToastHandler
                      }
                      SUPPORT,
                      PRIVACY_NOTICE,
@@ -253,7 +249,7 @@ index f650d7937d4705ab2db92589e143cfc75301affb..1ffc02d2cb009b65ea96cf068875a3bf
                  }
  
                  openLinkInNormalTab(item.url)
-@@ -280,6 +232,9 @@ class AboutFragment(private val toastHandler: ToastHandler = DefaultToastHandler
+@@ -280,6 +228,9 @@ class AboutFragment(private val toastHandler: ToastHandler = DefaultToastHandler
  
      companion object {
          private const val ABOUT_LICENSE_URL = "about:license"

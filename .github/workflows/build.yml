@@ -28,6 +28,8 @@ on:
         required: false
       KEY_PASSWORD:
         required: false
+      SAFE_BROWSING_API_KEY:
+        required: false
     outputs:
       version:
         description: Embermine version name of the build
@@ -141,6 +143,14 @@ jobs:
         env:
           BUILDID: ${{ steps.res.outputs.buildid }}
         run: bash scripts/configure-tree.sh fx "$BUILDID"
+
+      - name: Write Safe Browsing API key file
+        env:
+          SAFE_BROWSING_API_KEY: ${{ secrets.SAFE_BROWSING_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -n "$SAFE_BROWSING_API_KEY" ]; then echo "::add-mask::$SAFE_BROWSING_API_KEY"; fi
+          (umask 077 && printf '%s' "$SAFE_BROWSING_API_KEY" >fx/mobile/android/fenix/.safe_browsing_api_key)
 
       - name: Gradle assembleRelease
         working-directory: fx/mobile/android/fenix

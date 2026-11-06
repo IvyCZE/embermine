@@ -10,12 +10,12 @@ Embermine is a modified build of Firefox for Android, made by Ivy (https://ivy.y
 ## What Embermine does not send by default
 
 - Telemetry is off. Usage and diagnostic data is not sent to Mozilla.
-- Crash reports are not uploaded automatically. Crashes stay on your device, listed under About > Crashes.
+- Crash reports cannot be sent from this build. Crashes stay on your device, listed under About > Crashes.
 - Mozilla's experiments (Nimbus) are not downloaded.
 - Sponsored shortcuts, sponsored stories and Pocket stories are off.
 - Safe Browsing is off unless the build includes its own Google Safe Browsing API key.
 
-You can turn telemetry and crash reporting on or off in Settings > Data collection. You can turn sponsored content on or off in Settings > Homepage.
+You can turn telemetry on or off in Settings > Data collection. A change to telemetry takes effect the next time Embermine starts. You can turn sponsored shortcuts, sponsored stories and Pocket stories on or off in Settings > Homepage.
 
 ## Mozilla services
 

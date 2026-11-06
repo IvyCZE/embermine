@@ -25,6 +25,7 @@ class FlowWiringTests(unittest.TestCase):
             "bottom-navigation-bar", "14-main-menu-loading", "secret-settings-before", "secret-settings-unlocked",
             "secret-settings-after-restart", "about", "about-whatsnew", "about-support", "about-privacy",
             "about-licenses", "about-crashes", "about-before-logo-taps", "about-after-logo-taps",
+            "settings-data-collection", "settings-homepage-sponsored",
         }
         self.assertEqual(wanted - {stem for stem, _ in stems}, set())
         self.assertIn(("12-tab-tray-header", True), stems)
@@ -42,11 +43,19 @@ class FlowWiringTests(unittest.TestCase):
                 self.assertNotIn((stem, private), seen, stem)
                 seen.add((stem, private))
 
-    def test_legacy_flow_list_has_homepage_customize_and_wallpaper_picker(self) -> None:
+    def test_legacy_flow_list_has_homepage_customize_wallpaper_picker_and_the_opt_in(self) -> None:
         stems = {stem for f in run.flow_list("legacy") for stem, _, _ in f.expected}
-        self.assertEqual(stems, {"04-homepage", "customize", "settings-homepage", "wallpaper-picker"})
+        self.assertEqual(
+            stems,
+            {"04-homepage", "customize", "settings-homepage", "settings-homepage-sponsored", "wallpaper-picker", "settings-data-collection-opt-in"},
+        )
         for flow in run.flow_list("legacy"):
             self.assertTrue(callable(flow.run), flow.name)
+
+    def test_data_collection_opt_in_runs_only_in_the_legacy_pass_without_packet_capture(self) -> None:
+        main = {stem for f in run.flow_list() for stem, _, _ in f.expected}
+        self.assertNotIn("settings-data-collection-opt-in", main)
+        self.assertEqual(run.legacy_flow_list()[-1].name, "data collection opt-in")
 
     def test_run_helpers_exist(self) -> None:
         for module, name in (

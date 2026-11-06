@@ -1,0 +1,463 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: IvyCZE <me@ivy.yt>
+Date: Fri, 6 Nov 2026 19:30:47 +0000
+Subject: [PATCH] Embermine: 0004-privacy-defaults
+
+Ship with telemetry and crash reporting off: BuildConfig TELEMETRY and CRASH_REPORTING default to false, the usage, daily usage ping, experimentation and sponsored/Pocket defaults are off, and crash reports are kept only in the local crash list (Socorro and Sentry are not added without CRASH_REPORTING). The Data collection page hides the crash report choice when crash reporting is not built in. Nimbus experiment fetches run only after the user opts in to experimentation. The Glean switch still follows the stored choice at the next launch.
+
+Safe Browsing is disabled unless the optional SAFE_BROWSING_API_KEY is provided at build time (read from the git-ignored .safe_browsing_api_key file into BuildConfig). With a key, the Google legacy, v4 and v5 GeckoView providers use it; without one, no provider is configured and the Safe Browsing policy is NONE.
+
+The onboarding Terms of Use line says Embermine does not send diagnostic or interaction data to Mozilla unless turned on, in every locale.
+
+Co-authored-by: factory-droid[bot] <138933559+factory-droid[bot]@users.noreply.github.com>
+
+diff --git a/mobile/android/.gitignore b/mobile/android/.gitignore
+index 6b0618ff1073da2e865b2ea60cb701cceceee501..4d9ca982437decc22bf04e7ab428d29fb98d6176 100644
+--- a/mobile/android/.gitignore
++++ b/mobile/android/.gitignore
+@@ -69,6 +69,7 @@ test_artifacts/
+ .mls_token
+ .nimbus
+ .wallpaper_url
++.safe_browsing_api_key
+ fenix/app/src/**/res/values/fenix_firebase_push_credentials.xml
+ 
+ # Python Byte-compiled / optimized / DLL files
+diff --git a/mobile/android/fenix/app/build.gradle b/mobile/android/fenix/app/build.gradle
+index e81e7e66717484dfa32db9422e7c5d6da72d282f..0066fe7e17e1bce3812f19a53d31c7b9f367d615 100644
+--- a/mobile/android/fenix/app/build.gradle
++++ b/mobile/android/fenix/app/build.gradle
+@@ -337,8 +337,8 @@ androidComponents {
+ // -------------------------------------------------------------------------------------------------
+ 
+ android.defaultConfig.with {
+-    buildConfigField 'boolean', 'CRASH_REPORTING', 'true'
+-    buildConfigField 'boolean', 'TELEMETRY', 'true'
++    buildConfigField 'boolean', 'CRASH_REPORTING', 'false'
++    buildConfigField 'boolean', 'TELEMETRY', 'false'
+ 
+     // Reading the sentry token from a local file (if it exists). In a release task on taskcluster it will be available.
+     buildConfigField 'String', 'SENTRY_TOKEN', 'null'
+@@ -402,6 +402,13 @@ android.defaultConfig.with {
+     } catch (FileNotFoundException ignored) {
+         buildConfigField 'String', 'WALLPAPER_URL', '""'
+     }
++
++    try {
++        def key = new File("${rootDir}/.safe_browsing_api_key").text.trim()
++        buildConfigField 'String', 'SAFE_BROWSING_API_KEY', '"' + key + '"'
++    } catch (FileNotFoundException ignored) {
++        buildConfigField 'String', 'SAFE_BROWSING_API_KEY', '""'
++    }
+     buildConfigField 'String', 'SECRET_SETTINGS_OVERRIDES', '""'
+ }
+ 
+diff --git a/mobile/android/fenix/app/src/androidTest/java/org/mozilla/fenix/ui/robots/HomeScreenRobot.kt b/mobile/android/fenix/app/src/androidTest/java/org/mozilla/fenix/ui/robots/HomeScreenRobot.kt
+index bc6c3b88da79dc7a0676eb14e3fe6a704340befb..aec11bd810bf2a76051753346293274396edb721 100644
+--- a/mobile/android/fenix/app/src/androidTest/java/org/mozilla/fenix/ui/robots/HomeScreenRobot.kt
++++ b/mobile/android/fenix/app/src/androidTest/java/org/mozilla/fenix/ui/robots/HomeScreenRobot.kt
+@@ -571,7 +571,7 @@ class HomeScreenRobot(private val composeTestRule: ComposeTestRule) {
+         composeTestRule
+             .onNodeWithContentDescription(
+                 getStringResource(
+-                    R.string.nova_onboarding_tou_body_line_3,
++                    R.string.embermine_onboarding_tou_body_line_3,
+                     argument = getStringResource(R.string.nova_onboarding_tou_body_line_3_link_text),
+                 ) + " " + getStringResource(composeBaseR.string.mozac_compose_base_link_text_links_available),
+                 useUnmergedTree = true,
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/FenixApplication.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/FenixApplication.kt
+index 1b30426f6452e43a4ccdd9395877706674745b3b..cf7aea1ef40f145ebe0758099acf4d35e320f8fb 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/FenixApplication.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/FenixApplication.kt
+@@ -663,7 +663,9 @@ open class FenixApplication : Application(), Provider, ThemeProvider {
+         runOnVisualCompleteness(queue) {
+             components.nimbus.geckoPrefHandler.start()
+             applicationScope.launch(ioDispatcher) {
+-                components.nimbus.sdk.maybeFetchExperiments(settings = components.settings)
++                if (components.settings.isExperimentationEnabled) {
++                    components.nimbus.sdk.maybeFetchExperiments(settings = components.settings)
++                }
+                 components.nimbus.geckoPrefHandler.getPreferenceStateFromGecko().await()
+             }
+         }
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Analytics.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Analytics.kt
+index 6774a4eb6ce418a839cbde29581abc2df655a8fc..0aa99dc472acadb0014bdb79428e6e918c6d61c1 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Analytics.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Analytics.kt
+@@ -89,17 +89,19 @@ class Analytics(
+             services.add(sentryService)
+         }
+ 
+-        // The name "Fenix" here matches the product name on Socorro and is unrelated to the actual app name:
+-        // https://bugzilla.mozilla.org/show_bug.cgi?id=1523284
+-        val socorroService =
+-            MozillaSocorroService(
+-                context,
+-                appName = "Fenix",
+-                vendor = MOZ_APP_VENDOR,
+-                releaseChannel = MOZ_UPDATE_CHANNEL,
+-                distributionId = distributionId,
+-            )
+-        services.add(socorroService)
++        if (BuildConfig.CRASH_REPORTING) {
++            // The name "Fenix" here matches the product name on Socorro and is unrelated to the actual app name:
++            // https://bugzilla.mozilla.org/show_bug.cgi?id=1523284
++            val socorroService =
++                MozillaSocorroService(
++                    context,
++                    appName = "Fenix",
++                    vendor = MOZ_APP_VENDOR,
++                    releaseChannel = MOZ_UPDATE_CHANNEL,
++                    distributionId = distributionId,
++                )
++            services.add(socorroService)
++        }
+ 
+         val intent =
+             Intent(context, HomeActivity::class.java).apply {
+@@ -197,7 +199,7 @@ class Analytics(
+     }
+ }
+ 
+-private fun isSentryEnabled() = !BuildConfig.SENTRY_TOKEN.isNullOrEmpty()
++private fun isSentryEnabled() = BuildConfig.CRASH_REPORTING && !BuildConfig.SENTRY_TOKEN.isNullOrEmpty()
+ 
+ private fun getSentryProjectUrl(): String? {
+     val baseUrl = "https://sentry.io/organizations/mozilla/issues"
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Core.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Core.kt
+index b1ebab7da8021208088b07e84c7957c0173386ad..6122d45cf9b531c158ab7e7ba420ee72a8e2b689 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Core.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Core.kt
+@@ -122,6 +122,7 @@ import org.mozilla.fenix.components.search.ApplicationSearchMiddleware
+ import org.mozilla.fenix.components.search.SearchMigration
+ import org.mozilla.fenix.components.search.SearchWidgetMiddleware
+ import org.mozilla.fenix.downloads.DownloadService
++import org.mozilla.fenix.embermine.safeBrowsingPolicyFor
+ import org.mozilla.fenix.ext.components
+ import org.mozilla.fenix.ext.isLargeWindow
+ import org.mozilla.fenix.gecko.GeckoProvider
+@@ -265,6 +266,7 @@ class Core(
+             )
+             .also {
+                 WebCompatFeature.install(it)
++                it.settings.safeBrowsingPolicy = safeBrowsingPolicyFor(BuildConfig.SAFE_BROWSING_API_KEY)
+             }
+     }
+ 
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/SafeBrowsingConfig.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/SafeBrowsingConfig.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..c0ca5de068a473a176576096764ff8f08ff6985c
+--- /dev/null
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/SafeBrowsingConfig.kt
+@@ -0,0 +1,40 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine
++
++import mozilla.components.concept.engine.EngineSession.SafeBrowsingPolicy
++import org.mozilla.geckoview.ContentBlocking
++import org.mozilla.geckoview.ContentBlocking.SafeBrowsingProvider
++
++private const val GOOGLE_API_KEY_PLACEHOLDER = "%GOOGLE_SAFEBROWSING_API_KEY%"
++
++/**
++ * Returns the Safe Browsing policy for [apiKey]: the recommended categories when a key is set, none otherwise.
++ */
++internal fun safeBrowsingPolicyFor(apiKey: String): Array<SafeBrowsingPolicy> =
++    if (apiKey.isEmpty()) arrayOf(SafeBrowsingPolicy.NONE) else arrayOf(SafeBrowsingPolicy.RECOMMENDED)
++
++/**
++ * Returns the GeckoView Google Safe Browsing providers with [apiKey] in their URLs. Without a key no provider is
++ * configured, so GeckoView never uses the key Mozilla embeds in its build.
++ */
++internal fun safeBrowsingProvidersFor(apiKey: String): Array<SafeBrowsingProvider> =
++    if (apiKey.isEmpty()) {
++        emptyArray()
++    } else {
++        arrayOf(
++            ContentBlocking.GOOGLE_LEGACY_SAFE_BROWSING_PROVIDER,
++            ContentBlocking.GOOGLE_SAFE_BROWSING_PROVIDER,
++            ContentBlocking.GOOGLE_SAFE_BROWSING_V5_PROVIDER,
++        ).map { it.withApiKey(apiKey) }.toTypedArray()
++    }
++
++private fun SafeBrowsingProvider.withApiKey(apiKey: String): SafeBrowsingProvider {
++    val builder = SafeBrowsingProvider.from(this)
++    getUpdateUrl()?.let { builder.updateUrl(it.replace(GOOGLE_API_KEY_PLACEHOLDER, apiKey)) }
++    getGetHashUrl()?.let { builder.getHashUrl(it.replace(GOOGLE_API_KEY_PLACEHOLDER, apiKey)) }
++    getDataSharingUrl()?.let { builder.dataSharingUrl(it.replace(GOOGLE_API_KEY_PLACEHOLDER, apiKey)) }
++    return builder.build()
++}
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/gecko/GeckoProvider.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/gecko/GeckoProvider.kt
+index c1ccddf9a01118f5f1b4539fd85f1521908e55aa..b87652690dc3b45f3a917fe55679ae6db3ddff36 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/gecko/GeckoProvider.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/gecko/GeckoProvider.kt
+@@ -18,8 +18,11 @@ import mozilla.components.lib.crash.handler.CrashHandlerService
+ import mozilla.components.lib.crash.store.CrashAction
+ import mozilla.components.service.sync.autofill.GeckoCreditCardsAddressesStorageDelegate
+ import mozilla.components.service.sync.logins.GeckoLoginStorageDelegate
++import org.mozilla.fenix.BuildConfig
+ import org.mozilla.fenix.Config
+ import org.mozilla.fenix.components.appstate.AppAction
++import org.mozilla.fenix.embermine.safeBrowsingPolicyFor
++import org.mozilla.fenix.embermine.safeBrowsingProvidersFor
+ import org.mozilla.fenix.ext.components
+ import org.mozilla.fenix.nimbus.FxNimbus
+ import org.mozilla.geckoview.GeckoRuntime
+@@ -109,6 +112,7 @@ object GeckoProvider {
+                 .experimentDelegate(NimbusExperimentDelegate())
+                 .contentBlocking(
+                     policy.toContentBlockingSetting(
++                        safeBrowsingPolicy = safeBrowsingPolicyFor(BuildConfig.SAFE_BROWSING_API_KEY),
+                         queryParameterStripping = false,
+                         queryParameterStrippingPrivateBrowsing = false,
+                         queryParameterStrippingAllowList = "",
+@@ -124,7 +128,7 @@ object GeckoProvider {
+                         safeBrowsingRealTimeSimulationCacheTTLSec = 300,
+                         safeBrowsingRealTimeSimulationNegativeCacheEnabled = false,
+                         safeBrowsingRealTimeSimulationNegativeCacheTTLSec = 300,
+-                    )
++                    ).setSafeBrowsingProviders(*safeBrowsingProvidersFor(BuildConfig.SAFE_BROWSING_API_KEY))
+                 )
+                 .consoleOutput(context.components.settings.enableGeckoLogs)
+                 .debugLogging(Config.channel.isDebug || context.components.settings.enableGeckoLogs)
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/messaging/MessageNotificationWorker.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/messaging/MessageNotificationWorker.kt
+index da844a25147f713c8c3358df64515604667828b4..f82d04dc64687c7f3fd0eb834b0bfdfaf83c0279 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/messaging/MessageNotificationWorker.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/messaging/MessageNotificationWorker.kt
+@@ -80,11 +80,13 @@ class MessageNotificationWorker(
+         val nimbus = context.components.nimbus
+ 
+         // Refresh messages from Nimbus to ensure getNextMessage reflects the latest available content.
+-        tryFetchAndApplyNimbusExperiments(nimbus.sdk).apply {
+-            if (this) {
+-                LOGGER.info("Successfully fetched and applied Nimbus experiments.")
+-            } else {
+-                LOGGER.info("Failed to fetch and apply Nimbus experiments.")
++        if (context.components.settings.isExperimentationEnabled) {
++            tryFetchAndApplyNimbusExperiments(nimbus.sdk).apply {
++                if (this) {
++                    LOGGER.info("Successfully fetched and applied Nimbus experiments.")
++                } else {
++                    LOGGER.info("Failed to fetch and apply Nimbus experiments.")
++                }
+             }
+         }
+ 
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/view/OnboardingScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/view/OnboardingScreen.kt
+index 8e36d42a548f2a4ffba0a7cec571d16654368a95..5683e548203b155b7f135385387a35c8950788e0 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/view/OnboardingScreen.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/view/OnboardingScreen.kt
+@@ -719,7 +719,7 @@ private fun touPageUIData() =
+                 lineTwoText = stringResource(id = R.string.nova_onboarding_tou_body_line_2),
+                 lineTwoLinkText = stringResource(id = R.string.nova_onboarding_tou_body_line_2_link_text),
+                 lineTwoLinkUrl = "URL",
+-                lineThreeText = stringResource(id = R.string.nova_onboarding_tou_body_line_3),
++                lineThreeText = stringResource(id = R.string.embermine_onboarding_tou_body_line_3),
+                 lineThreeLinkText = stringResource(id = R.string.nova_onboarding_tou_body_line_3_link_text),
+             ),
+         imageRes = R.drawable.nova_onboarding_tou,
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/view/TermsOfServiceOnboardingPage.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/view/TermsOfServiceOnboardingPage.kt
+index ed369fc7c139cfb3caaf464644ee7e100619f465..36b3d632fcc51183a0bf6ebe94deb2c65bd43c22 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/view/TermsOfServiceOnboardingPage.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/view/TermsOfServiceOnboardingPage.kt
+@@ -274,7 +274,7 @@ private fun OnboardingPagePreview() {
+                             lineTwoText = stringResource(id = R.string.nova_onboarding_tou_body_line_2),
+                             lineTwoLinkText = stringResource(id = R.string.nova_onboarding_tou_body_line_2_link_text),
+                             lineTwoLinkUrl = "URL",
+-                            lineThreeText = stringResource(id = R.string.nova_onboarding_tou_body_line_3),
++                            lineThreeText = stringResource(id = R.string.embermine_onboarding_tou_body_line_3),
+                             lineThreeLinkText = stringResource(id = R.string.nova_onboarding_tou_body_line_3_link_text),
+                         ),
+                     imageRes = R.drawable.nova_onboarding_tou,
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/datachoices/DataChoicesScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/datachoices/DataChoicesScreen.kt
+index a7e5877bdc509ba6b18d96fc55839f5dcfcdb868..bd98cae30777cb6058807849ea2b91715d3482b7 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/datachoices/DataChoicesScreen.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/datachoices/DataChoicesScreen.kt
+@@ -42,6 +42,7 @@ import mozilla.components.compose.base.theme.PreviewThemeProvider
+ import mozilla.components.compose.base.theme.Theme
+ import mozilla.components.lib.crash.store.CrashReportOption
+ import mozilla.components.lib.state.ext.observeAsComposableState
++import org.mozilla.fenix.BuildConfig
+ import org.mozilla.fenix.R
+ import org.mozilla.fenix.compose.list.RadioButtonListItem
+ import org.mozilla.fenix.compose.list.SwitchListItem
+@@ -201,7 +202,9 @@ private fun buildDataChoicesItems(state: DataChoicesState): List<DataChoicesSect
+             add(DataChoicesSectionKey.TECHNICAL_DATA)
+             add(DataChoicesSectionKey.STUDIES)
+             add(DataChoicesSectionKey.USAGE_DATA)
+-            add(DataChoicesSectionKey.CRASH_REPORTS)
++            if (BuildConfig.CRASH_REPORTING) {
++                add(DataChoicesSectionKey.CRASH_REPORTS)
++            }
+             if (state.showMeasurementDataSection) {
+                 add(DataChoicesSectionKey.CAMPAIGN_MEASUREMENT)
+             }
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
+index 00e5b4bb8b9e0b7b4e00dda7a29336a7c6fb0e23..7bb10e4dd834e9284b2ace7e8a7056457ae2f3e0 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
+@@ -200,7 +200,7 @@ class Settings(
+         lazyFeatureFlagBooleanPreference(
+             appContext.getPreferenceKey(R.string.pref_key_pocket_homescreen_recommendations),
+             featureFlag = ContentRecommendationsFeatureHelper.isContentRecommendationsFeatureEnabled(appContext),
+-            defaultValue = { homescreenSections[HomeScreenSection.POCKET] == true },
++            defaultValue = { false },
+         )
+ 
+     /** Indicates what simple toolbar shortcut key is currently selected. */
+@@ -242,7 +242,7 @@ class Settings(
+     val showPocketSponsoredStories by
+         lazyFeatureFlagBooleanPreference(
+             key = appContext.getPreferenceKey(R.string.pref_key_pocket_sponsored_stories),
+-            defaultValue = { homescreenSections[HomeScreenSection.POCKET_SPONSORED_STORIES] == true },
++            defaultValue = { false },
+             featureFlag = ContentRecommendationsFeatureHelper.isPocketSponsoredStoriesFeatureEnabled(appContext),
+         )
+ 
+@@ -725,7 +725,7 @@ class Settings(
+     var isTelemetryEnabled by
+         booleanPreference(
+             appContext.getPreferenceKey(R.string.pref_key_telemetry),
+-            default = true,
++            default = false,
+         )
+ 
+     var isMarketingTelemetryEnabled by
+@@ -2372,7 +2372,7 @@ class Settings(
+     var showContileFeature by
+         booleanPreference(
+             key = appContext.getPreferenceKey(R.string.pref_key_enable_contile),
+-            default = true,
++            default = false,
+         )
+ 
+     /** Blocklist used to filter items from the home screen that have previously been removed. */
+diff --git a/mobile/android/fenix/app/src/main/res/values/embermine_strings.xml b/mobile/android/fenix/app/src/main/res/values/embermine_strings.xml
+index d5b8c756c685048c5d2516d006a2f6b5116e2998..fcce1b96472079f67617c73ab40a0fbe86af461b 100644
+--- a/mobile/android/fenix/app/src/main/res/values/embermine_strings.xml
++++ b/mobile/android/fenix/app/src/main/res/values/embermine_strings.xml
+@@ -7,4 +7,5 @@
+     <string name="embermine_mozilla_product_firefox" translatable="false">Firefox</string>
+     <string name="embermine_about_main_line" translatable="false">Embermine is a modified build of Firefox, made by <a href="https://ivy.yt">https://ivy.yt</a></string>
+     <string name="embermine_android_components_abbreviation" translatable="false">AC</string>
++    <string name="embermine_onboarding_tou_body_line_3" translatable="false">Embermine does not send diagnostic or interaction data to Mozilla unless you turn it on. %1$s</string>
+ </resources>
+diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/SafeBrowsingConfigTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/SafeBrowsingConfigTest.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..85b6c5bc754a7e511cacdce023dc5dab6e17d347
+--- /dev/null
++++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/SafeBrowsingConfigTest.kt
+@@ -0,0 +1,50 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine
++
++import mozilla.components.concept.engine.EngineSession.SafeBrowsingPolicy
++import org.junit.Assert.assertArrayEquals
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertFalse
++import org.junit.Assert.assertTrue
++import org.junit.Test
++
++class SafeBrowsingConfigTest {
++
++    @Test
++    fun `without a key safe browsing policy is none`() {
++        assertArrayEquals(arrayOf(SafeBrowsingPolicy.NONE), safeBrowsingPolicyFor(""))
++    }
++
++    @Test
++    fun `without a key no safe browsing provider is configured`() {
++        assertEquals(0, safeBrowsingProvidersFor("").size)
++    }
++
++    @Test
++    fun `with a key safe browsing policy is recommended`() {
++        assertArrayEquals(arrayOf(SafeBrowsingPolicy.RECOMMENDED), safeBrowsingPolicyFor("test-key"))
++    }
++
++    @Test
++    fun `with a key every google provider update url uses the key and no placeholder remains`() {
++        val providers = safeBrowsingProvidersFor("test-key")
++
++        assertEquals(listOf("google", "google4", "google5"), providers.map { it.name })
++        providers.forEach { provider ->
++            val updateUrl = provider.getUpdateUrl().orEmpty()
++            assertTrue(updateUrl, updateUrl.contains("key=test-key"))
++        }
++        providers.flatMap { listOfNotNull(it.getUpdateUrl(), it.getGetHashUrl(), it.getDataSharingUrl()) }
++            .forEach { url -> assertFalse(url, url.contains("%GOOGLE_SAFEBROWSING_API_KEY%")) }
++    }
++
++    @Test
++    fun `with a key the v5 provider stays enabled`() {
++        val v5Provider = safeBrowsingProvidersFor("test-key").single { it.name == "google5" }
++
++        assertEquals(true, v5Provider.enabled)
++    }
++}
+diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/onboarding/store/DefaultPrivacyPreferencesRepositoryTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/onboarding/store/DefaultPrivacyPreferencesRepositoryTest.kt
+index 2ba6927b9b0ceeb6f2dd3269353979126475ef9b..47667a8fb5f77f8c6929e50bb9d44845733cf777 100644
+--- a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/onboarding/store/DefaultPrivacyPreferencesRepositoryTest.kt
++++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/onboarding/store/DefaultPrivacyPreferencesRepositoryTest.kt
+@@ -71,14 +71,14 @@ class DefaultPrivacyPreferencesRepositoryTest {
+         runTest {
+             val settings = Settings(testContext)
+             val repository = DefaultPrivacyPreferencesRepository(settings, FakeNimbusApi(), createCrashReporter())
+-            assertTrue(settings.isTelemetryEnabled)
+-            assertTrue(repository.getPreference(PreferenceType.UsageData))
+-
+-            settings.isTelemetryEnabled = false
++            assertFalse(settings.isTelemetryEnabled)
+             assertFalse(repository.getPreference(PreferenceType.UsageData))
+ 
+             settings.isTelemetryEnabled = true
+             assertTrue(repository.getPreference(PreferenceType.UsageData))
++
++            settings.isTelemetryEnabled = false
++            assertFalse(repository.getPreference(PreferenceType.UsageData))
+         }
+     }
+ 
+@@ -93,9 +93,9 @@ class DefaultPrivacyPreferencesRepositoryTest {
+                 nimbusSdk = nimbusSdk,
+                 crashReporter = createCrashReporter(listOf(crashTelemetryService)),
+             )
+-        assertTrue(settings.isTelemetryEnabled)
+-        assertTrue(settings.isExperimentationEnabled)
+-        assertTrue(crashTelemetryService.isTelemetryOn)
++        assertFalse(settings.isTelemetryEnabled)
++        assertFalse(settings.isExperimentationEnabled)
++        assertFalse(crashTelemetryService.isTelemetryOn)
+         assertTrue(nimbusSdk.experimentParticipation)
+ 
+         nimbusSdk.isTelemetryIdReset = false
+diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/utils/SettingsTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/utils/SettingsTest.kt
+index a9cb61b462b14a32c85b0321d94a21b83dce6ebb..80a16738d925e4fadc95efa5575f301932fca2d5 100644
+--- a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/utils/SettingsTest.kt
++++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/utils/SettingsTest.kt
+@@ -197,7 +197,18 @@ class SettingsTest {
+     fun isTelemetryEnabled() {
+         // When just created
+         // Then
+-        assertTrue(settings.isTelemetryEnabled)
++        assertFalse(settings.isTelemetryEnabled)
++        assertFalse(settings.isDailyUsagePingEnabled)
++        assertFalse(settings.isExperimentationEnabled)
++    }
++
++    @Test
++    fun sponsoredHomepageContentIsOffByDefault() {
++        // When just created
++        // Then
++        assertFalse(settings.showContileFeature)
++        assertFalse(settings.showPocketRecommendationsFeature)
++        assertFalse(settings.showPocketSponsoredStories)
+     }
+ 
+     @Test

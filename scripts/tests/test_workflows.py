@@ -64,3 +64,15 @@ class CiWorkflowTests(unittest.TestCase):
 
     def test_release_mode_requires_the_owner_key(self) -> None:
         self.assertIn("--require-owner-key", text("build.yml"))
+
+    def test_safe_browsing_key_is_masked_and_written_only_before_gradle(self) -> None:
+        build = text("build.yml")
+        self.assertRegex(build, r"(?m)^      SAFE_BROWSING_API_KEY:\n        required: false$")
+        occurrences = [m.start() for m in re.finditer(r"secrets\.SAFE_BROWSING_API_KEY", build)]
+        self.assertEqual(len(occurrences), 1)
+        step = build[build.index("- name: Write Safe Browsing API key file") : build.index("- name: Gradle assembleRelease")]
+        self.assertIn("::add-mask::", step)
+        self.assertIn("umask 077", step)
+        self.assertIn("fx/mobile/android/fenix/.safe_browsing_api_key", step)
+        self.assertNotRegex(step, r"echo\s+\"?\$SAFE_BROWSING_API_KEY")
+        self.assertLess(occurrences[0], build.index("- name: Gradle assembleRelease"))

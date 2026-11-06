@@ -72,14 +72,27 @@ SECRET_STEMS = [
 
 
 def legacy_flow_list() -> list[Flow]:
-    """API 30: the homepage with its default wallpaper, Customize and the wallpaper picker."""
+    """API 30: the homepage with its default wallpaper, Customize, the wallpaper picker and one data collection opt-in.
+
+    This job has no packet capture, so the opt-in cannot show up in network-hosts.txt of the main walk.
+    """
     f_browse, f_set = flows_browse, flows_settings
     return [
         Flow("homepage", f_browse.homepage, [("04-homepage", "homepage", False)]),
         Flow(
             "settings",
             f_set.legacy_pages,
-            [("customize", "customize screen", False), ("settings-homepage", "homepage settings page", False), ("wallpaper-picker", "wallpaper picker", False)],
+            [
+                ("customize", "customize screen", False),
+                ("settings-homepage", "homepage settings page", False),
+                ("settings-homepage-sponsored", "homepage settings page, Stories and Sponsored stories toggles", False),
+                ("wallpaper-picker", "wallpaper picker", False),
+            ],
+        ),
+        Flow(
+            "data collection opt-in",
+            f_set.data_collection_opt_in,
+            [("settings-data-collection-opt-in", "settings data collection page, after turning on technical and interaction data", False)],
         ),
     ]
 
@@ -120,6 +133,7 @@ def flow_list(variant: str = "light") -> list[Flow]:
                 ("customize", "customize screen", False),
                 ("settings-data-collection", "settings data collection page", False),
                 ("settings-homepage", "homepage settings page", False),
+                ("settings-homepage-sponsored", "homepage settings page, Stories and Sponsored stories toggles", False),
                 ("wallpaper-picker", "wallpaper picker", False),
                 ("about", "about screen", False),
             ],

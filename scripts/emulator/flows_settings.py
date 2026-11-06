@@ -23,6 +23,7 @@ SUBPAGES = (
 SETTINGS_ROW_ROOT = t.SETTINGS_TITLE
 ABOUT_ROW = r"About (Firefox|Embermine)"
 ABOUT_FIRST_ROW = Selector(label=r"What.s new in Embermine")
+TECHNICAL_DATA_ROW = Selector(label=r"Send technical and interaction data")
 PREF_NAME = re.compile(r"[a-z][A-Za-z0-9]*(\.[A-Za-z0-9_]+)+")
 
 
@@ -132,6 +133,10 @@ def homepage_settings(s: Session) -> None:
     with s.capture("settings-homepage", label="homepage settings page") as shot:
         open_row(s, r"Homepage")
         shot.take(settle=1.5)
+    with s.capture("settings-homepage-sponsored", label="homepage settings page, Stories and Sponsored stories toggles") as shot:
+        s.dev.scroll_to(Selector(label=r"Sponsored stories"), max_swipes=8)
+        shot.take(settle=1.5)
+    s.dev.scroll_top()
     with s.capture("wallpaper-picker", label="wallpaper picker (Homepage > Wallpapers)") as shot:
         s.dev.tap(Selector(label=r"Wallpapers?"), timeout=8, settle=2.5)
         s.dev.wait_for(Selector(desc=r".*[Ww]allpaper.*"), Selector(label=r".*[Ww]allpaper.*"), timeout=8)
@@ -199,6 +204,16 @@ def about_pages(s: Session) -> None:
             if s.dev.wait_for(opened, timeout=30) is None:
                 raise StepError(f"{label}: the page did not open")
             shot.take(settle=3.0)
+
+
+def data_collection_opt_in(s: Session) -> None:
+    """Turns on the technical and interaction data switch once. The default page is captured by settings_pages."""
+    label = "settings data collection page, after turning on technical and interaction data"
+    with s.capture("settings-data-collection-opt-in", label=label) as shot:
+        open_settings(s)
+        open_row(s, r"Data collection")
+        s.dev.tap(TECHNICAL_DATA_ROW, timeout=10, settle=2.0)
+        shot.take(settle=1.5, note="switch tapped once from off")
 
 
 def allow_private_screenshots(s: Session) -> None:

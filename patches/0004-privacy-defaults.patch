@@ -5,6 +5,8 @@ Subject: [PATCH] Embermine: 0004-privacy-defaults
 
 Ship with telemetry and crash reporting off: BuildConfig TELEMETRY and CRASH_REPORTING default to false, the usage, daily usage ping, experimentation and sponsored/Pocket defaults are off, and crash reports are kept only in the local crash list (Socorro and Sentry are not added without CRASH_REPORTING). The Data collection page hides the crash report choice when crash reporting is not built in. Nimbus experiment fetches run only after the user opts in to experimentation. The Glean switch still follows the stored choice at the next launch.
 
+Gecko's own telemetry upload and region lookup default to off through GeckoPreferenceController on the default branch, applied as soon as the runtime is created. Embermine ships Mozilla's prebuilt GeckoView, so a change to the bundled default pref file would never reach the APK.
+
 Safe Browsing is disabled unless the optional SAFE_BROWSING_API_KEY is provided at build time (read from the git-ignored .safe_browsing_api_key file into BuildConfig). With a key, the Google legacy, v4 and v5 GeckoView providers use it; without one, no provider is configured and the Safe Browsing policy is NONE.
 
 The onboarding Terms of Use line says Embermine does not send diagnostic or interaction data to Mozilla unless turned on, in every locale.
@@ -23,22 +25,6 @@ index 6b0618ff1073da2e865b2ea60cb701cceceee501..4d9ca982437decc22bf04e7ab428d29f
  fenix/app/src/**/res/values/fenix_firebase_push_credentials.xml
  
  # Python Byte-compiled / optimized / DLL files
-diff --git a/mobile/android/app/geckoview-prefs.js b/mobile/android/app/geckoview-prefs.js
-index 3cf841dd1bdb037f06875758fda328c2b77d8854..4f17b6c42b2b2ff9af8108cad5f351446e151452 100644
---- a/mobile/android/app/geckoview-prefs.js
-+++ b/mobile/android/app/geckoview-prefs.js
-@@ -364,6 +364,11 @@ pref("toolkit.defaultChromeURI", "chrome://geckoview/content/geckoview.xhtml", l
- // Whether to use unified telemetry behavior; requires a restart to take effect
- pref("toolkit.telemetry.unified", false);
- 
-+// Embermine ships with Gecko telemetry upload and the region lookup off
-+pref("datareporting.healthreport.uploadEnabled", false);
-+pref("datareporting.policy.dataSubmissionEnabled", false);
-+pref("browser.region.network.url", "");
-+
- // Download protection lists are not available on Android (bug 1397938, bug 1394017)
- pref("urlclassifier.downloadAllowTable", "");
- pref("urlclassifier.downloadBlockTable", "");
 diff --git a/mobile/android/fenix/app/build.gradle b/mobile/android/fenix/app/build.gradle
 index e81e7e66717484dfa32db9422e7c5d6da72d282f..0066fe7e17e1bce3812f19a53d31c7b9f367d615 100644
 --- a/mobile/android/fenix/app/build.gradle
@@ -173,6 +159,40 @@ index b1ebab7da8021208088b07e84c7957c0173386ad..6122d45cf9b531c158ab7e7ba420ee72
              }
      }
  
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/GeckoPrivacyPrefs.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/GeckoPrivacyPrefs.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..8271b1487dba747fa31715f6f8227eaae8ba653d
+--- /dev/null
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/GeckoPrivacyPrefs.kt
+@@ -0,0 +1,28 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine
++
++import android.os.Handler
++import android.os.Looper
++import org.mozilla.geckoview.GeckoPreferenceController
++import org.mozilla.geckoview.GeckoPreferenceController.PREF_BRANCH_DEFAULT
++import org.mozilla.geckoview.GeckoPreferenceController.SetGeckoPreference
++
++internal fun embermineGeckoPrivacyPrefs(): List<SetGeckoPreference<*>> =
++    listOf(
++        SetGeckoPreference.setBoolPref("datareporting.healthreport.uploadEnabled", false, PREF_BRANCH_DEFAULT),
++        SetGeckoPreference.setBoolPref("datareporting.policy.dataSubmissionEnabled", false, PREF_BRANCH_DEFAULT),
++        SetGeckoPreference.setStringPref("browser.region.network.url", "", PREF_BRANCH_DEFAULT),
++    )
++
++/**
++ * Sets the Gecko default prefs that keep Gecko telemetry upload and the region lookup off. Embermine ships Mozilla's
++ * prebuilt GeckoView, so these defaults are set at runtime rather than in the bundled default pref file.
++ */
++fun applyEmbermineGeckoPrivacyPrefs() {
++    Handler(Looper.getMainLooper()).post {
++        GeckoPreferenceController.setGeckoPrefs(embermineGeckoPrivacyPrefs())
++    }
++}
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/SafeBrowsingConfig.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/SafeBrowsingConfig.kt
 new file mode 100644
 index 0000000000000000000000000000000000000000..c0ca5de068a473a176576096764ff8f08ff6985c
@@ -220,22 +240,31 @@ index 0000000000000000000000000000000000000000..c0ca5de068a473a176576096764ff8f0
 +    return builder.build()
 +}
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/gecko/GeckoProvider.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/gecko/GeckoProvider.kt
-index c1ccddf9a01118f5f1b4539fd85f1521908e55aa..b87652690dc3b45f3a917fe55679ae6db3ddff36 100644
+index c1ccddf9a01118f5f1b4539fd85f1521908e55aa..244eb19983591118a0eb8415b2f82046b0e2b805 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/gecko/GeckoProvider.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/gecko/GeckoProvider.kt
-@@ -18,8 +18,11 @@ import mozilla.components.lib.crash.handler.CrashHandlerService
+@@ -18,8 +18,12 @@ import mozilla.components.lib.crash.handler.CrashHandlerService
  import mozilla.components.lib.crash.store.CrashAction
  import mozilla.components.service.sync.autofill.GeckoCreditCardsAddressesStorageDelegate
  import mozilla.components.service.sync.logins.GeckoLoginStorageDelegate
 +import org.mozilla.fenix.BuildConfig
  import org.mozilla.fenix.Config
  import org.mozilla.fenix.components.appstate.AppAction
++import org.mozilla.fenix.embermine.applyEmbermineGeckoPrivacyPrefs
 +import org.mozilla.fenix.embermine.safeBrowsingPolicyFor
 +import org.mozilla.fenix.embermine.safeBrowsingProvidersFor
  import org.mozilla.fenix.ext.components
  import org.mozilla.fenix.nimbus.FxNimbus
  import org.mozilla.geckoview.GeckoRuntime
-@@ -109,6 +112,7 @@ object GeckoProvider {
+@@ -71,6 +75,7 @@ object GeckoProvider {
+         }
+ 
+         val geckoRuntime = GeckoRuntime.create(context, runtimeSettings)
++        applyEmbermineGeckoPrivacyPrefs()
+ 
+         geckoRuntime.autocompleteStorageDelegate =
+             GeckoAutocompleteStorageDelegate(
+@@ -109,6 +114,7 @@ object GeckoProvider {
                  .experimentDelegate(NimbusExperimentDelegate())
                  .contentBlocking(
                      policy.toContentBlockingSetting(
@@ -243,7 +272,7 @@ index c1ccddf9a01118f5f1b4539fd85f1521908e55aa..b87652690dc3b45f3a917fe55679ae6d
                          queryParameterStripping = false,
                          queryParameterStrippingPrivateBrowsing = false,
                          queryParameterStrippingAllowList = "",
-@@ -124,7 +128,7 @@ object GeckoProvider {
+@@ -124,7 +130,7 @@ object GeckoProvider {
                          safeBrowsingRealTimeSimulationCacheTTLSec = 300,
                          safeBrowsingRealTimeSimulationNegativeCacheEnabled = false,
                          safeBrowsingRealTimeSimulationNegativeCacheTTLSec = 300,
@@ -374,6 +403,42 @@ index d5b8c756c685048c5d2516d006a2f6b5116e2998..fcce1b96472079f67617c73ab40a0fbe
      <string name="embermine_android_components_abbreviation" translatable="false">AC</string>
 +    <string name="embermine_onboarding_tou_body_line_3" translatable="false">Embermine does not send diagnostic or interaction data to Mozilla unless you turn it on. %1$s</string>
  </resources>
+diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/GeckoPrivacyPrefsTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/GeckoPrivacyPrefsTest.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..bcce09bad437ce2db17cea37c741f660b0619124
+--- /dev/null
++++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/GeckoPrivacyPrefsTest.kt
+@@ -0,0 +1,30 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine
++
++import org.junit.Assert.assertEquals
++import org.junit.Test
++import org.mozilla.geckoview.GeckoPreferenceController.PREF_BRANCH_DEFAULT
++
++class GeckoPrivacyPrefsTest {
++
++    private val prefs = embermineGeckoPrivacyPrefs().associateBy { it.pref }
++
++    @Test
++    fun `gecko telemetry upload and data submission default to off`() {
++        assertEquals(false, prefs.getValue("datareporting.healthreport.uploadEnabled").value)
++        assertEquals(false, prefs.getValue("datareporting.policy.dataSubmissionEnabled").value)
++    }
++
++    @Test
++    fun `gecko region lookup URL is cleared`() {
++        assertEquals("", prefs.getValue("browser.region.network.url").value)
++    }
++
++    @Test
++    fun `gecko privacy prefs are set on the default branch`() {
++        assertEquals(setOf(PREF_BRANCH_DEFAULT), prefs.values.map { it.branch }.toSet())
++    }
++}
 diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/SafeBrowsingConfigTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/SafeBrowsingConfigTest.kt
 new file mode 100644
 index 0000000000000000000000000000000000000000..85b6c5bc754a7e511cacdce023dc5dab6e17d347

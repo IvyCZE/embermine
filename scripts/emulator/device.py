@@ -135,7 +135,7 @@ class Device:
         return True
 
     def type_text(self, text: str) -> None:
-        self.adb.shell("input text " + re.sub(r"[^A-Za-z0-9._-]", "", text))
+        self.adb.shell("input text " + re.sub(r"[^A-Za-z0-9._:-]", "", text))
 
     def key(self, name: str) -> None:
         self.adb.shell(f"input keyevent {name}")

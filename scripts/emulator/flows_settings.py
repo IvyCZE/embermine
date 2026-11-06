@@ -166,12 +166,20 @@ def history(s: Session) -> None:
 
 
 def about_config(s: Session) -> None:
+    """Fenix ignores about: URLs sent as intents, so about:config is typed into the address bar."""
     with s.capture("about-config", label="about:config page") as shot:
-        s.open_url("about:config")
+        go_home(s)
+        s.visited.append("about:config")
+        s.dev.tap(t.HOMEPAGE_BAR, timeout=10, settle=1.5)
+        s.dev.type_text("about:config")
+        s.dev.key("KEYCODE_ENTER")
         try:
             s.wait_page("about:config", timeout=20)
         except StepError as exc:
-            raise StepError("about:config did not open; GeckoProvider must call aboutConfigEnabled(true)") from exc
+            raise StepError(
+                "about:config did not open after it was typed into the address bar; check aboutConfigEnabled in GeckoProvider"
+            ) from exc
+        s.dev.try_tap(Selector(label=r"Accept the [Rr]isk.*"), timeout=3)
         s.dev.sleep(3.0)
         prefs = [n for n in s.dev.dump("about-config-prefs", save=True) if PREF_NAME.fullmatch(n.text or "")]
         shot.take(settle=1.0, note=f"about:config open; {len(prefs)} preference names in the UI dump")

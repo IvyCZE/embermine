@@ -287,7 +287,8 @@ def main(argv: list[str] | None = None) -> int:
                 write_logcat_report(session, args.out)
             except Exception as exc:  # noqa: BLE001
                 log(f"logcat report failed: {exc}")
-            if exit_code == 0 and not legacy:
+            if exit_code == 0 and legacy:
+                # Only the pass without packet capture installs other apps, so their traffic stays out of network-hosts.txt.
                 write_coinstall(session, args.out, firefox_version, args.debug / "coinstall-work")
             (args.debug / "visited-urls.txt").write_text("\n".join(session.visited) + "\n", encoding="utf-8")
         if not legacy:

@@ -65,7 +65,7 @@ def run(adb: Adb, package: str, firefox_version: str, work: Path, launch_check: 
     work.mkdir(parents=True, exist_ok=True)
     install_results: list[str] = []
     out = [
-        "# coinstall.txt: Embermine next to official Firefox and F-Droid Fennec (x86_64, API 34 emulator)",
+        "# coinstall.txt: Embermine next to official Firefox and F-Droid Fennec (x86_64 emulator)",
         f"# app under test: {package}",
         "",
         "## pm list packages before",

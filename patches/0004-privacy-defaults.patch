@@ -23,6 +23,22 @@ index 6b0618ff1073da2e865b2ea60cb701cceceee501..4d9ca982437decc22bf04e7ab428d29f
  fenix/app/src/**/res/values/fenix_firebase_push_credentials.xml
  
  # Python Byte-compiled / optimized / DLL files
+diff --git a/mobile/android/app/geckoview-prefs.js b/mobile/android/app/geckoview-prefs.js
+index 3cf841dd1bdb037f06875758fda328c2b77d8854..4f17b6c42b2b2ff9af8108cad5f351446e151452 100644
+--- a/mobile/android/app/geckoview-prefs.js
++++ b/mobile/android/app/geckoview-prefs.js
+@@ -364,6 +364,11 @@ pref("toolkit.defaultChromeURI", "chrome://geckoview/content/geckoview.xhtml", l
+ // Whether to use unified telemetry behavior; requires a restart to take effect
+ pref("toolkit.telemetry.unified", false);
+ 
++// Embermine ships with Gecko telemetry upload and the region lookup off
++pref("datareporting.healthreport.uploadEnabled", false);
++pref("datareporting.policy.dataSubmissionEnabled", false);
++pref("browser.region.network.url", "");
++
+ // Download protection lists are not available on Android (bug 1397938, bug 1394017)
+ pref("urlclassifier.downloadAllowTable", "");
+ pref("urlclassifier.downloadBlockTable", "");
 diff --git a/mobile/android/fenix/app/build.gradle b/mobile/android/fenix/app/build.gradle
 index e81e7e66717484dfa32db9422e7c5d6da72d282f..0066fe7e17e1bce3812f19a53d31c7b9f367d615 100644
 --- a/mobile/android/fenix/app/build.gradle
@@ -52,6 +68,19 @@ index e81e7e66717484dfa32db9422e7c5d6da72d282f..0066fe7e17e1bce3812f19a53d31c7b9
      buildConfigField 'String', 'SECRET_SETTINGS_OVERRIDES', '""'
  }
  
+diff --git a/mobile/android/fenix/app/onboarding.fml.yaml b/mobile/android/fenix/app/onboarding.fml.yaml
+index 73b46a4a7e609d19b1bae5684a70348fc5c3dd52..6806dba760c25346903cfd31a8eeb8c556c22101 100644
+--- a/mobile/android/fenix/app/onboarding.fml.yaml
++++ b/mobile/android/fenix/app/onboarding.fml.yaml
+@@ -34,7 +34,7 @@ features:
+                   line-one-link-text: nova_onboarding_tou_body_line_1_link_text
+                   line-two-text: nova_onboarding_tou_body_line_2
+                   line-two-link-text: nova_onboarding_tou_body_line_2_link_text
+-                  line-three-text: nova_onboarding_tou_body_line_3
++                  line-three-text: embermine_onboarding_tou_body_line_3
+                   line-three-link-text: nova_onboarding_tou_body_line_3_link_text
+ 
+             default-browser:
 diff --git a/mobile/android/fenix/app/src/androidTest/java/org/mozilla/fenix/ui/robots/HomeScreenRobot.kt b/mobile/android/fenix/app/src/androidTest/java/org/mozilla/fenix/ui/robots/HomeScreenRobot.kt
 index bc6c3b88da79dc7a0676eb14e3fe6a704340befb..aec11bd810bf2a76051753346293274396edb721 100644
 --- a/mobile/android/fenix/app/src/androidTest/java/org/mozilla/fenix/ui/robots/HomeScreenRobot.kt

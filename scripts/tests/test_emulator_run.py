@@ -23,7 +23,8 @@ class FlowWiringTests(unittest.TestCase):
             "03-tab-group-sheet", "08-tab-group-menu", "tab-grid-group-header", "01-synced-tabs", "15-downloads",
             "downloads-active", "downloads-paused", "download-notification", "wallpaper-picker", "customize",
             "bottom-navigation-bar", "14-main-menu-loading", "secret-settings-before", "secret-settings-unlocked",
-            "secret-settings-after-restart",
+            "secret-settings-after-restart", "about", "about-whatsnew", "about-support", "about-privacy",
+            "about-licenses", "about-crashes",
         }
         self.assertEqual(wanted - {stem for stem, _ in stems}, set())
         self.assertIn(("12-tab-tray-header", True), stems)
@@ -47,8 +48,15 @@ class FlowWiringTests(unittest.TestCase):
             (flows_settings, "about_config"),
             (flows_browse, "complete_onboarding"),
             (flows_motion, "both_positions"),
+            (flows_settings, "about_pages"),
         ):
             self.assertTrue(callable(getattr(module, name)), name)
+
+    def test_about_pages_cover_each_row_that_opens_something(self) -> None:
+        stems = [stem for stem, _, _, _ in flows_settings.ABOUT_PAGES]
+        self.assertEqual(stems, ["about-whatsnew", "about-support", "about-privacy", "about-licenses", "about-crashes"])
+        expected = {stem for f in run.flow_list() for stem, _, _ in f.expected}
+        self.assertTrue(set(stems) <= expected)
 
 
 if __name__ == "__main__":

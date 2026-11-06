@@ -19,6 +19,47 @@ SUBPAGES = (
     ("settings-subpage-firefox-labs", r"Firefox Labs", "settings sub-page: Firefox Labs"),
 )
 SETTINGS_ROW_ROOT = t.SETTINGS_TITLE
+ABOUT_ROW = r"About (Firefox|Embermine)"
+ABOUT_FIRST_ROW = Selector(label=r"What.s new in Embermine")
+
+
+def _toolbar_shows(url: str) -> Selector:
+    return Selector(id="ADDRESSBAR_URL_BOX", desc=url)
+
+
+# (file stem, row title in the About list, what shows the page opened, label for the index)
+ABOUT_PAGES = (
+    (
+        "about-whatsnew",
+        r"What.s new in Embermine",
+        _toolbar_shows(r".*github\.com/IvyCZE/embermine/releases.*"),
+        "About > What's new (GitHub releases)",
+    ),
+    (
+        "about-support",
+        r"Support",
+        _toolbar_shows(r".*github\.com/IvyCZE/embermine/issues.*"),
+        "About > Support (GitHub issues)",
+    ),
+    (
+        "about-privacy",
+        r"Privacy notice",
+        _toolbar_shows(r".*github\.com/IvyCZE/embermine/blob/master/PRIVACY\.md.*"),
+        "About > Privacy notice (PRIVACY.md on GitHub)",
+    ),
+    (
+        "about-licenses",
+        r"Licensing information",
+        _toolbar_shows(r"about:license.*"),
+        "About > Licensing information (about:license)",
+    ),
+    (
+        "about-crashes",
+        r"Crashes",
+        Selector(label=r"Crash Reports|No crash reports have been submitted\."),
+        "About > Crashes (crash list)",
+    ),
+)
 
 
 def open_settings(s: Session) -> None:
@@ -133,6 +174,22 @@ def about_config(s: Session) -> None:
             ) from exc
         s.dev.sleep(3.0)
         shot.take(settle=1.0, note="page requested: about:config")
+
+
+def open_about(s: Session) -> None:
+    open_settings(s)
+    open_row(s, ABOUT_ROW, wait=ABOUT_FIRST_ROW)
+
+
+def about_pages(s: Session) -> None:
+    """Each About row that opens a page or screen. Every capture starts again from Settings."""
+    for stem, row, opened, label in ABOUT_PAGES:
+        with s.capture(stem, label=label) as shot:
+            open_about(s)
+            open_row(s, row)
+            if s.dev.wait_for(opened, timeout=30) is None:
+                raise StepError(f"{label}: the page did not open")
+            shot.take(settle=3.0)
 
 
 def allow_private_screenshots(s: Session) -> None:

@@ -33,7 +33,7 @@ from scripts.emulator.session import LaunchError, Session
 from scripts.emulator.testserver import WalkServer
 
 SERVER_PORT = 8765
-FLOW_BUDGET_SECONDS = 28 * 60
+FLOW_BUDGET_SECONDS = 36 * 60
 Expected = tuple[str, str, bool]  # file stem, index label, private
 
 
@@ -126,6 +126,7 @@ def flow_list(variant: str = "light") -> list[Flow]:
         Flow("about:config", f_set.about_config, [("about-config", "about:config page", False)]),
         Flow("motion", lambda s: f_motion.both_positions(s, motion), motion_expected),
         Flow("secret settings", flows_secret.secret_settings, SECRET_STEMS),
+        Flow("about pages", f_set.about_pages, [(stem, label, False) for stem, _, _, label in f_set.ABOUT_PAGES]),
     ]
 
 

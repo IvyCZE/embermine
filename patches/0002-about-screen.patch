@@ -1,0 +1,288 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: IvyCZE <me@ivy.yt>
+Date: Fri, 6 Nov 2026 15:02:07 +0000
+Subject: [PATCH] Embermine: 0002-about-screen
+
+Replace the About header text with the Embermine main line and link, show the Embermine version line followed by GeckoView, Application Services and Android Components versions, point What's new and Support at the Embermine GitHub pages, point Privacy notice at PRIVACY.md and remove Know your rights.
+
+diff --git a/mobile/android/fenix/app/src/androidTest/java/org/mozilla/fenix/ui/robots/SettingsSubMenuAboutRobot.kt b/mobile/android/fenix/app/src/androidTest/java/org/mozilla/fenix/ui/robots/SettingsSubMenuAboutRobot.kt
+index fbde05393f668a79225f728a1cbd5752a6bd8ab6..c93ef7318af542a76e5ffc4ef5ffbdaec5ba1ef4 100644
+--- a/mobile/android/fenix/app/src/androidTest/java/org/mozilla/fenix/ui/robots/SettingsSubMenuAboutRobot.kt
++++ b/mobile/android/fenix/app/src/androidTest/java/org/mozilla/fenix/ui/robots/SettingsSubMenuAboutRobot.kt
+@@ -6,10 +6,8 @@
+ 
+ package org.mozilla.fenix.ui.robots
+ 
+-import android.os.Build
+ import android.util.Log
+ import androidx.compose.ui.test.junit4.ComposeTestRule
+-import androidx.core.content.pm.PackageInfoCompat
+ import androidx.test.espresso.Espresso
+ import androidx.test.espresso.Espresso.onView
+ import androidx.test.espresso.action.ViewActions.click
+@@ -22,14 +20,13 @@ import androidx.test.espresso.matcher.ViewMatchers.withContentDescription
+ import androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility
+ import androidx.test.espresso.matcher.ViewMatchers.withId
+ import androidx.test.espresso.matcher.ViewMatchers.withText
+-import androidx.test.platform.app.InstrumentationRegistry
+ import androidx.test.uiautomator.UiScrollable
+ import androidx.test.uiautomator.UiSelector
+-import mozilla.components.support.utils.ext.packageManagerCompatHelper
+ import org.hamcrest.CoreMatchers.allOf
+ import org.hamcrest.CoreMatchers.containsString
+ import org.mozilla.fenix.BuildConfig
+ import org.mozilla.fenix.R
++import org.mozilla.fenix.embermine.EmbermineVersion
+ import org.mozilla.fenix.helpers.Constants.LISTS_MAXSWIPES
+ import org.mozilla.fenix.helpers.Constants.TAG
+ import org.mozilla.fenix.helpers.MatcherHelper.assertUIObjectExists
+@@ -48,45 +45,36 @@ class SettingsSubMenuAboutRobot {
+     }
+ 
+     fun verifyVersionNumber() {
+-        val context = InstrumentationRegistry.getInstrumentation().targetContext
+-
+-        val packageInfo = context.packageManagerCompatHelper.getPackageInfoCompat(context.packageName, 0)
+-        val versionCode = PackageInfoCompat.getLongVersionCode(packageInfo).toString()
+-        val buildNVersion = "${packageInfo.versionName} (Build #$versionCode)"
++        val versionLine = EmbermineVersion.current()
+         val geckoVersion =
+             org.mozilla.geckoview.BuildConfig.MOZ_APP_VERSION + "-" + org.mozilla.geckoview.BuildConfig.MOZ_APP_BUILDID
+         val asVersion = mozilla.components.Build.APPLICATION_SERVICES_VERSION
+-        val osVersion = Build.VERSION.RELEASE
+-        Log.i(
+-            TAG,
+-            "verifyVersionNumber: Trying to verify that the about section contains build version: $buildNVersion",
+-        )
+-        onView(withId(R.id.about_text)).check(matches(withText(containsString(buildNVersion))))
+-        Log.i(TAG, "verifyVersionNumber: Verified that the about section contains build version: $buildNVersion")
++        val acVersion = mozilla.components.Build.VERSION
++        Log.i(TAG, "verifyVersionNumber: Trying to verify that the about section contains version line: $versionLine")
++        onView(withId(R.id.about_text)).check(matches(withText(containsString(versionLine))))
++        Log.i(TAG, "verifyVersionNumber: Verified that the about section contains version line: $versionLine")
+         Log.i(TAG, "verifyVersionNumber: Trying to verify that the about section contains gecko version: $geckoVersion")
+-        onView(withId(R.id.about_text)).check(matches(withText(containsString(geckoVersion))))
++        onView(withId(R.id.about_text)).check(matches(withText(containsString("GV: $geckoVersion"))))
+         Log.i(TAG, "verifyVersionNumber: Verified that the about section contains gecko version: $geckoVersion")
+         Log.i(
+             TAG,
+             "verifyVersionNumber: Trying to verify that the about section contains android services version: $asVersion",
+         )
+-        onView(withId(R.id.about_text)).check(matches(withText(containsString(asVersion))))
++        onView(withId(R.id.about_text)).check(matches(withText(containsString("AS: $asVersion"))))
+         Log.i(TAG, "verifyVersionNumber: Verified that the about section contains android services version: $asVersion")
+-        Log.i(TAG, "verifyVersionNumber: Trying to verify that the about section contains Android version: $osVersion")
+-        onView(withId(R.id.about_text)).check(matches(withText(containsString("Android $osVersion"))))
+-        Log.i(TAG, "verifyVersionNumber: Verified that the about section contains Android version: $osVersion")
+-    }
+-
+-    fun verifyProductCompany() {
+         Log.i(
+             TAG,
+-            "verifyProductCompany: Trying to verify that the about section contains the company that produced the app info: ${"$appName is produced by Mozilla."}",
+-        )
+-        onView(withId(R.id.about_content)).check(matches(withText(containsString("$appName is produced by Mozilla."))))
+-        Log.i(
+-            TAG,
+-            "verifyProductCompany: Verified that the about section contains the company that produced the app info: \"$appName is produced by Mozilla.\"",
++            "verifyVersionNumber: Trying to verify that the about section contains android components version: $acVersion",
+         )
++        onView(withId(R.id.about_text)).check(matches(withText(containsString("AC: $acVersion"))))
++        Log.i(TAG, "verifyVersionNumber: Verified that the about section contains android components version: $acVersion")
++    }
++
++    fun verifyProductCompany() {
++        val mainLine = "Embermine is a modified build of Firefox, made by https://ivy.yt"
++        Log.i(TAG, "verifyProductCompany: Trying to verify that the about section contains the main line: \"$mainLine\"")
++        onView(withId(R.id.about_content)).check(matches(withText(containsString(mainLine))))
++        Log.i(TAG, "verifyProductCompany: Verified that the about section contains the main line: \"$mainLine\"")
+     }
+ 
+     fun verifyCurrentTimestamp() {
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/about/AboutFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/about/AboutFragment.kt
+index f650d7937d4705ab2db92589e143cfc75301affb..1ffc02d2cb009b65ea96cf068875a3bfe6d6103d 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/about/AboutFragment.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/about/AboutFragment.kt
+@@ -5,33 +5,30 @@
+ package org.mozilla.fenix.settings.about
+ 
+ import android.content.Context
+-import android.content.pm.PackageManager
+-import android.os.Build
+ import android.os.Bundle
++import android.text.method.LinkMovementMethod
+ import android.view.LayoutInflater
+ import android.view.View
+ import android.view.ViewGroup
+ import android.widget.Toast
+ import androidx.annotation.VisibleForTesting
+-import androidx.core.content.pm.PackageInfoCompat
++import androidx.core.text.HtmlCompat
+ import androidx.fragment.app.Fragment
+ import androidx.lifecycle.Lifecycle
+ import androidx.navigation.fragment.findNavController
+ import androidx.recyclerview.widget.DividerItemDecoration
+-import mozilla.components.support.utils.ext.packageManagerCompatHelper
+ import org.mozilla.fenix.BuildConfig
+ import org.mozilla.fenix.GleanMetrics.Events
+ import org.mozilla.fenix.R
+ import org.mozilla.fenix.databinding.FragmentAboutBinding
+ import org.mozilla.fenix.e2e.SystemInsetsPaddedFragment
++import org.mozilla.fenix.embermine.EmbermineVersion
+ import org.mozilla.fenix.ext.components
+ import org.mozilla.fenix.ext.openToBrowser
+ import org.mozilla.fenix.ext.requireComponents
+ import org.mozilla.fenix.ext.showToolbar
+-import org.mozilla.fenix.settings.SupportUtils
+ import org.mozilla.fenix.settings.about.AboutItemType.LICENSING_INFO
+ import org.mozilla.fenix.settings.about.AboutItemType.PRIVACY_NOTICE
+-import org.mozilla.fenix.settings.about.AboutItemType.RIGHTS
+ import org.mozilla.fenix.settings.about.AboutItemType.SUPPORT
+ import org.mozilla.fenix.settings.about.AboutItemType.WHATS_NEW
+ import org.mozilla.fenix.utils.Settings
+@@ -149,65 +146,31 @@ class AboutFragment(private val toastHandler: ToastHandler = DefaultToastHandler
+     }
+ 
+     private fun populateAboutHeader() {
+-        val aboutText =
+-            try {
+-                val packageInfo =
+-                    requireContext()
+-                        .packageManagerCompatHelper
+-                        .getPackageInfoCompat(
+-                            requireContext().packageName,
+-                            0,
+-                        )
+-                val versionCode = PackageInfoCompat.getLongVersionCode(packageInfo).toString()
+-                val maybeFenixVcsHash = if (BuildConfig.VCS_HASH.isNotBlank()) ", ${BuildConfig.VCS_HASH}" else ""
+-                val maybeGecko = getString(R.string.gecko_view_abbreviation)
+-                val geckoVersion = GeckoViewBuildConfig.MOZ_APP_VERSION + "-" + GeckoViewBuildConfig.MOZ_APP_BUILDID
+-                val appServicesAbbreviation = getString(R.string.app_services_abbreviation)
+-                val appServicesVersion = mozilla.components.Build.APPLICATION_SERVICES_VERSION
+-                val operatingSystemAbbrevation = "OS"
+-                val operatingSystemVersion = "Android ${Build.VERSION.RELEASE}"
+-
+-                String.format(
+-                    "%s (Build #%s)%s\n%s: %s\n%s: %s\n%s: %s",
+-                    packageInfo.versionName,
+-                    versionCode,
+-                    maybeFenixVcsHash,
+-                    maybeGecko,
+-                    geckoVersion,
+-                    appServicesAbbreviation,
+-                    appServicesVersion,
+-                    operatingSystemAbbrevation,
+-                    operatingSystemVersion,
+-                )
+-            } catch (e: PackageManager.NameNotFoundException) {
+-                ""
+-            }
+-
+-        val content = getString(R.string.about_content, appName)
+-        val buildDate = BuildConfig.BUILD_DATE
++        val geckoVersion = GeckoViewBuildConfig.MOZ_APP_VERSION + "-" + GeckoViewBuildConfig.MOZ_APP_BUILDID
++        val versionLines = listOf(
++            EmbermineVersion.current(),
++            "${getString(R.string.gecko_view_abbreviation)}: $geckoVersion",
++            "${getString(R.string.app_services_abbreviation)}: ${mozilla.components.Build.APPLICATION_SERVICES_VERSION}",
++            "${getString(R.string.embermine_android_components_abbreviation)}: ${mozilla.components.Build.VERSION}",
++        )
+ 
+-        binding.aboutText.text = aboutText
+-        binding.aboutContent.text = content
+-        binding.buildDate.text = buildDate
++        binding.aboutContent.text = HtmlCompat.fromHtml(
++            getString(R.string.embermine_about_main_line),
++            HtmlCompat.FROM_HTML_MODE_COMPACT,
++        )
++        binding.aboutContent.movementMethod = LinkMovementMethod.getInstance()
++        binding.aboutText.text = versionLines.joinToString("\n")
++        binding.buildDate.text = BuildConfig.BUILD_DATE
+     }
+ 
+     private fun populateAboutList(): List<AboutPageItem> {
+-        val context = requireContext()
+-
+         return listOf(
+             AboutPageItem(
+-                AboutItem.ExternalLink(
+-                    WHATS_NEW,
+-                    SupportUtils.WHATS_NEW_URL,
+-                ),
+-                // Note: Fenix only has release notes for 'Release' versions, NOT 'Beta' & 'Nightly'.
++                AboutItem.ExternalLink(WHATS_NEW, RELEASES_URL),
+                 getString(R.string.about_whats_new, getString(R.string.app_name)),
+             ),
+             AboutPageItem(
+-                AboutItem.ExternalLink(
+-                    SUPPORT,
+-                    SupportUtils.getSumoURLForTopic(context, SupportUtils.SumoTopic.HELP),
+-                ),
++                AboutItem.ExternalLink(SUPPORT, ISSUES_URL),
+                 getString(R.string.about_support),
+             ),
+             AboutPageItem(
+@@ -215,19 +178,9 @@ class AboutFragment(private val toastHandler: ToastHandler = DefaultToastHandler
+                 getString(R.string.about_crashes),
+             ),
+             AboutPageItem(
+-                AboutItem.ExternalLink(
+-                    PRIVACY_NOTICE,
+-                    SupportUtils.getMozillaPageUrl(SupportUtils.MozillaPage.PRIVACY_NOTICE),
+-                ),
++                AboutItem.ExternalLink(PRIVACY_NOTICE, PRIVACY_NOTICE_URL),
+                 getString(R.string.about_privacy_notice),
+             ),
+-            AboutPageItem(
+-                AboutItem.ExternalLink(
+-                    RIGHTS,
+-                    SupportUtils.getSumoURLForTopic(context, SupportUtils.SumoTopic.YOUR_RIGHTS),
+-                ),
+-                getString(R.string.about_know_your_rights),
+-            ),
+             AboutPageItem(
+                 AboutItem.ExternalLink(LICENSING_INFO, ABOUT_LICENSE_URL),
+                 getString(R.string.about_licensing_information),
+@@ -262,8 +215,7 @@ class AboutFragment(private val toastHandler: ToastHandler = DefaultToastHandler
+                     }
+                     SUPPORT,
+                     PRIVACY_NOTICE,
+-                    LICENSING_INFO,
+-                    RIGHTS -> {} // no telemetry needed
++                    LICENSING_INFO -> {} // no telemetry needed
+                 }
+ 
+                 openLinkInNormalTab(item.url)
+@@ -280,6 +232,9 @@ class AboutFragment(private val toastHandler: ToastHandler = DefaultToastHandler
+ 
+     companion object {
+         private const val ABOUT_LICENSE_URL = "about:license"
++        private const val RELEASES_URL = "https://github.com/IvyCZE/embermine/releases"
++        private const val ISSUES_URL = "https://github.com/IvyCZE/embermine/issues"
++        private const val PRIVACY_NOTICE_URL = "https://github.com/IvyCZE/embermine/blob/master/PRIVACY.md"
+     }
+ 
+     /** Helper functions for handling Toast messages. */
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/about/AboutItem.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/about/AboutItem.kt
+index e3e0ab6a60210afa8b1fed4d577d54702906f34d..5bf9b531802e20a5307e8b2030d3b100bb36f0b6 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/about/AboutItem.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/about/AboutItem.kt
+@@ -16,7 +16,6 @@ enum class AboutItemType {
+     WHATS_NEW,
+     SUPPORT,
+     PRIVACY_NOTICE,
+-    RIGHTS,
+     LICENSING_INFO,
+ }
+ 
+diff --git a/mobile/android/fenix/app/src/main/res/values/embermine_strings.xml b/mobile/android/fenix/app/src/main/res/values/embermine_strings.xml
+index b8056703002d126d64a5a06c0d85f1750ff34c47..d5b8c756c685048c5d2516d006a2f6b5116e2998 100644
+--- a/mobile/android/fenix/app/src/main/res/values/embermine_strings.xml
++++ b/mobile/android/fenix/app/src/main/res/values/embermine_strings.xml
+@@ -5,4 +5,6 @@
+ <resources>
+     <!-- The Mozilla product name, for text that names Firefox itself rather than the app. -->
+     <string name="embermine_mozilla_product_firefox" translatable="false">Firefox</string>
++    <string name="embermine_about_main_line" translatable="false">Embermine is a modified build of Firefox, made by <a href="https://ivy.yt">https://ivy.yt</a></string>
++    <string name="embermine_android_components_abbreviation" translatable="false">AC</string>
+ </resources>

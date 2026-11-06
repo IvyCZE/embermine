@@ -15,6 +15,8 @@ SUBPAGES = (
     ("settings-subpage-tracking-protection", r"Enhanced Tracking Protection", "settings sub-page: Enhanced Tracking Protection"),
     ("settings-subpage-site-settings", r"Site settings", "settings sub-page: Site settings"),
     ("settings-subpage-download-settings", r"Download Settings", "settings sub-page: Download Settings"),
+    ("settings-subpage-sign-in", r"Sign in", "settings sub-page: Sign in (Turn on Sync)"),
+    ("settings-subpage-firefox-labs", r"Firefox Labs", "settings sub-page: Firefox Labs"),
 )
 SETTINGS_ROW_ROOT = t.SETTINGS_TITLE
 

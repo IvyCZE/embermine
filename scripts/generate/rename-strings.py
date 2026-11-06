@@ -4,8 +4,9 @@
 Only mobile/android/fenix/app/src/main/res/values/strings.xml is touched; the
 localized values-*/strings.xml files are left alone. Strings that name a Mozilla
 product or service (Sync and Firefox on other devices, Firefox Suggest, Firefox
-Labs, Firefox Terms of Use, Firefox/Mozilla account, "based on Firefox") keep
-"Firefox". Every replaced string name is printed.
+Labs, Firefox Terms of Use, Firefox/Mozilla account, "based on Firefox", IP
+Protection) keep "Firefox", and so does the onboarding Terms of Use body, which
+is Mozilla's legal text. Every replaced string name is printed.
 
     usage: rename-strings.py --tree <patched Firefox tree>
 """
@@ -23,6 +24,8 @@ KEEP_NAME_RE = re.compile(
     r"(^|_)(sync|synced|fxa|sign_in)(_|$)"
     r"|^firefox_(suggest|labs)"
     r"|_fx_suggest(_|$)"
+    r"|^ip_protection_"
+    r"|^(onboarding_term_of_service|onboarding_redesign_tou_body|nova_onboarding_tou_body)_"
 )
 
 KEEP_PHRASES = (

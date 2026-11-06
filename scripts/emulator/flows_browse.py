@@ -8,6 +8,7 @@ from scripts.emulator.session import LaunchError, Session
 from scripts.emulator.uidump import Selector
 
 HTTPS_URL = "https://example.com/"
+TERMS_PAGE = Selector(label=r".*(Terms of Use|Privacy Notice).*")
 
 
 def onboarding_first_screen(s: Session) -> None:
@@ -22,13 +23,20 @@ def onboarding_first_screen(s: Session) -> None:
 def complete_onboarding(s: Session, max_steps: int = 14) -> None:
     """Tap through the onboarding pages declining everything. Failing to reach the homepage fails the job."""
     previous: list[str] = []
+    terms_captured = False
     for step in range(max_steps):
         s.dev.sweep_dialogs()
         nodes = s.dev.dump(f"onboarding-{step}", save=True)
+        if not terms_captured and uidump.find_first(nodes, TERMS_PAGE) is not None:
+            terms_captured = True
+            with s.capture("onboarding-terms-of-use", label="onboarding Terms of Use page") as shot:
+                shot.take(settle=1.0)
         button = uidump.find_first(nodes, *t.ONBOARDING_BUTTONS)
         if button is None:
             if uidump.find_first(nodes, t.HOMEPAGE_VIEW, t.HOMEPAGE_BAR) is not None:
                 s.log(f"onboarding finished after {step} taps")
+                if not terms_captured:
+                    record_missing_terms_page(s)
                 return
             s.dev.sleep(2.0)
             continue
@@ -47,6 +55,11 @@ def complete_onboarding(s: Session, max_steps: int = 14) -> None:
         previous = labels
         s.dev.sleep(2.0)
     raise LaunchError(f"homepage not reached after {max_steps} onboarding steps")
+
+
+def record_missing_terms_page(s: Session) -> None:
+    with s.capture("onboarding-terms-of-use", label="onboarding Terms of Use page"):
+        raise StepError("the Terms of Use onboarding page was not on screen during the onboarding taps")
 
 
 def go_home(s: Session, *, private: bool = False) -> None:

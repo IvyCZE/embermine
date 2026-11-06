@@ -7,6 +7,8 @@ Release applicationId yt.ivy.embermine, no sharedUserId, shortcuts target the ne
 
 Release launcher icon is an adaptive icon whose background, foreground and monochrome drawables are generated from assets/icon/icon.svg. The legacy Firefox launcher and wordmark webp files that the generator replaces are removed.
 
+Call sites that name a Mozilla product or service (Terms of Use, IP Protection, the sent-from footer, the Classic Firefox wallpaper) pass the non-translatable embermine_mozilla_product_firefox string, so they still say Firefox. App self-references use app_name.
+
 Co-authored-by: factory-droid[bot] <138933559+factory-droid[bot]@users.noreply.github.com>
 
 diff --git a/mobile/android/fenix/app/build.gradle b/mobile/android/fenix/app/build.gradle
@@ -41,20 +43,387 @@ index 4d8cdf341a237422f8311e6b1c42842007eba42c..e81e7e66717484dfa32db9422e7c5d6d
                      "deepLinkScheme": deepLinkSchemeValue,
              ])
          }
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Core.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Core.kt
+index 37f1465be70213c0883c381ef6aa2cf281edaa74..b1ebab7da8021208088b07e84c7957c0173386ad 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Core.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Core.kt
+@@ -518,7 +518,7 @@ class Core(
+             DefaultSentFromFirefoxManager(
+                 snackbarEnabled = showSnackbar,
+                 templateMessage = templateMessage,
+-                appName = context.getString(R.string.firefox),
++                appName = context.getString(R.string.embermine_mozilla_product_firefox),
+                 downloadLink = downloadLink,
+                 storage = DefaultSentFromStorage(context.components.settings),
+             )
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/appstate/setup/checklist/SetupChecklistState.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/appstate/setup/checklist/SetupChecklistState.kt
+index f5b50ef6def6bdef8b7e68169f13547fbb661fe6..a7115b6b4cc55e2ddebf7bfb8fd0ac439eb95f17 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/appstate/setup/checklist/SetupChecklistState.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/appstate/setup/checklist/SetupChecklistState.kt
+@@ -42,7 +42,7 @@ fun getSetupChecklistTitle(context: Context, allTasksCompleted: Boolean) =
+         } else {
+             getString(
+                 R.string.setup_checklist_title_state_incomplete,
+-                getString(R.string.firefox),
++                getString(R.string.app_name),
+             )
+         }
+     }
+@@ -71,7 +71,7 @@ private fun Context.subtitleForGroupsWith6Tasks(progress: Progress) =
+         NO_TASKS ->
+             getString(
+                 R.string.setup_checklist_subtitle_6_steps_initial_state,
+-                getString(R.string.firefox),
++                getString(R.string.app_name),
+             )
+ 
+         ONE_TASK -> getString(R.string.setup_checklist_subtitle_6_steps_first_step)
+@@ -82,7 +82,7 @@ private fun Context.subtitleForGroupsWith6Tasks(progress: Progress) =
+         SIX_TASKS ->
+             getString(
+                 R.string.setup_checklist_subtitle_6_steps_completed_state,
+-                getString(R.string.firefox),
++                getString(R.string.app_name),
+             )
+ 
+         else -> null
+@@ -93,7 +93,7 @@ private fun Context.subtitleForGroupsWith5Tasks(progress: Progress) =
+         NO_TASKS ->
+             getString(
+                 R.string.setup_checklist_subtitle_5_steps_initial_state,
+-                getString(R.string.firefox),
++                getString(R.string.app_name),
+             )
+ 
+         ONE_TASK -> getString(R.string.setup_checklist_subtitle_5_steps_first_step)
+@@ -103,7 +103,7 @@ private fun Context.subtitleForGroupsWith5Tasks(progress: Progress) =
+         FIVE_TASKS ->
+             getString(
+                 R.string.setup_checklist_subtitle_5_steps_completed_state,
+-                getString(R.string.firefox),
++                getString(R.string.app_name),
+             )
+ 
+         else -> null
+@@ -114,7 +114,7 @@ private fun Context.subtitleForTasks(progress: Progress) =
+         NO_TASKS ->
+             getString(
+                 R.string.setup_checklist_subtitle_3_steps_initial_state,
+-                getString(R.string.firefox),
++                getString(R.string.app_name),
+             )
+ 
+         ONE_TASK -> getString(R.string.setup_checklist_subtitle_3_steps_first_step)
+@@ -122,7 +122,7 @@ private fun Context.subtitleForTasks(progress: Progress) =
+         THREE_TASKS ->
+             getString(
+                 R.string.setup_checklist_subtitle_3_steps_completed_state,
+-                getString(R.string.firefox),
++                getString(R.string.app_name),
+             )
+ 
+         else -> null
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/setup/ui/ChecklistView.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/setup/ui/ChecklistView.kt
+index 39a5306cfed96816af59f5eb7fc42af635b08679..651fca2f247cc9006c36a70b801909cc6a64f3a4 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/setup/ui/ChecklistView.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/setup/ui/ChecklistView.kt
+@@ -132,7 +132,7 @@ private fun Group(
+             horizontalAlignment = Alignment.Start,
+         ) {
+             Text(
+-                text = stringResource(group.title, stringResource(R.string.firefox)),
++                text = stringResource(group.title, stringResource(R.string.app_name)),
+                 style = FirefoxTheme.typography.subtitle1,
+                 modifier = Modifier.semantics { heading() },
+             )
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ipprotection/ui/IPProtectionBottomSheet.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ipprotection/ui/IPProtectionBottomSheet.kt
+index 33ce3fcbf871321053042b4f98f42918bcfb1789..c229fc64621b48ce0a75f50cf6d9bf7c72c1f7ed 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ipprotection/ui/IPProtectionBottomSheet.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ipprotection/ui/IPProtectionBottomSheet.kt
+@@ -155,7 +155,7 @@ private fun BottomSheetContent(
+                     text =
+                         stringResource(
+                             R.string.ip_protection_onboarding_card_headline,
+-                            stringResource(R.string.firefox),
++                            stringResource(R.string.embermine_mozilla_product_firefox),
+                         ),
+                     style = MaterialTheme.typography.bodyLarge,
+                 )
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/reviewprompt/ui/CustomReviewPrompt.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/reviewprompt/ui/CustomReviewPrompt.kt
+index 9a62c3276220877f38f99b7ecaa2fb733a377726..9470dd3a6e94d076fb62a292e5ebe022eb7750db 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/reviewprompt/ui/CustomReviewPrompt.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/reviewprompt/ui/CustomReviewPrompt.kt
+@@ -143,7 +143,7 @@ private fun PrePrompt(
+             text =
+                 stringResource(
+                     R.string.review_prompt_pre_prompt_header,
+-                    stringResource(R.string.firefox),
++                    stringResource(R.string.app_name),
+                 ),
+             style = FirefoxTheme.typography.headline7,
+         )
+@@ -215,7 +215,7 @@ private fun RateStep(onRateButtonClick: () -> Unit, modifier: Modifier = Modifie
+                 text =
+                     stringResource(
+                         R.string.review_prompt_rate_header,
+-                        stringResource(R.string.firefox),
++                        stringResource(R.string.app_name),
+                     ),
+                 style = FirefoxTheme.typography.headline7,
+             )
+@@ -227,7 +227,7 @@ private fun RateStep(onRateButtonClick: () -> Unit, modifier: Modifier = Modifie
+             text =
+                 stringResource(
+                     R.string.review_prompt_rate_button,
+-                    stringResource(R.string.firefox),
++                    stringResource(R.string.app_name),
+                 ),
+             modifier = Modifier.fillMaxWidth(),
+             onClick = onRateButtonClick,
+@@ -250,7 +250,7 @@ private fun FeedbackStep(onLeaveFeedbackButtonClick: () -> Unit, modifier: Modif
+                 text =
+                     stringResource(
+                         R.string.review_prompt_feedback_header,
+-                        stringResource(R.string.firefox),
++                        stringResource(R.string.app_name),
+                     ),
+                 style = FirefoxTheme.typography.headline7,
+             )
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/IPProtectionScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/IPProtectionScreen.kt
+index 6915ed1e4ab288f071c8a4e09515efd737169e8a..8997490e76fc4a2d84c3a4f6bc930393cd35a59f 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/IPProtectionScreen.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/IPProtectionScreen.kt
+@@ -348,7 +348,7 @@ private fun VpnLocationSection(
+                 description =
+                     stringResource(
+                         R.string.ip_protection_location_fastest_description,
+-                        stringResource(R.string.firefox),
++                        stringResource(R.string.embermine_mozilla_product_firefox),
+                     ),
+                 maxDescriptionLines = Int.MAX_VALUE,
+                 onClick = onLocationClicked.takeIf { isClickable },
+@@ -466,7 +466,11 @@ private fun VpnPromoCard(
+     PromoCard(
+         description = null,
+         modifier = modifier.fillMaxWidth(),
+-        title = stringResource(R.string.ip_protection_promo_headline, stringResource(R.string.firefox)),
++        title =
++            stringResource(
++                R.string.ip_protection_promo_headline,
++                stringResource(R.string.embermine_mozilla_product_firefox),
++            ),
+         footer =
+             stringResource(R.string.ip_protection_onboarding_body_promo, promoDate, learnMoreText) to
+                 LinkTextState(
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/LinkSharingFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/LinkSharingFragment.kt
+index 6da39f24d1798af448ac978b4e9ccb059b17eeda..56c003cd70774533e51d778d98a6d4b9ed0165dd 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/LinkSharingFragment.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/LinkSharingFragment.kt
+@@ -37,12 +37,12 @@ class LinkSharingFragment : PreferenceFragmentCompat(), SystemInsetsPaddedFragme
+             title =
+                 getString(
+                     R.string.link_sharing_toggle_body,
+-                    getString(R.string.firefox),
++                    getString(R.string.embermine_mozilla_product_firefox),
+                 )
+             summary =
+                 getString(
+                     R.string.link_sharing_toggle_title,
+-                    getString(R.string.firefox),
++                    getString(R.string.embermine_mozilla_product_firefox),
+                 )
+         }
+     }
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/about/AboutFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/about/AboutFragment.kt
+index 1a9f9ca087a5a8b42cb46443fdd1a0e7246e4027..f650d7937d4705ab2db92589e143cfc75301affb 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/about/AboutFragment.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/about/AboutFragment.kt
+@@ -201,7 +201,7 @@ class AboutFragment(private val toastHandler: ToastHandler = DefaultToastHandler
+                     SupportUtils.WHATS_NEW_URL,
+                 ),
+                 // Note: Fenix only has release notes for 'Release' versions, NOT 'Beta' & 'Nightly'.
+-                getString(R.string.about_whats_new, getString(R.string.firefox)),
++                getString(R.string.about_whats_new, getString(R.string.app_name)),
+             ),
+             AboutPageItem(
+                 AboutItem.ExternalLink(
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt
-index 6c864fd870764fc5c04a2831f66107f691f8aca2..06a66bdfdeb9b27a9b7744f8a80b40573b85aff4 100644
+index 6c864fd870764fc5c04a2831f66107f691f8aca2..c580868a2bf41bc3e5e49ea75c6736c65e4da3f4 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt
-@@ -125,7 +125,8 @@ private fun WallpaperGroupHeading(
+@@ -125,7 +125,11 @@ private fun WallpaperGroupHeading(
      // or invest in a method of localizing the remote strings themselves.
      if (collection.name == Wallpaper.CLASSIC_FIREFOX_COLLECTION) {
          Text(
 -            text = stringResource(R.string.wallpaper_classic_title, stringResource(R.string.firefox)),
-+            // Mozilla's wallpaper collection keeps its name; R.string.firefox now resolves to the app name.
-+            text = stringResource(R.string.wallpaper_classic_title, "Firefox"),
++            text =
++                stringResource(
++                    R.string.wallpaper_classic_title,
++                    stringResource(R.string.embermine_mozilla_product_firefox),
++                ),
              color = MaterialTheme.colorScheme.onSurface,
              style = FirefoxTheme.typography.subtitle2,
          )
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/startupCrash/StartupCrashScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/startupCrash/StartupCrashScreen.kt
+index 04b35ed56165bcaa7105640ecea534cb1cba411e..07cf5413c8e39fd0a8096ca568562036aabb085f 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/startupCrash/StartupCrashScreen.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/startupCrash/StartupCrashScreen.kt
+@@ -103,7 +103,7 @@ private fun ReopenButton(store: StartupCrashStore) {
+         text =
+             stringResource(
+                 R.string.startup_crash_restart,
+-                stringResource(R.string.firefox),
++                stringResource(R.string.app_name),
+             ),
+         modifier = Modifier.fillMaxWidth(),
+         icon = painterResource(iconsR.drawable.mozac_ic_checkmark_24),
+@@ -149,7 +149,7 @@ private fun ScreenText() {
+             text =
+                 stringResource(
+                     R.string.startup_crash_title,
+-                    stringResource(R.string.firefox),
++                    stringResource(R.string.app_name),
+                 ),
+             style = FirefoxTheme.typography.headline5,
+         )
+@@ -158,7 +158,7 @@ private fun ScreenText() {
+             text =
+                 stringResource(
+                     R.string.startup_crash_body,
+-                    stringResource(R.string.firefox),
++                    stringResource(R.string.app_name),
+                 ),
+             color = MaterialTheme.colorScheme.onSurfaceVariant,
+             style = FirefoxTheme.typography.body2,
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/termsofuse/experimentation/TermsOfUsePromptContent.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/termsofuse/experimentation/TermsOfUsePromptContent.kt
+index 502ac0e36fd2cb460a09f403e9b127b8dcf48eb7..ad9a892a2905ffb3f02b1cf494dd5568f70a3ca5 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/termsofuse/experimentation/TermsOfUsePromptContent.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/termsofuse/experimentation/TermsOfUsePromptContent.kt
+@@ -87,7 +87,7 @@ internal fun getTreatmentB(
+         title =
+             context.getString(
+                 R.string.terms_of_use_prompt_title_option_b,
+-                context.getString(R.string.firefox),
++                context.getString(R.string.embermine_mozilla_product_firefox),
+             ),
+         learnMoreContent = { LearnMoreContentAlternative(onLearnMoreClicked) },
+     )
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/termsofuse/ui/TermsOfUseBottomSheet.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/termsofuse/ui/TermsOfUseBottomSheet.kt
+index 3412f30c0548c1bdb3333289bf9b852e1eb849a0..d7c4f3207e96f447c94dbf9c5092c36b89f3e386 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/termsofuse/ui/TermsOfUseBottomSheet.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/termsofuse/ui/TermsOfUseBottomSheet.kt
+@@ -229,7 +229,7 @@ private fun TermsOfUseContent(
+         text =
+             stringResource(
+                 id = R.string.terms_of_use_prompt_message_1,
+-                stringResource(R.string.firefox),
++                stringResource(R.string.embermine_mozilla_product_firefox),
+                 stringResource(R.string.terms_of_use_prompt_link_terms_of_use),
+                 stringResource(R.string.terms_of_use_prompt_link_privacy_notice),
+             ),
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/trackingprotection/ProtectionsDashboardContent.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/trackingprotection/ProtectionsDashboardContent.kt
+index 5d48570c761cba53d0be84fb5d100b468a0e40ff..9be7acbc009d90c4658d7f18d520848d59a7265f 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/trackingprotection/ProtectionsDashboardContent.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/trackingprotection/ProtectionsDashboardContent.kt
+@@ -78,7 +78,7 @@ fun ProtectionsDashboardContent(
+         ) {
+             TrackerProtectionDashboard(
+                 modifier = Modifier.fillMaxWidth().semantics { traversalIndex = 0f },
+-                appName = stringResource(R.string.firefox),
++                appName = stringResource(R.string.app_name),
+                 totalTrackersBlockedAllTime = totalTrackersBlocked,
+                 trackingSinceDate = formattedEarliestDate,
+                 totalTrackersBlocked = trackersBlockedThisWeek.sumOf { it.count },
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/TranslationOptionsDialog.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/TranslationOptionsDialog.kt
+index 29e7083507109c07af09f9db05480555697a0bda..5a06d2bd1a1543f22140a3600e10d2fadb9d8ca0 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/TranslationOptionsDialog.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/TranslationOptionsDialog.kt
+@@ -95,7 +95,7 @@ fun TranslationOptionsDialog(
+         label =
+             stringResource(
+                 id = R.string.translation_option_bottom_sheet_about_translations,
+-                formatArgs = arrayOf(stringResource(R.string.firefox)),
++                formatArgs = arrayOf(stringResource(R.string.app_name)),
+             ),
+         modifier = Modifier.fillMaxWidth().padding(start = 56.dp).defaultMinSize(minHeight = 56.dp).wrapContentHeight(),
+         onClick = { aboutTranslationClicked() },
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/TranslationsDialogBottomSheet.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/TranslationsDialogBottomSheet.kt
+index 49ffd1b2cf3c4b62cac87c3c3fdd73ddb7361df6..0d7145b10ce8ac4f93eb54b242b2d9f8ff073274 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/TranslationsDialogBottomSheet.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/TranslationsDialogBottomSheet.kt
+@@ -584,7 +584,7 @@ private fun getTranslationsDialogTitle(showFirstTime: Boolean = false) =
+     if (showFirstTime) {
+         stringResource(
+             id = R.string.translations_bottom_sheet_title_first_time,
+-            stringResource(id = R.string.firefox),
++            stringResource(id = R.string.app_name),
+         )
+     } else {
+         stringResource(id = R.string.translations_bottom_sheet_title)
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/preferences/automatic/AutomaticTranslationItemPreference.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/preferences/automatic/AutomaticTranslationItemPreference.kt
+index 0759e56311456d79f2d045834fd2d8c416a954df..4f615008d13aad9b52734fcc42f9bb11a60d30d0 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/preferences/automatic/AutomaticTranslationItemPreference.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/preferences/automatic/AutomaticTranslationItemPreference.kt
+@@ -36,7 +36,7 @@ sealed class AutomaticTranslationOptionPreference(
+         override val summaryId: List<Int> =
+             listOf(
+                 R.string.automatic_translation_option_offer_to_translate_summary_preference,
+-                R.string.firefox,
++                R.string.app_name,
+             ),
+     ) : AutomaticTranslationOptionPreference(titleId = titleId, summaryId = summaryId)
+ 
+@@ -46,7 +46,7 @@ sealed class AutomaticTranslationOptionPreference(
+         override val summaryId: List<Int> =
+             listOf(
+                 R.string.automatic_translation_option_always_translate_summary_preference,
+-                R.string.firefox,
++                R.string.app_name,
+             ),
+     ) : AutomaticTranslationOptionPreference(titleId = titleId, summaryId = summaryId)
+ 
+@@ -56,7 +56,7 @@ sealed class AutomaticTranslationOptionPreference(
+         override val summaryId: List<Int> =
+             listOf(
+                 R.string.automatic_translation_option_never_translate_summary_preference,
+-                R.string.firefox,
++                R.string.app_name,
+             ),
+     ) : AutomaticTranslationOptionPreference(titleId = titleId, summaryId = summaryId)
+ }
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/preferences/downloadlanguages/DeleteLanguageFileDialog.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/preferences/downloadlanguages/DeleteLanguageFileDialog.kt
+index 8e35a325a10f2fd13275b9f76fb6be54dcceaaad..c3c585bb2bfcea414d667ce88e2ea9ef3db54484 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/preferences/downloadlanguages/DeleteLanguageFileDialog.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/preferences/downloadlanguages/DeleteLanguageFileDialog.kt
+@@ -70,12 +70,12 @@ fun DeleteLanguageFileDialog(
+                 if (isAllLanguagesItemType) {
+                     stringResource(
+                         id = R.string.delete_language_all_languages_file_dialog_message,
+-                        stringResource(id = R.string.firefox),
++                        stringResource(id = R.string.app_name),
+                     )
+                 } else {
+                     stringResource(
+                         id = R.string.delete_language_file_dialog_message,
+-                        stringResource(id = R.string.firefox),
++                        stringResource(id = R.string.app_name),
+                     )
+                 }
+ 
+diff --git a/mobile/android/fenix/app/src/main/res/values/embermine_strings.xml b/mobile/android/fenix/app/src/main/res/values/embermine_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..b8056703002d126d64a5a06c0d85f1750ff34c47
+--- /dev/null
++++ b/mobile/android/fenix/app/src/main/res/values/embermine_strings.xml
+@@ -0,0 +1,8 @@
++<?xml version="1.0" encoding="utf-8" standalone="yes"?>
++<!-- This Source Code Form is subject to the terms of the Mozilla Public
++   - License, v. 2.0. If a copy of the MPL was not distributed with this
++   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
++<resources>
++    <!-- The Mozilla product name, for text that names Firefox itself rather than the app. -->
++    <string name="embermine_mozilla_product_firefox" translatable="false">Firefox</string>
++</resources>
 diff --git a/mobile/android/fenix/app/src/main/res/values/static_strings.xml b/mobile/android/fenix/app/src/main/res/values/static_strings.xml
 index 876460272967b07c441b70c471cebf6a613e9149..8fc4243ace6a2dbdb4a16e596b80e1953c2e8513 100644
 --- a/mobile/android/fenix/app/src/main/res/values/static_strings.xml
@@ -3271,3 +3640,21 @@ index 31d6b91379cbfe57cad0a80a849964a02052abe3..8d3caa4a046d636297735804f3033d02
              android:targetClass="org.mozilla.fenix.IntentReceiverActivity" />
      </shortcut>
  </shortcuts>
+diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/settings/IPProtectionScreenTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/settings/IPProtectionScreenTest.kt
+index e0f1166df7ab2965ae946c51392bc6eb6f146516..99680a63b0f9f5038d7c107c510e23f2daf9bf04 100644
+--- a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/settings/IPProtectionScreenTest.kt
++++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/settings/IPProtectionScreenTest.kt
+@@ -233,7 +233,12 @@ class IPProtectionScreenTest {
+ }
+ 
+ private fun hasPromoCardTitle() =
+-    hasText(testContext.getString(R.string.ip_protection_promo_headline, testContext.getString(R.string.firefox)))
++    hasText(
++        testContext.getString(
++            R.string.ip_protection_promo_headline,
++            testContext.getString(R.string.embermine_mozilla_product_firefox),
++        ),
++    )
+ 
+ private fun hasVpnDescription() =
+     hasContentDescription(

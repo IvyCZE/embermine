@@ -81,6 +81,12 @@ class RenameTextTests(unittest.TestCase):
             "firefox_labs_title",
             "preference_search_address_bar_fx_suggest",
             "onboarding_redesign_sync_title",
+            "ip_protection_location_fastest_description",
+            "ip_protection_promo_headline",
+            "onboarding_term_of_service_line_two_2",
+            "onboarding_term_of_service_line_three",
+            "onboarding_redesign_tou_body_three",
+            "nova_onboarding_tou_body_line_3",
         ):
             with self.subTest(name=name):
                 self.assertEqual(rs.rename_text(name, "Use Firefox"), "Use Firefox")
@@ -106,7 +112,6 @@ class RenameStringsTests(unittest.TestCase):
                 "onboarding_welcome_to_firefox",
                 "default_browser_text",
                 "user_text",
-                "onboarding_term_of_service_line_two_2",
                 "other_text",
                 "based_text",
                 "tabs_open",
@@ -125,6 +130,7 @@ class RenameStringsTests(unittest.TestCase):
             "from other Firefox devices.<",
             "open Firefox and go to <b>https://firefox.com/pair</b>",
             "Embermine is based on Firefox and uses Embermine.",
+            ">Firefox cares about your privacy. Learn more in our %1$s.<",
         ):
             with self.subTest(kept=kept):
                 self.assertIn(kept, self.out)
@@ -174,7 +180,7 @@ class RunTests(unittest.TestCase):
             self.assertIn("renamed onboarding_welcome_to_firefox", printed)
             self.assertIn("renamed tabs_open", printed)
             self.assertNotIn("renamed firefox_labs_title", printed)
-            self.assertIn("in 7 strings", printed)
+            self.assertIn("in 6 strings", printed)
             self.assertIn("Welcome to Embermine", (tree / rs.STRINGS_REL).read_text(encoding="utf-8"))
             self.assertEqual(locale.read_text(encoding="utf-8"), FIXTURE)
 

@@ -18,12 +18,13 @@ def launcher_package(s: Session) -> str:
     return package
 
 
-def enable_themed_icons(s: Session, launcher: str) -> None:
+def set_themed_icons(s: Session, launcher: str, enabled: bool) -> None:
     """The Pixel launcher exposes its grid options through a content provider."""
+    value = "true" if enabled else "false"
     for path in ("set_icon_themed", "icon_themed"):
         uri = f"content://{launcher}.grid_control/{path}"
-        result = s.dev.adb.shell(f"content update --uri {uri} --bind boolean_value:b:true").strip()
-        s.log(f"update {path}: {result or 'ok'}")
+        result = s.dev.adb.shell(f"content update --uri {uri} --bind boolean_value:b:{value}").strip()
+        s.log(f"update {path} to {value}: {result or 'ok'}")
     state = s.dev.adb.shell(f"content query --uri content://{launcher}.grid_control/icon_themed").strip()
     s.log(f"icon_themed after update: {state[:120]}")
 
@@ -54,10 +55,22 @@ def themed_icon_capture(s: Session, label_pattern: str) -> None:
     label = "launcher themed icon (home screen, themed icons on)"
     with s.capture("launcher-themed-icon", label=label, file=f"launcher-themed-icon_{s.theme}.png", combination=s.theme) as shot:
         launcher = launcher_package(s)
-        enable_themed_icons(s, launcher)
+        set_themed_icons(s, launcher, enabled=True)
         s.dev.home()
         s.dev.sleep(2.0)
         place_on_home_screen(s, label_pattern)
         s.dev.sleep(3.0)
         placed = uidump.find_first(s.dev.dump("home-with-icon"), Selector(label=label_pattern))
+        shot.take(settle=0.5, note="app icon found in the home screen dump" if placed else "app icon not found in the home screen dump")
+
+
+def plain_icon_capture(s: Session, label_pattern: str) -> None:
+    """The adaptive icon as drawn when themed icons are off: the full-colour background, Sunny and ermine."""
+    label = "launcher icon (home screen, themed icons off)"
+    with s.capture("launcher-icon", label=label, file=f"launcher-icon_{s.theme}.png", combination=s.theme) as shot:
+        launcher = launcher_package(s)
+        set_themed_icons(s, launcher, enabled=False)
+        s.dev.home()
+        s.dev.sleep(3.0)
+        placed = uidump.find_first(s.dev.dump("home-plain-icon"), Selector(label=label_pattern))
         shot.take(settle=0.5, note="app icon found in the home screen dump" if placed else "app icon not found in the home screen dump")

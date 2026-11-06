@@ -256,6 +256,7 @@ def main(argv: list[str] | None = None) -> int:
             final = devsetup.read_palette_state(adb)
             index.header.append("Palette at the end of the walk: " + "; ".join(final.overlay_lines()) + f"; {devsetup.describe_state(final)}")
             launcher.themed_icon_capture(session, app_label)
+            launcher.plain_icon_capture(session, app_label)
             if not final.applied:
                 raise LaunchError("the forced palette was lost during the walk: " + "; ".join(final.problems()))
     except LaunchError as exc:

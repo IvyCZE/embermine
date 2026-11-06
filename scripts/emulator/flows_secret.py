@@ -1,9 +1,9 @@
-"""Secret settings: the Settings list before the unlock, after five taps on the About logo, and after a restart."""
+"""Secret settings: the About logo before and after five taps, the Settings list around the unlock, and after a restart."""
 from __future__ import annotations
 
 from scripts.emulator import uidump
 from scripts.emulator.device import StepError
-from scripts.emulator.flows_settings import ensure_settings_list, open_row, open_settings
+from scripts.emulator.flows_settings import ABOUT_FIRST_ROW, ensure_settings_list, open_row, open_settings
 from scripts.emulator.session import Session
 from scripts.emulator.uidump import Selector
 
@@ -25,21 +25,23 @@ def secret_row_note(s: Session) -> str:
     return "'Secret Settings' row on screen" if present else "no 'Secret Settings' row on screen"
 
 
-def tap_about_logo(s: Session) -> None:
-    open_row(s, ABOUT_ROW)
+def logo_position(s: Session) -> tuple[int, int]:
     nodes = s.dev.dump("about-for-logo", save=True)
     logo = uidump.find_first(nodes, LOGO)
     if logo is not None:
-        x, y = logo.center
-    else:
-        width, height = uidump.screen_size(nodes)
-        x, y = int(width * LOGO_FALLBACK[0]), int(height * LOGO_FALLBACK[1])
-        s.log("About logo not found by id, tapping its usual position")
+        return logo.center
+    width, height = uidump.screen_size(nodes)
+    s.log("About logo not found by id, tapping its usual position")
+    return int(width * LOGO_FALLBACK[0]), int(height * LOGO_FALLBACK[1])
+
+
+def tap_logo_five_times(s: Session) -> None:
+    if not s.dev.visible(ABOUT_FIRST_ROW):
+        raise StepError("the About screen is not open, so the logo taps were not sent")
+    x, y = logo_position(s)
     for _ in range(LOGO_TAPS):
         s.dev.tap_xy(x, y)
         s.dev.sleep(0.6)
-    s.dev.back()
-    s.dev.sleep(1.0)
 
 
 def secret_settings(s: Session) -> None:
@@ -47,12 +49,19 @@ def secret_settings(s: Session) -> None:
         open_settings(s)
         scroll_settings_to_end(s)
         shot.take(settle=1.0, note=secret_row_note(s))
+        if s.dev.visible(SECRET_ROW):
+            raise StepError("the Secret Settings row was there before the About logo was tapped")
+    ensure_settings_list(s)
+    with s.capture("about-before-logo-taps", label="About screen before the logo taps") as shot:
+        open_row(s, ABOUT_ROW, wait=ABOUT_FIRST_ROW)
+        shot.take(settle=1.0, note="no logo taps yet")
+    with s.capture("about-after-logo-taps", label="About screen after five logo taps") as shot:
+        tap_logo_five_times(s)
+        shot.take(settle=0.5, note="five taps sent to the About logo")
     ensure_settings_list(s)
     unlocked = False
     with s.capture("secret-settings-unlocked", label="Settings list end, after five taps on the About logo") as shot:
         s.dev.scroll_top()
-        tap_about_logo(s)
-        ensure_settings_list(s)
         scroll_settings_to_end(s)
         shot.take(settle=1.0, note=secret_row_note(s))
         unlocked = s.dev.visible(SECRET_ROW)
@@ -69,3 +78,5 @@ def secret_settings(s: Session) -> None:
             raise StepError("Settings did not open after the relaunch")
         scroll_settings_to_end(s)
         shot.take(settle=1.0, note=secret_row_note(s))
+        if not s.dev.visible(SECRET_ROW):
+            raise StepError("the Secret Settings row was gone after force-stop and relaunch")

@@ -1,6 +1,8 @@
 """Settings screens, history and about:config."""
 from __future__ import annotations
 
+import re
+
 from scripts.emulator import targets as t
 from scripts.emulator.device import StepError
 from scripts.emulator.flows_browse import go_home
@@ -21,6 +23,7 @@ SUBPAGES = (
 SETTINGS_ROW_ROOT = t.SETTINGS_TITLE
 ABOUT_ROW = r"About (Firefox|Embermine)"
 ABOUT_FIRST_ROW = Selector(label=r"What.s new in Embermine")
+PREF_NAME = re.compile(r"[a-z][A-Za-z0-9]*(\.[A-Za-z0-9_]+)+")
 
 
 def _toolbar_shows(url: str) -> Selector:
@@ -168,12 +171,10 @@ def about_config(s: Session) -> None:
         try:
             s.wait_page("about:config", timeout=20)
         except StepError as exc:
-            raise StepError(
-                "about:config did not open; GeckoProvider enables it for Beta, Nightly and debug builds only, "
-                "this build reports the release channel"
-            ) from exc
+            raise StepError("about:config did not open; GeckoProvider must call aboutConfigEnabled(true)") from exc
         s.dev.sleep(3.0)
-        shot.take(settle=1.0, note="page requested: about:config")
+        prefs = [n for n in s.dev.dump("about-config-prefs", save=True) if PREF_NAME.fullmatch(n.text or "")]
+        shot.take(settle=1.0, note=f"about:config open; {len(prefs)} preference names in the UI dump")
 
 
 def open_about(s: Session) -> None:

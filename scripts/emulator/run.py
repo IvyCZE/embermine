@@ -63,6 +63,8 @@ DOWNLOAD_STEMS = [
 ]
 SECRET_STEMS = [
     ("secret-settings-before", "secret settings, before unlock", False),
+    ("about-before-logo-taps", "About screen before the logo taps", False),
+    ("about-after-logo-taps", "About screen after five logo taps", False),
     ("secret-settings-unlocked", "secret settings, after unlock", False),
     ("secret-settings-screen", "secret settings screen", False),
     ("secret-settings-after-restart", "secret settings, after restart", False),

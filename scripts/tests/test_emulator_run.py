@@ -24,10 +24,16 @@ class FlowWiringTests(unittest.TestCase):
             "downloads-active", "downloads-paused", "download-notification", "wallpaper-picker", "customize",
             "bottom-navigation-bar", "14-main-menu-loading", "secret-settings-before", "secret-settings-unlocked",
             "secret-settings-after-restart", "about", "about-whatsnew", "about-support", "about-privacy",
-            "about-licenses", "about-crashes",
+            "about-licenses", "about-crashes", "about-before-logo-taps", "about-after-logo-taps",
         }
         self.assertEqual(wanted - {stem for stem, _ in stems}, set())
         self.assertIn(("12-tab-tray-header", True), stems)
+
+    def test_about_config_pref_pattern_matches_pref_names_only(self) -> None:
+        for name in ("general.aboutConfig.enable", "browser.tabs.warnOnClose", "devtools.console.stdout.chrome"):
+            self.assertIsNotNone(flows_settings.PREF_NAME.fullmatch(name), name)
+        for text in ("About", "Search preference name", "https://example.com", "Embermine 159.0"):
+            self.assertIsNone(flows_settings.PREF_NAME.fullmatch(text), text)
 
     def test_expected_stems_are_unique_per_privacy_mode(self) -> None:
         seen: set[tuple[str, bool]] = set()

@@ -1,6 +1,9 @@
 """Entry point of the emulator job: install the APK, walk the app and write screenshots and reports.
 
-usage: python3 -m scripts.emulator.run --variant light|dark|legacy --apk-dir DIR --out DIR --debug DIR
+usage: python3 -m scripts.emulator.run --variant light|dark|legacy [--accent on|off] --apk-dir DIR --out DIR --debug DIR
+
+--accent on is the default switch state (Use wallpaper colors on); the walk ends with the switch toggle captures.
+--accent off turns the switch off in Customize before the walk, so every capture is dynamic-off.
 
 Install and launch failures end the run with a non-zero exit code. Every capture after that is fail-soft:
 a screen that cannot be reached is listed as MISSING (with the reason) in screens-index.md.
@@ -11,7 +14,7 @@ import argparse
 import sys
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from scripts.emulator import (
@@ -27,7 +30,7 @@ from scripts.emulator import (
     launcher,
     logcat_scan,
 )
-from scripts.emulator.device import Adb, Device
+from scripts.emulator.device import Adb, Device, StepError
 from scripts.emulator.naming import ScreenIndex, capture_name, check_index_matches_files
 from scripts.emulator.session import LaunchError, Session
 from scripts.emulator.testserver import WalkServer
@@ -43,6 +46,7 @@ class Flow:
     run: Callable[[Session], None]
     expected: list[Expected]
     private: bool = False
+    states: dict[str, bool] = field(default_factory=dict)  # stems whose switch state differs from the session's
 
 
 TAB_TRAY_STEMS = [
@@ -97,7 +101,7 @@ def legacy_flow_list() -> list[Flow]:
     ]
 
 
-def flow_list(variant: str = "light") -> list[Flow]:
+def flow_list(variant: str = "light", accent: str = "on") -> list[Flow]:
     if variant == "legacy":
         return legacy_flow_list()
     f_browse, f_set, f_motion = flows_browse, flows_settings, flows_motion
@@ -113,7 +117,7 @@ def flow_list(variant: str = "light") -> list[Flow]:
         for kind, states in (("page-load", ("loading", "loaded")), ("pull-to-refresh", ("pulling", "reloading")))
         for state in states
     ]
-    return [
+    flows = [
         Flow("homepage", f_browse.homepage, [("04-homepage", "homepage", False)]),
         Flow("search", f_browse.search_bar_and_selector, [("search-bar", "search bar", False), ("11-search-selector", "search engine selector", False)]),
         Flow("pages", lambda s: f_browse.page_captures(s, private=False), [(p, p, False) for p in page_stems]),
@@ -145,6 +149,16 @@ def flow_list(variant: str = "light") -> list[Flow]:
         Flow("secret settings", flows_secret.secret_settings, SECRET_STEMS),
         Flow("about pages", f_set.about_pages, [(stem, label, False) for stem, _, _, label in f_set.ABOUT_PAGES]),
     ]
+    if accent == "on":
+        flows.append(
+            Flow(
+                "wallpaper colors toggle",
+                f_set.wallpaper_colors_toggle,
+                [(stem, label, False) for stem, _, label in f_set.WALLPAPER_COLORS_CAPTURES],
+                states={stem: on for stem, on, _ in f_set.WALLPAPER_COLORS_CAPTURES},
+            )
+        )
+    return flows
 
 
 def run_flow(s: Session, flow: Flow, deadline: float) -> None:
@@ -169,9 +183,10 @@ def run_flow(s: Session, flow: Flow, deadline: float) -> None:
             s.log(reason)
     recorded = {e.file for e in s.index.entries}
     for stem, label, private in flow.expected:
-        file = capture_name(stem, theme=s.theme, dynamic=s.dynamic, private=private)
+        dynamic = flow.states.get(stem, s.dynamic)
+        file = capture_name(stem, theme=s.theme, dynamic=dynamic, private=private)
         if file not in recorded:
-            combination = f"dynamic-off {s.theme}{' private' if private else ''}"
+            combination = f"dynamic-{'on' if dynamic else 'off'} {s.theme}{' private' if private else ''}"
             s.index.missing(label, combination, file, reason)
     try:
         s.dev.sweep_dialogs()
@@ -207,6 +222,7 @@ def write_coinstall(s: Session, out: Path, firefox_version: str, work: Path) -> 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--variant", choices=("light", "dark", "legacy"), required=True)
+    parser.add_argument("--accent", choices=("on", "off"), default="on")
     parser.add_argument("--apk-dir", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--debug", type=Path, required=True)
@@ -233,7 +249,10 @@ def main(argv: list[str] | None = None) -> int:
         apk = devsetup.find_apk(args.apk_dir)
         package, label = devsetup.apk_package_and_label(args.apk_dir / "apk-info.txt", apk.name)
         app_label = r"Embermine|Firefox" if not label else rf"{label}|Embermine|Firefox"
-        session = Session(dev, package, args.variant, args.out, args.debug, index, server=f"http://10.0.2.2:{SERVER_PORT}")
+        dynamic = not legacy and args.accent == "on"
+        session = Session(
+            dev, package, args.variant, args.out, args.debug, index, dynamic=dynamic, server=f"http://10.0.2.2:{SERVER_PORT}"
+        )
         if legacy:
             index.header = [
                 "Variant: legacy, light theme, API 30 google_apis x86_64 emulator, Pixel 6 profile (no Material You on this Android version)",
@@ -241,10 +260,16 @@ def main(argv: list[str] | None = None) -> int:
                 "Combination naming: dynamic-off means the 'Use wallpaper colors' switch is off or absent; no system palette is forced.",
             ]
         else:
+            switch_line = (
+                "Use wallpaper colors: on (default); the toggle captures record each switch state"
+                if dynamic
+                else "Use wallpaper colors: turned off in Customize before the walk"
+            )
             index.header = [
-                f"Variant: {args.variant} theme, API 34 google_apis x86_64 emulator, Pixel 6 profile",
+                f"Variant: {args.variant} theme, accent {args.accent}, API 34 google_apis x86_64 emulator, Pixel 6 profile",
                 f"App under test: {apk.name} (package {package}, label {label!r})",
-                "Combination naming: dynamic-off means the 'Use wallpaper colors' switch does not exist yet; the green system palette is forced.",
+                f"{switch_line}. The green system palette is forced in both passes.",
+                "Combination naming: dynamic-on and dynamic-off follow the in-app switch, not the palette.",
             ]
         devsetup.wake_and_stay_on(adb)
         devsetup.suppress_error_dialogs(adb)
@@ -267,8 +292,13 @@ def main(argv: list[str] | None = None) -> int:
         session.launch_from_launcher()
         flows_browse.onboarding_first_screen(session)
         flows_browse.complete_onboarding(session)
+        if args.accent == "off" and not legacy:
+            try:
+                flows_settings.turn_wallpaper_colors_off(session)
+            except StepError as exc:
+                raise LaunchError(f"'Use wallpaper colors' could not be turned off before the walk: {exc}") from exc
         deadline = time.monotonic() + FLOW_BUDGET_SECONDS
-        for flow in flow_list(args.variant):
+        for flow in flow_list(args.variant, args.accent):
             run_flow(session, flow, deadline)
         if not legacy:
             final = devsetup.read_palette_state(adb)

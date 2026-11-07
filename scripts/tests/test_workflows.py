@@ -25,6 +25,16 @@ class CiWorkflowTests(unittest.TestCase):
                 self.assertNotRegex(body, r"contents:\s*write")
                 self.assertNotRegex(body, r"gh release|action-gh-release|git push|create-release|git tag")
 
+    def test_emulator_matrix_walks_light_and_dark_with_the_switch_on_and_off(self) -> None:
+        ci = text("ci.yml")
+        job = ci[ci.index("  emulator:") : ci.index("  emulator-legacy:")]
+        for variant in ("light", "dark"):
+            for accent in ("on", "off"):
+                self.assertRegex(job, rf"variant: {variant}\s+accent: {accent}")
+        self.assertIn("--accent ${{ matrix.accent }}", job)
+        self.assertIn("name: screenshots-${{ matrix.variant }}-${{ matrix.accent }}", job)
+        self.assertIn("name: emulator-debug-${{ matrix.variant }}-${{ matrix.accent }}", job)
+
     def test_legacy_emulator_job_runs_the_api_30_walk_after_the_build(self) -> None:
         ci = text("ci.yml")
         job = ci[ci.index("  emulator-legacy:") : ci.index("  unit-tests:")]

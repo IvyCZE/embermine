@@ -1,0 +1,377 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: IvyCZE <me@ivy.yt>
+Date: Sat, 7 Nov 2026 09:57:20 +0000
+Subject: [PATCH] Embermine: 0005-wallpaper-colors-switch-and-accent
+
+Add the "Use wallpaper colors" switch to Settings > Customize. It is on by default, hidden below Android 12, stored in fenix_preferences through Settings, and recreates the activity as soon as it changes.
+
+When the switch is on and the theme is not private, EmbermineAccent copies only the accent slots from the Material You scheme into Firefox's ColorScheme: the primary family, secondaryContainer and inversePrimary. Tertiary follows the dynamic primary, so buttons, switches and links use the same hue. The selected tab outline and the accent and CFR gradients become two-tone gradients from the dynamic primary to the dynamic tertiary. Backgrounds, surfaces, neutrals and error colors stay Firefox's. Private mode and Android 11 and older keep the Firefox colors.
+
+EmbermineAccentScheme is plain Kotlin and its JVM test covers the slot mapping and the gradient stops.
+
+Co-authored-by: factory-droid[bot] <138933559+factory-droid[bot]@users.noreply.github.com>
+
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineAccent.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineAccent.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..47d60dcdaec8c2591ab13a2ee4aaab0a586efa70
+--- /dev/null
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineAccent.kt
+@@ -0,0 +1,41 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine
++
++import android.content.Context
++import android.os.Build
++import androidx.compose.material3.ColorScheme
++import androidx.compose.material3.dynamicDarkColorScheme
++import androidx.compose.material3.dynamicLightColorScheme
++import mozilla.components.compose.base.theme.AcornGradientScheme
++import mozilla.components.compose.base.theme.Theme
++import org.mozilla.fenix.ext.components
++
++/**
++ * Applies the wallpaper accent colors when "Use wallpaper colors" is on. Private mode and Android
++ * versions below 12 keep the Firefox colors.
++ */
++object EmbermineAccent {
++
++    fun colorScheme(context: Context, theme: Theme, base: ColorScheme): ColorScheme {
++        val dynamic = dynamicScheme(context, theme) ?: return base
++        return EmbermineAccentScheme.colorScheme(base, dynamic)
++    }
++
++    fun gradients(context: Context, theme: Theme, base: AcornGradientScheme): AcornGradientScheme {
++        val dynamic = dynamicScheme(context, theme) ?: return base
++        return EmbermineAccentScheme.gradients(base, dynamic)
++    }
++
++    private fun dynamicScheme(context: Context, theme: Theme): ColorScheme? {
++        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
++        if (theme == Theme.Private || !context.components.settings.isEmbermineWallpaperColorsEnabled) return null
++        return when (theme) {
++            Theme.Light -> dynamicLightColorScheme(context)
++            Theme.Dark, Theme.Oled -> dynamicDarkColorScheme(context)
++            Theme.Private -> null
++        }
++    }
++}
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineAccentScheme.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineAccentScheme.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..2701dccb1832a0aa4a1f17f0ad653ad76df8bc05
+--- /dev/null
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineAccentScheme.kt
+@@ -0,0 +1,43 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine
++
++import androidx.compose.material3.ColorScheme
++import mozilla.components.compose.base.theme.AcornGradient
++import mozilla.components.compose.base.theme.AcornGradientScheme
++import mozilla.components.compose.base.utils.ColorStop
++
++/**
++ * Maps a Material You scheme onto Firefox's accent slots. Surfaces, backgrounds, neutrals and error
++ * colors are never copied, so only the accents follow the wallpaper.
++ */
++object EmbermineAccentScheme {
++
++    fun colorScheme(base: ColorScheme, dynamic: ColorScheme): ColorScheme = base.copy(
++        primary = dynamic.primary,
++        onPrimary = dynamic.onPrimary,
++        primaryContainer = dynamic.primaryContainer,
++        onPrimaryContainer = dynamic.onPrimaryContainer,
++        inversePrimary = dynamic.inversePrimary,
++        secondaryContainer = dynamic.secondaryContainer,
++        onSecondaryContainer = dynamic.onSecondaryContainer,
++        tertiary = dynamic.primary,
++        onTertiary = dynamic.onPrimary,
++        tertiaryContainer = dynamic.primaryContainer,
++        onTertiaryContainer = dynamic.onPrimaryContainer,
++    )
++
++    fun gradients(base: AcornGradientScheme, dynamic: ColorScheme): AcornGradientScheme = base.copy(
++        cfr = twoTone(base.cfr, dynamic),
++        accent = twoTone(base.accent, dynamic),
++        tabOutline = twoTone(base.tabOutline, dynamic),
++    )
++
++    private fun twoTone(gradient: AcornGradient, dynamic: ColorScheme): AcornGradient = gradient.copy(
++        colorStops = gradient.colorStops.mapIndexed { index, stop ->
++            ColorStop(stop.position, if (index == 0) dynamic.primary else dynamic.tertiary)
++        },
++    )
++}
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/CustomizationFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/CustomizationFragment.kt
+index 1956c4ef6f25d317f6a9b6bfa6c7c7ce3fdf7066..4b988a63892c7ac9675a0a9352aa0b7e04e25f93 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/CustomizationFragment.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/CustomizationFragment.kt
+@@ -115,6 +115,7 @@ class CustomizationFragment : PreferenceFragmentCompat(), SystemInsetsPaddedFrag
+         bindLightTheme()
+         bindAutoBatteryTheme()
+         setupRadioGroups()
++        setupWallpaperColorsSwitch()
+         setupToolbarCategory()
+         setupTabStripDisplayCategory()
+         setupTabStripLocationCategory()
+@@ -227,6 +228,18 @@ class CustomizationFragment : PreferenceFragmentCompat(), SystemInsetsPaddedFrag
+         )
+     }
+ 
++    private fun setupWallpaperColorsSwitch() {
++        val wallpaperColorsSwitch =
++            requirePreference<SwitchPreferenceCompat>(R.string.pref_key_embermine_use_wallpaper_colors)
++        wallpaperColorsSwitch.isVisible = SDK_INT >= Build.VERSION_CODES.S
++        wallpaperColorsSwitch.isChecked = requireComponents.settings.isEmbermineWallpaperColorsEnabled
++        wallpaperColorsSwitch.setOnPreferenceChangeListener { _, newValue ->
++            requireComponents.settings.isEmbermineWallpaperColorsEnabled = newValue as Boolean
++            activity?.recreate()
++            true
++        }
++    }
++
+     private fun bindLightTheme() {
+         radioLightTheme = requirePreference(R.string.pref_key_light_theme)
+         radioLightTheme.onClickListener {
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/theme/FirefoxTheme.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/theme/FirefoxTheme.kt
+index 9185fef2c847bd36a461872be258da182fb564f0..9e947beb2dca3e950be67cf0b364a8bbf4bc4cb4 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/theme/FirefoxTheme.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/theme/FirefoxTheme.kt
+@@ -8,6 +8,7 @@ import androidx.compose.material3.ColorScheme
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.CompositionLocalProvider
+ import androidx.compose.runtime.ReadOnlyComposable
++import androidx.compose.ui.platform.LocalContext
+ import mozilla.components.compose.base.theme.AcornColors
+ import mozilla.components.compose.base.theme.AcornGradientScheme
+ import mozilla.components.compose.base.theme.AcornTheme
+@@ -27,6 +28,7 @@ import mozilla.components.compose.base.theme.oledAcornGradientScheme
+ import mozilla.components.compose.base.theme.oledColorPalette
+ import mozilla.components.compose.base.theme.privateAcornGradientScheme
+ import mozilla.components.compose.base.theme.privateColorPalette
++import org.mozilla.fenix.embermine.EmbermineAccent
+ 
+ /**
+  * The theme for Mozilla Firefox for Android (Fenix).
+@@ -47,21 +49,23 @@ fun FirefoxTheme(
+             Theme.Private -> privateColorPalette
+         }
+ 
+-    val colorScheme: ColorScheme =
++    val firefoxColorScheme: ColorScheme =
+         when (theme) {
+             Theme.Light -> acornLightColorScheme()
+             Theme.Dark -> acornDarkColorScheme()
+             Theme.Oled -> acornOledColorScheme()
+             Theme.Private -> acornPrivateColorScheme()
+         }
++    val colorScheme: ColorScheme = EmbermineAccent.colorScheme(LocalContext.current, theme, firefoxColorScheme)
+ 
+-    val gradients: AcornGradientScheme =
++    val firefoxGradients: AcornGradientScheme =
+         when (theme) {
+             Theme.Light -> lightAcornGradientScheme
+             Theme.Dark -> darkAcornGradientScheme
+             Theme.Oled -> oledAcornGradientScheme
+             Theme.Private -> privateAcornGradientScheme
+         }
++    val gradients: AcornGradientScheme = EmbermineAccent.gradients(LocalContext.current, theme, firefoxGradients)
+ 
+     val tabGroupColors: TabGroupColorPalette =
+         when (theme) {
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
+index 8875fe0f4d4caa287625dc68f778c36389b393a8..d57c8223c22b811e56063eb46e07794277f08da3 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
+@@ -2274,6 +2274,12 @@ class Settings(
+                     (isTabStripEligible(appContext) || FxNimbus.features.tabStrip.value().allowOnAllDevices),
+         )
+ 
++    var isEmbermineWallpaperColorsEnabled by
++        booleanPreference(
++            appContext.getPreferenceKey(R.string.pref_key_embermine_use_wallpaper_colors),
++            default = true,
++        )
++
+     var isDynamicToolbarEnabled by
+         booleanPreference(
+             appContext.getPreferenceKey(R.string.pref_key_dynamic_toolbar),
+diff --git a/mobile/android/fenix/app/src/main/res/values/embermine_strings.xml b/mobile/android/fenix/app/src/main/res/values/embermine_strings.xml
+index fcce1b96472079f67617c73ab40a0fbe86af461b..84bea931e6c19df1954fbbdebb1de28643c29518 100644
+--- a/mobile/android/fenix/app/src/main/res/values/embermine_strings.xml
++++ b/mobile/android/fenix/app/src/main/res/values/embermine_strings.xml
+@@ -8,4 +8,6 @@
+     <string name="embermine_about_main_line" translatable="false">Embermine is a modified build of Firefox, made by <a href="https://ivy.yt">https://ivy.yt</a></string>
+     <string name="embermine_android_components_abbreviation" translatable="false">AC</string>
+     <string name="embermine_onboarding_tou_body_line_3" translatable="false">Embermine does not send diagnostic or interaction data to Mozilla unless you turn it on. %1$s</string>
++    <string name="embermine_preference_use_wallpaper_colors" translatable="false">Use wallpaper colors</string>
++    <string name="embermine_preference_use_wallpaper_colors_summary" translatable="false">Accent colors follow your wallpaper. Private browsing stays purple.</string>
+ </resources>
+diff --git a/mobile/android/fenix/app/src/main/res/values/preference_keys.xml b/mobile/android/fenix/app/src/main/res/values/preference_keys.xml
+index d7b17c8de4a68189a78a4420a0fac51943bf61b5..39c8a45cef3b9ec9bc5e05f2ada5f2254ff5fd81 100644
+--- a/mobile/android/fenix/app/src/main/res/values/preference_keys.xml
++++ b/mobile/android/fenix/app/src/main/res/values/preference_keys.xml
+@@ -420,6 +420,7 @@
+ 
+     <!-- Whether the debug menu (secret settings, secret debug info, nimbus experiments, etc.) should be enabled persistently -->
+     <string name="pref_key_persistent_debug_menu" translatable="false">pref_key_persistent_debug_menu</string>
++    <string name="pref_key_embermine_use_wallpaper_colors" translatable="false">pref_key_embermine_use_wallpaper_colors</string>
+ 
+     <string name="pref_key_open_tabs_count" translatable="false">pref_key_open_tabs_count</string>
+     <string name="pref_key_open_private_tabs_count" translatable="false">pref_key_open_private_tabs_count</string>
+diff --git a/mobile/android/fenix/app/src/main/res/xml/customization_preferences.xml b/mobile/android/fenix/app/src/main/res/xml/customization_preferences.xml
+index 161fe29bf39bcd6a99759f5ac96e5fc556f19ed3..4e9dd7fe636a60877d3324913e9f833221e7ee4a 100644
+--- a/mobile/android/fenix/app/src/main/res/xml/customization_preferences.xml
++++ b/mobile/android/fenix/app/src/main/res/xml/customization_preferences.xml
+@@ -47,6 +47,11 @@
+             android:key="@string/pref_key_follow_device_theme"
+             android:title="@string/preference_follow_device_theme"
+             app:isPreferenceVisible="@bool/API28" />
++
++        <androidx.preference.SwitchPreferenceCompat
++            android:key="@string/pref_key_embermine_use_wallpaper_colors"
++            android:title="@string/embermine_preference_use_wallpaper_colors"
++            android:summary="@string/embermine_preference_use_wallpaper_colors_summary" />
+     </androidx.preference.PreferenceCategory>
+ 
+     <androidx.preference.PreferenceCategory
+diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineAccentSchemeTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineAccentSchemeTest.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..4ca459223d9735877d58ac10565b7d2a583a9725
+--- /dev/null
++++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineAccentSchemeTest.kt
+@@ -0,0 +1,129 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine
++
++import androidx.compose.material3.lightColorScheme
++import androidx.compose.ui.graphics.Color
++import mozilla.components.compose.base.theme.AcornGradient
++import mozilla.components.compose.base.theme.AcornGradientScheme
++import mozilla.components.compose.base.theme.AcornGradientType
++import mozilla.components.compose.base.utils.ColorStop
++import org.junit.Assert.assertEquals
++import org.junit.Test
++
++class EmbermineAccentSchemeTest {
++
++    private val firefoxScheme = lightColorScheme(
++        primary = Color(0xFF3E2976),
++        onPrimary = Color(0xFFFFFFFF),
++        primaryContainer = Color(0xFFCDB7FF),
++        onPrimaryContainer = Color(0xFF180E30),
++        inversePrimary = Color(0xFFCDB7FF),
++        secondary = Color(0xFF6B6B6B),
++        secondaryContainer = Color(0xFFE2DCF2),
++        onSecondaryContainer = Color(0xFF180E30),
++        tertiary = Color(0xFF764EDD),
++        onTertiary = Color(0xFFFFFFFF),
++        tertiaryContainer = Color(0xFFF5ECFF),
++        onTertiaryContainer = Color(0xFF180E30),
++        background = Color(0xFFF2F0F8),
++        surface = Color(0xFFFBFAFE),
++        error = Color(0xFFB3261E),
++        outline = Color(0xFF8A8A8A),
++    )
++
++    private val dynamicScheme = lightColorScheme(
++        primary = Color(0xFF2E7D32),
++        onPrimary = Color(0xFFFFFFFF),
++        primaryContainer = Color(0xFFB8F0B4),
++        onPrimaryContainer = Color(0xFF002204),
++        inversePrimary = Color(0xFF9CD69A),
++        secondaryContainer = Color(0xFFD2E8CF),
++        onSecondaryContainer = Color(0xFF0E2110),
++        tertiary = Color(0xFF3A6A6A),
++        onTertiary = Color(0xFFFFFFFF),
++        tertiaryContainer = Color(0xFFBDEFEF),
++        onTertiaryContainer = Color(0xFF002020),
++        background = Color(0xFF112211),
++        surface = Color(0xFF112211),
++        error = Color(0xFF00FF00),
++        outline = Color(0xFF00FF00),
++    )
++
++    private val firefoxGradients = AcornGradientScheme(
++        cfr = linear(Color(0xFF5939A8), Color(0xFF764EDD)),
++        accent = linear(Color(0xFFB393FF), Color(0xFFFFB27A)),
++        accentSubtle = linear(Color(0xFFE5D6FF), Color(0xFFFFE0C2)),
++        tabOutline = linear(Color(0xFFB393FF), Color(0xFF764EDD)),
++        privacyMask = AcornGradient(
++            type = AcornGradientType.Vertical,
++            colorStops = listOf(ColorStop(0f, Color(0xFFCDB7FF)), ColorStop(1f, Color(0xFFFFFFFF))),
++        ),
++    )
++
++    @Test
++    fun `accent slots take the dynamic primary family`() {
++        val result = EmbermineAccentScheme.colorScheme(firefoxScheme, dynamicScheme)
++
++        assertEquals(dynamicScheme.primary, result.primary)
++        assertEquals(dynamicScheme.onPrimary, result.onPrimary)
++        assertEquals(dynamicScheme.primaryContainer, result.primaryContainer)
++        assertEquals(dynamicScheme.onPrimaryContainer, result.onPrimaryContainer)
++        assertEquals(dynamicScheme.inversePrimary, result.inversePrimary)
++        assertEquals(dynamicScheme.secondaryContainer, result.secondaryContainer)
++        assertEquals(dynamicScheme.onSecondaryContainer, result.onSecondaryContainer)
++    }
++
++    @Test
++    fun `tertiary accents follow the dynamic primary instead of the dynamic tertiary`() {
++        val result = EmbermineAccentScheme.colorScheme(firefoxScheme, dynamicScheme)
++
++        assertEquals(dynamicScheme.primary, result.tertiary)
++        assertEquals(dynamicScheme.onPrimary, result.onTertiary)
++        assertEquals(dynamicScheme.primaryContainer, result.tertiaryContainer)
++        assertEquals(dynamicScheme.onPrimaryContainer, result.onTertiaryContainer)
++    }
++
++    @Test
++    fun `surfaces backgrounds neutrals and error keep the Firefox colors`() {
++        val result = EmbermineAccentScheme.colorScheme(firefoxScheme, dynamicScheme)
++
++        assertEquals(firefoxScheme.background, result.background)
++        assertEquals(firefoxScheme.surface, result.surface)
++        assertEquals(firefoxScheme.secondary, result.secondary)
++        assertEquals(firefoxScheme.error, result.error)
++        assertEquals(firefoxScheme.outline, result.outline)
++    }
++
++    @Test
++    fun `accent gradients run from the dynamic primary to the dynamic tertiary`() {
++        val result = EmbermineAccentScheme.gradients(firefoxGradients, dynamicScheme)
++
++        listOf(result.tabOutline, result.accent, result.cfr).forEach { gradient ->
++            assertEquals(2, gradient.colorStops.size)
++            assertEquals(dynamicScheme.primary, gradient.colorStops.first().color)
++            assertEquals(dynamicScheme.tertiary, gradient.colorStops.last().color)
++        }
++        assertEquals(
++            firefoxGradients.tabOutline.colorStops.map { it.position },
++            result.tabOutline.colorStops.map { it.position },
++        )
++        assertEquals(firefoxGradients.accent.type, result.accent.type)
++        assertEquals(firefoxGradients.cfr.type, result.cfr.type)
++    }
++
++    @Test
++    fun `gradients outside the accent set keep the Firefox values`() {
++        val result = EmbermineAccentScheme.gradients(firefoxGradients, dynamicScheme)
++
++        assertEquals(firefoxGradients.accentSubtle, result.accentSubtle)
++        assertEquals(firefoxGradients.privacyMask, result.privacyMask)
++    }
++
++    private fun linear(start: Color, end: Color) = AcornGradient(
++        type = AcornGradientType.Linear(angleInDegrees = 96f),
++        colorStops = listOf(ColorStop(0f, start), ColorStop(0.71f, end)),
++    )
++}

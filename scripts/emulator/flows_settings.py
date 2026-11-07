@@ -4,6 +4,7 @@ from __future__ import annotations
 import re
 
 from scripts.emulator import targets as t
+from scripts.emulator import uidump
 from scripts.emulator.device import StepError
 from scripts.emulator.flows_browse import go_home
 from scripts.emulator.session import Session
@@ -24,6 +25,14 @@ SETTINGS_ROW_ROOT = t.SETTINGS_TITLE
 ABOUT_ROW = r"About (Firefox|Embermine)"
 ABOUT_FIRST_ROW = Selector(label=r"What.s new in Embermine")
 TECHNICAL_DATA_ROW = Selector(label=r"Send technical and interaction data")
+WALLPAPER_COLORS_ROW = Selector(label=r"Use wallpaper colors")
+# (file stem, switch state in the capture, label for the index), in the order the toggle flow takes them
+WALLPAPER_COLORS_CAPTURES = (
+    ("customize-after-toggle-off", False, "customize screen, switch turned off"),
+    ("customize-after-toggle-on", True, "customize screen, switch turned on again"),
+    ("customize-after-restart-off", False, "customize screen, switch off after a restart"),
+    ("customize-after-restart-on", True, "customize screen, switch on after a restart"),
+)
 PREF_NAME = re.compile(r"[a-z][A-Za-z0-9]*(\.[A-Za-z0-9_]+)+")
 
 
@@ -227,6 +236,84 @@ def data_collection_opt_in(s: Session) -> None:
         open_row(s, r"Data collection")
         s.dev.tap(TECHNICAL_DATA_ROW, timeout=10, settle=2.0)
         shot.take(settle=1.5, note="switch tapped once from off")
+
+
+def open_customize(s: Session) -> None:
+    open_settings(s)
+    open_row(s, r"Customize", wait=WALLPAPER_COLORS_ROW)
+
+
+def wallpaper_colors_on(s: Session) -> bool:
+    """State of the 'Use wallpaper colors' switch: the switch nearest to the row's title."""
+    nodes = s.dev.dump("wallpaper-colors-switch")
+    row = uidump.find_first(nodes, WALLPAPER_COLORS_ROW)
+    if row is None:
+        raise StepError("'Use wallpaper colors' row not found")
+    switches = uidump.find_all(nodes, Selector(id="switchWidget"))
+    mine = min(switches, key=lambda n: abs(n.center[1] - row.center[1]), default=None)
+    if mine is None:
+        raise StepError("no switch next to 'Use wallpaper colors'")
+    return mine.checked
+
+
+def require_wallpaper_colors(s: Session, on: bool) -> None:
+    state = wallpaper_colors_on(s)
+    if state != on:
+        raise StepError(f"'Use wallpaper colors' is {'on' if state else 'off'}, expected {'on' if on else 'off'}")
+
+
+def set_wallpaper_colors(s: Session, on: bool) -> None:
+    """Taps the row when the switch is in the other state. The activity is recreated, so Customize is waited for."""
+    before = wallpaper_colors_on(s)
+    s.log(f"'Use wallpaper colors' is {'on' if before else 'off'} before the tap")
+    if before == on:
+        return
+    s.dev.tap(WALLPAPER_COLORS_ROW, timeout=10, settle=2.0)
+    if s.dev.wait_for(WALLPAPER_COLORS_ROW, timeout=20) is None:
+        raise StepError("Customize did not come back after the switch was tapped")
+    require_wallpaper_colors(s, on)
+    s.log(f"'Use wallpaper colors' toggled, now {'on' if on else 'off'}")
+
+
+def turn_wallpaper_colors_off(s: Session) -> None:
+    """Dynamic-off pass: the switch is turned off in Customize before the walk, so the walk shows Firefox's accent."""
+    s.dynamic = False
+    open_customize(s)
+    set_wallpaper_colors(s, False)
+    s.deep_link("home")
+
+
+def _toggle_capture(s: Session, stem: str, on: bool) -> None:
+    label = next(name for key, _, name in WALLPAPER_COLORS_CAPTURES if key == stem)
+    s.dynamic = on
+    with s.capture(stem, label=label) as shot:
+        require_wallpaper_colors(s, on)
+        shot.take(settle=1.5)
+
+
+def wallpaper_colors_toggle(s: Session) -> None:
+    """Dynamic-on pass, after the walk: starts from the default (on), captures right after each toggle and after
+    a restart in each state. The session's dynamic flag is set before each capture so its file name has the state."""
+    try:
+        s.dynamic = True
+        open_customize(s)
+        require_wallpaper_colors(s, True)
+        set_wallpaper_colors(s, False)
+        _toggle_capture(s, "customize-after-toggle-off", on=False)
+        set_wallpaper_colors(s, True)
+        _toggle_capture(s, "customize-after-toggle-on", on=True)
+        set_wallpaper_colors(s, False)
+        s.force_stop()
+        s.launch_from_launcher()
+        open_customize(s)
+        _toggle_capture(s, "customize-after-restart-off", on=False)
+        set_wallpaper_colors(s, True)
+        s.force_stop()
+        s.launch_from_launcher()
+        open_customize(s)
+        _toggle_capture(s, "customize-after-restart-on", on=True)
+    finally:
+        s.dynamic = True
 
 
 def allow_private_screenshots(s: Session) -> None:

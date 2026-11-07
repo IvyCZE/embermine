@@ -21,7 +21,9 @@ jobs:
     secrets: inherit
 
   # Walks the x86_64 APK on an API 34 emulator and uploads screenshots plus reports (screens-index.md,
-  # network-hosts.txt, coinstall.txt, logcat-crash.txt). Screens are fail-soft; install and launch failures fail the job.
+  # network-hosts.txt, coinstall.txt, logcat-crash.txt). Each light and dark walk runs twice: accent on (the
+  # default switch state) and accent off (the switch is turned off before the walk). Screens are fail-soft;
+  # install and launch failures fail the job.
   emulator:
     needs: build
     runs-on: ubuntu-latest
@@ -29,7 +31,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [light, dark]
+        include:
+          - variant: light
+            accent: on
+          - variant: light
+            accent: off
+          - variant: dark
+            accent: on
+          - variant: dark
+            accent: off
     steps:
       - uses: actions/checkout@v7
         with:
@@ -59,17 +69,18 @@ jobs:
           disable-animations: true
           emulator-boot-timeout: 900
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -tcpdump /tmp/em.pcap
-          script: python3 -m scripts.emulator.run --variant ${{ matrix.variant }} --apk-dir apk --out shots --debug debug
+          script: python3 -m scripts.emulator.run --variant ${{ matrix.variant }} --accent ${{ matrix.accent }} --apk-dir apk --out shots --debug debug
 
       - name: Network hosts
         if: ${{ !cancelled() }}
         env:
           VARIANT: ${{ matrix.variant }}
+          ACCENT: ${{ matrix.accent }}
         run: |
           mkdir -p shots debug
           ls -la /tmp/em.pcap
           python3 -m scripts.emulator.netreport --pcap /tmp/em.pcap --out shots/network-hosts.txt \
-            --session "scripted walk of the $VARIANT variant with default settings (onboarding declined; settings changed: allow screenshots in private browsing, the toolbar position top then bottom, the toolbar layout Expanded then back to Simple, the secret settings unlock by five taps on the About logo, and the launcher's themed icons on then off; none of these touches the network). Pages: https://example.com plus a local test server on 10.0.2.2 that serves the page-load, pull-to-refresh and download files. Also: tab tray, downloads, history and settings screens (the Sign in row shows Sync's QR sign-in screen because the emulator has a back camera, so no account web page loads), the About rows that open GitHub pages (releases, issues and PRIVACY.md on github.com) and about:license. The co-install check runs only in the legacy pass, which has no packet capture. Wi-Fi disabled" \
+            --session "scripted walk of the $VARIANT variant with the 'Use wallpaper colors' switch $ACCENT (accent on: the walk ends by turning it off, on and off again across two restarts, and back on; accent off: it is turned off before the walk; no toggle touches the network) and default settings (onboarding declined; settings changed: allow screenshots in private browsing, the toolbar position top then bottom, the toolbar layout Expanded then back to Simple, the secret settings unlock by five taps on the About logo, and the launcher's themed icons on then off; none of these touches the network). Pages: https://example.com plus a local test server on 10.0.2.2 that serves the page-load, pull-to-refresh and download files. Also: tab tray, downloads, history and settings screens (the Sign in row shows Sync's QR sign-in screen because the emulator has a back camera, so no account web page loads), the About rows that open GitHub pages (releases, issues and PRIVACY.md on github.com) and about:license. The co-install check runs only in the legacy pass, which has no packet capture. Wi-Fi disabled" \
             --visited debug/visited-urls.txt
           cp /tmp/em.pcap debug/ || true
 
@@ -83,7 +94,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
-          name: screenshots-${{ matrix.variant }}
+          name: screenshots-${{ matrix.variant }}-${{ matrix.accent }}
           path: shots
           if-no-files-found: error
           retention-days: 30
@@ -92,7 +103,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
-          name: emulator-debug-${{ matrix.variant }}
+          name: emulator-debug-${{ matrix.variant }}-${{ matrix.accent }}
           path: debug
           if-no-files-found: ignore
           retention-days: 7
@@ -242,7 +253,8 @@ jobs:
           python3 scripts/junit_summary.py unit-test-results \
             --require-class org.mozilla.fenix.embermine.EmbermineVersionTest \
             --require-class org.mozilla.fenix.embermine.EmbermineNameArgsTest \
-            --require-class org.mozilla.fenix.embermine.EmbermineMetricControllerTest
+            --require-class org.mozilla.fenix.embermine.EmbermineMetricControllerTest \
+            --require-class org.mozilla.fenix.embermine.EmbermineAccentSchemeTest
 
       - name: Upload unit test results
         if: ${{ !cancelled() }}

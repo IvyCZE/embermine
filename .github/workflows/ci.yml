@@ -229,7 +229,7 @@ jobs:
           BUILDID: ${{ steps.res.outputs.buildid }}
         run: bash scripts/configure-tree.sh fx "$BUILDID"
 
-      - name: Gradle unit tests (org.mozilla.fenix.embermine)
+      - name: Gradle unit tests (org.mozilla.fenix.embermine, compose-base embermine)
         working-directory: fx/mobile/android/fenix
         run: |
           set -euo pipefail
@@ -241,6 +241,7 @@ jobs:
             -Pkotlin.daemon.jvmargs=-Xmx3g \
             --continue \
             :app:testDebugUnitTest --tests "org.mozilla.fenix.embermine.*" \
+            :components:compose-base:testDebugUnitTest --tests "mozilla.components.compose.base.embermine.*" \
             -PdisableDebugSigning
 
       # A green Gradle run proves nothing when the test filter matched no class.
@@ -248,13 +249,14 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           mkdir -p unit-test-results
-          find fx/obj-embermine/gradle/build/mobile/android/fenix -name 'TEST-*.xml' -path '*test-results*' \
+          find fx/obj-embermine/gradle/build/mobile/android -name 'TEST-*.xml' -path '*test-results*' \
             -exec cp --parents {} unit-test-results/ \;
           python3 scripts/junit_summary.py unit-test-results \
             --require-class org.mozilla.fenix.embermine.EmbermineVersionTest \
             --require-class org.mozilla.fenix.embermine.EmbermineNameArgsTest \
             --require-class org.mozilla.fenix.embermine.EmbermineMetricControllerTest \
-            --require-class org.mozilla.fenix.embermine.EmbermineAccentSchemeTest
+            --require-class org.mozilla.fenix.embermine.EmbermineAccentSchemeTest \
+            --require-class mozilla.components.compose.base.embermine.EmbermineShapeTest
 
       - name: Upload unit test results
         if: ${{ !cancelled() }}

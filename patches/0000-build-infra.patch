@@ -16,7 +16,7 @@ Port ShakeSensitivitySlider and FontSizeSlider to the SliderState overload of
 Slider: material3 1.5 hid the value/thumb/track overload.
 
 diff --git a/gradle/libs.versions.toml b/gradle/libs.versions.toml
-index fd0aba7a9e1d38d794081747c5b656c5c6b45619..45cdde6c83a41fd1fdc01bf475d0932fbb4033bf 100644
+index fd0aba7a9e1d38d794081747c5b656c5c6b45619..28607d535c30456415d9b7d6f9c01f147792bcae 100644
 --- a/gradle/libs.versions.toml
 +++ b/gradle/libs.versions.toml
 @@ -214,7 +214,7 @@ androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref =
@@ -28,6 +28,26 @@ index fd0aba7a9e1d38d794081747c5b656c5c6b45619..45cdde6c83a41fd1fdc01bf475d0932f
  androidx-compose-material3-adaptive = { module = "androidx.compose.material3.adaptive:adaptive" }
  androidx-compose-material3-adaptivelayout = { module = "androidx.compose.material3.adaptive:adaptive-layout" }
  androidx-compose-material3-adaptivenavigation = { module = "androidx.compose.material3.adaptive:adaptive-navigation" }
+@@ -229,6 +229,7 @@ androidx-compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-mani
+ androidx-compose-ui-text-android = { module = "androidx.compose.ui:ui-text-android" }
+ androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
+ androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
++androidx-graphics-shapes = { module = "androidx.graphics:graphics-shapes-android", version = "1.0.1" }
+ 
+ # Google other
+ accompanist-drawablepainter = { module = "com.google.accompanist:accompanist-drawablepainter", version.ref = "accompanist" }
+diff --git a/mobile/android/android-components/components/compose/base/build.gradle b/mobile/android/android-components/components/compose/base/build.gradle
+index 6a1a80b2f882575d1a2ad79b6e54e4f10b4ddd85..db246719ac69c9e46cf51c00605cb5def7f27459 100644
+--- a/mobile/android/android-components/components/compose/base/build.gradle
++++ b/mobile/android/android-components/components/compose/base/build.gradle
+@@ -33,6 +33,7 @@ dependencies {
+     implementation libs.androidx.compose.material3.windowsizeclass
+     implementation libs.androidx.compose.ui
+     implementation libs.androidx.compose.ui.tooling.preview
++    implementation libs.androidx.graphics.shapes
+     implementation libs.androidx.navigation.compose
+ 
+     debugImplementation libs.androidx.compose.ui.tooling
 diff --git a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/menu/DropdownMenu.kt b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/menu/DropdownMenu.kt
 index 77f9cc9d6fc0d1e0a614763e9a15b494238c4563..ace370d65f16c4448e59d3e4ef867d6d9040e959 100644
 --- a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/menu/DropdownMenu.kt
@@ -259,3 +279,26 @@ index 20a42d6eabb471a159f7c2bf38133a45d352e62a..d03fd22090944aea7f6c98d79a7aa4d6
          }
      }
  
+diff --git a/mobile/android/gradle/plugins/conventions/src/main/java/org/mozilla/conventions/SettingsPlugin.kt b/mobile/android/gradle/plugins/conventions/src/main/java/org/mozilla/conventions/SettingsPlugin.kt
+index 35563c1a00e34d692b0ba87c14560b92dbe8ebe7..2226ea61f150ad5410317c561d2cb1468eb94f87 100644
+--- a/mobile/android/gradle/plugins/conventions/src/main/java/org/mozilla/conventions/SettingsPlugin.kt
++++ b/mobile/android/gradle/plugins/conventions/src/main/java/org/mozilla/conventions/SettingsPlugin.kt
+@@ -28,6 +28,8 @@ private data class AutoPublishConfig(
+ // which comes with a "py" launcher and respects the shebang line to specify the version.
+ private val isWindows = System.getProperty("os.name").lowercase().contains("windows")
+ 
++private val AC_TEST_ENABLED_PROJECTS = setOf(":components:compose-base")
++
+ abstract class SettingsPlugin : Plugin<Settings> {
+     private val logger = Logging.getLogger(SettingsPlugin::class.java)
+ 
+@@ -129,7 +131,8 @@ abstract class SettingsPlugin : Plugin<Settings> {
+             rootGradle.taskGraph.allTasks.forEach { task ->
+                 val mozilla = task.project.extensions.findByType(ProjectExtension::class.java)
+                     ?: return@forEach
+-                if (mozilla.androidComponentsProject.get() && (task is Test || task.name.contains("lint"))) {
++                val isDisabledTest = task is Test && task.project.path !in AC_TEST_ENABLED_PROJECTS
++                if (mozilla.androidComponentsProject.get() && (isDisabledTest || task.name.contains("lint"))) {
+                     task.project.logger.debug("Disabling task ${task.path}")
+                     task.enabled = false
+                 }

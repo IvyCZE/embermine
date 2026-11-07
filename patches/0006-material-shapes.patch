@@ -1,0 +1,797 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: IvyCZE <me@ivy.yt>
+Date: Sat, 7 Nov 2026 20:10:30 +0000
+Subject: [PATCH] Embermine: 0006-material-shapes
+
+Add the EmbermineShape enum (MaterialShapes), the ShapedIconBackground
+helper (40 dp primaryContainer container behind the icon, drawn without
+changing layout), and EmbermineShapeDrawable for View toolbars. Opt in
+main menu items, the library row, the bottom navigation row, the account
+avatar and the site protection panel rows, leaving the other menus
+unshaped. Add a JVM test for the shape mapping.
+
+Co-authored-by: factory-droid[bot] <138933559+factory-droid[bot]@users.noreply.github.com>
+
+diff --git a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/EmbermineShape.kt b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/EmbermineShape.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..34e96710c2a9b948c7bcd55b109acd1bb2cb0efd
+--- /dev/null
++++ b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/EmbermineShape.kt
+@@ -0,0 +1,31 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package mozilla.components.compose.base.embermine
++
++import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
++import androidx.compose.material3.MaterialShapes
++import androidx.compose.material3.toShape
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.graphics.Shape
++import androidx.graphics.shapes.RoundedPolygon
++
++@OptIn(ExperimentalMaterial3ExpressiveApi::class)
++enum class EmbermineShape(val polygon: RoundedPolygon) {
++    Cookie12Sided(MaterialShapes.Cookie12Sided),
++    Cookie9Sided(MaterialShapes.Cookie9Sided),
++    Cookie7Sided(MaterialShapes.Cookie7Sided),
++    Cookie6Sided(MaterialShapes.Cookie6Sided),
++    Cookie4Sided(MaterialShapes.Cookie4Sided),
++    Sunny(MaterialShapes.Sunny),
++    Slanted(MaterialShapes.Slanted),
++    Flower(MaterialShapes.Flower),
++    Pentagon(MaterialShapes.Pentagon),
++    Clover4Leaf(MaterialShapes.Clover4Leaf),
++    Pill(MaterialShapes.Pill),
++    Gem(MaterialShapes.Gem);
++
++    @Composable
++    fun toShape(): Shape = polygon.toShape()
++}
+diff --git a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/EmbermineShapeDrawable.kt b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/EmbermineShapeDrawable.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..3c3de734d2358bfe5d415644c0a4a04450c70d18
+--- /dev/null
++++ b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/EmbermineShapeDrawable.kt
+@@ -0,0 +1,58 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package mozilla.components.compose.base.embermine
++
++import android.graphics.Canvas
++import android.graphics.ColorFilter
++import android.graphics.Matrix
++import android.graphics.Paint
++import android.graphics.Path
++import android.graphics.PixelFormat
++import android.graphics.Rect
++import android.graphics.drawable.Drawable
++import androidx.annotation.ColorInt
++import androidx.graphics.shapes.toPath
++import androidx.graphics.shapes.transformed
++
++/**
++ * A [Drawable] filling the [EmbermineShape] polygon with [color] inside its bounds, for View toolbars and menus.
++ *
++ * @param shape The [EmbermineShape] to draw.
++ * @param color The fill color of the shape.
++ */
++class EmbermineShapeDrawable(
++    shape: EmbermineShape,
++    @ColorInt color: Int,
++) : Drawable() {
++    private val polygon = shape.polygon
++    private val path = Path()
++    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
++        style = Paint.Style.FILL
++        this.color = color
++    }
++
++    override fun onBoundsChange(bounds: Rect) {
++        super.onBoundsChange(bounds)
++        val matrix = Matrix().apply {
++            setScale(bounds.width().toFloat(), bounds.height().toFloat())
++            postTranslate(bounds.left.toFloat(), bounds.top.toFloat())
++        }
++        polygon.transformed(matrix).toPath(path)
++    }
++
++    override fun draw(canvas: Canvas) {
++        canvas.drawPath(path, paint)
++    }
++
++    override fun setAlpha(alpha: Int) {
++        paint.alpha = alpha
++    }
++
++    override fun setColorFilter(colorFilter: ColorFilter?) {
++        paint.colorFilter = colorFilter
++    }
++
++    override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
++}
+diff --git a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/ShapedIconBackground.kt b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/ShapedIconBackground.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..e194d0dfd64c5e4032d7756e7db8acd4d95d2e8e
+--- /dev/null
++++ b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/ShapedIconBackground.kt
+@@ -0,0 +1,61 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package mozilla.components.compose.base.embermine
++
++import androidx.compose.foundation.layout.Box
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.draw.drawBehind
++import androidx.compose.ui.geometry.Size
++import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.graphics.drawscope.translate
++import androidx.compose.ui.unit.Dp
++import androidx.compose.ui.unit.dp
++
++private val SHAPE_CONTAINER_SIZE: Dp = 40.dp
++private const val DISABLED_ALPHA = 0.38f
++
++/**
++ * Draws [shape] as a 40 dp container behind [content] without changing the layout size of [content].
++ *
++ * @param shape The [EmbermineShape] of the container. When `null`, no container is drawn.
++ * @param defaultContentColor The content color used when [shape] is `null`.
++ * @param modifier [Modifier] to be applied to the layout.
++ * @param enabled Whether the container and its content are drawn in their enabled colors.
++ * @param content The content, receiving the color it should be tinted with.
++ */
++@Composable
++fun ShapedIconBackground(
++    shape: EmbermineShape?,
++    defaultContentColor: Color,
++    modifier: Modifier = Modifier,
++    enabled: Boolean = true,
++    content: @Composable (contentColor: Color) -> Unit,
++) {
++    if (shape == null) {
++        content(defaultContentColor)
++        return
++    }
++
++    val alpha = if (enabled) 1f else DISABLED_ALPHA
++    val containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = alpha)
++    val contentColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = alpha)
++    val containerShape = shape.toShape()
++
++    Box(
++        modifier = modifier.drawBehind {
++            val containerSize = SHAPE_CONTAINER_SIZE.toPx()
++            val outline = containerShape.createOutline(Size(containerSize, containerSize), layoutDirection, this)
++            translate(left = (size.width - containerSize) / 2f, top = (size.height - containerSize) / 2f) {
++                drawOutline(outline = outline, color = containerColor)
++            }
++        },
++        contentAlignment = Alignment.Center,
++    ) {
++        content(contentColor)
++    }
++}
+diff --git a/mobile/android/android-components/components/compose/base/src/test/java/mozilla/components/compose/base/embermine/EmbermineShapeTest.kt b/mobile/android/android-components/components/compose/base/src/test/java/mozilla/components/compose/base/embermine/EmbermineShapeTest.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..d9e51b078ed1d78e5a67bfcd911ad2d21988dce2
+--- /dev/null
++++ b/mobile/android/android-components/components/compose/base/src/test/java/mozilla/components/compose/base/embermine/EmbermineShapeTest.kt
+@@ -0,0 +1,38 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package mozilla.components.compose.base.embermine
++
++import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
++import androidx.compose.material3.MaterialShapes
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertSame
++import org.junit.Test
++
++@OptIn(ExperimentalMaterial3ExpressiveApi::class)
++class EmbermineShapeTest {
++
++    @Test
++    fun `every EmbermineShape maps to its MaterialShapes polygon`() {
++        val expected = mapOf(
++            EmbermineShape.Cookie12Sided to MaterialShapes.Cookie12Sided,
++            EmbermineShape.Cookie9Sided to MaterialShapes.Cookie9Sided,
++            EmbermineShape.Cookie7Sided to MaterialShapes.Cookie7Sided,
++            EmbermineShape.Cookie6Sided to MaterialShapes.Cookie6Sided,
++            EmbermineShape.Cookie4Sided to MaterialShapes.Cookie4Sided,
++            EmbermineShape.Sunny to MaterialShapes.Sunny,
++            EmbermineShape.Slanted to MaterialShapes.Slanted,
++            EmbermineShape.Flower to MaterialShapes.Flower,
++            EmbermineShape.Pentagon to MaterialShapes.Pentagon,
++            EmbermineShape.Clover4Leaf to MaterialShapes.Clover4Leaf,
++            EmbermineShape.Pill to MaterialShapes.Pill,
++            EmbermineShape.Gem to MaterialShapes.Gem,
++        )
++
++        assertEquals(EmbermineShape.entries.toSet(), expected.keys)
++        expected.forEach { (shape, polygon) ->
++            assertSame(polygon, shape.polygon)
++        }
++    }
++}
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/ExtensionsMenuItem.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/ExtensionsMenuItem.kt
+index 6962dfd8799446121f2b7be511ec4957d391df91..a3010cba0bef3827dadc6c9fd03a57701e87fddd 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/ExtensionsMenuItem.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/ExtensionsMenuItem.kt
+@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
+ import androidx.compose.ui.tooling.preview.Preview
+ import androidx.compose.ui.tooling.preview.PreviewParameter
+ import androidx.compose.ui.unit.dp
++import mozilla.components.compose.base.embermine.EmbermineShape
+ import mozilla.components.compose.base.theme.ThemedValue
+ import mozilla.components.compose.base.theme.ThemedValueProvider
+ import mozilla.components.feature.addons.Addon
+@@ -52,6 +53,7 @@ internal fun ExtensionsMenuItem(
+     webExtensionMenuCount: Int,
+     extensionsMenuItemDescription: String?,
+     onExtensionsMenuClick: () -> Unit,
++    beforeIconShape: EmbermineShape? = null,
+     extensionSubmenu: @Composable () -> Unit,
+ ) {
+     val stateDescription =
+@@ -78,6 +80,7 @@ internal fun ExtensionsMenuItem(
+             maxDescriptionLines = 1,
+             stateDescription = stateDescription,
+             beforeIconPainter = beforeIconPainter,
++            beforeIconShape = beforeIconShape,
+             onClick = onExtensionsMenuClick,
+             descriptionState = descriptionState,
+             modifier =
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/IPProtectionMenuItem.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/IPProtectionMenuItem.kt
+index 812f2e65d25653d5bb7b438c6a6922d29970ef20..5fb50482857a73ce8eb6bcc2c7b0553a0177d13c 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/IPProtectionMenuItem.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/IPProtectionMenuItem.kt
+@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.stateDescription
+ import androidx.compose.ui.tooling.preview.Preview
+ import androidx.compose.ui.tooling.preview.PreviewParameter
+ import androidx.compose.ui.unit.dp
++import mozilla.components.compose.base.embermine.EmbermineShape
+ import mozilla.components.compose.base.modifier.debouncedClickable
+ import mozilla.components.compose.base.theme.ThemedValue
+ import mozilla.components.compose.base.theme.ThemedValueProvider
+@@ -54,12 +55,14 @@ private val MENU_ITEM_MIN_HEIGHT = 52.dp
+  * @param state The current [IPProtectionMenuState] to display.
+  * @param onToggle Called when the label row is tapped to toggle IP Protection on or off.
+  * @param onNavigate Called when the chevron is tapped to open the IP Protection settings screen.
++ * @param beforeIconShape Optional [EmbermineShape] drawn behind the globe icon.
+  */
+ @Composable
+ internal fun IPProtectionMenuItem(
+     state: IPProtectionMenuState,
+     onToggle: () -> Unit,
+     onNavigate: () -> Unit,
++    beforeIconShape: EmbermineShape? = null,
+ ) {
+     val statusDescription = badgeText(state.status)
+     val role =
+@@ -84,6 +87,7 @@ internal fun IPProtectionMenuItem(
+         description = descriptionText(state),
+         minHeight = MENU_ITEM_MIN_HEIGHT,
+         beforeIconPainter = painterResource(iconsR.drawable.mozac_ic_globe_24),
++        beforeIconShape = beforeIconShape,
+         contentPaddingListItem = PaddingValues(start = FirefoxTheme.layout.space.dynamic200),
+     ) {
+         Row(
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/LibraryMenuItem.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/LibraryMenuItem.kt
+index 2b0030de2ed51523fcc482ff615ab6395017e887..542a1dad9818f164c1acda9f442d96a8d1e3be85 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/LibraryMenuItem.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/LibraryMenuItem.kt
+@@ -42,6 +42,8 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
+ import androidx.compose.ui.unit.dp
+ import mozilla.components.compose.base.badge.BADGE_SIZE_SMALL
+ import mozilla.components.compose.base.badge.BadgedIcon
++import mozilla.components.compose.base.embermine.EmbermineShape
++import mozilla.components.compose.base.embermine.ShapedIconBackground
+ import mozilla.components.compose.base.theme.information
+ import mozilla.components.ui.icons.R as iconsR
+ import org.mozilla.fenix.R
+@@ -57,6 +59,7 @@ import org.mozilla.fenix.theme.FirefoxTheme
+  * @param labelRes String resource ID for the label text.
+  * @param state The state of the menu item to display.
+  * @param shape The [Shape] to clip the background into.
++ * @param iconShape Optional [EmbermineShape] drawn behind the icon.
+  * @param index The index of the item within the row.
+  * @param onClick Invoked when the user taps this item.
+  */
+@@ -68,6 +71,7 @@ fun LibraryMenuItem(
+     @StringRes labelRes: Int,
+     state: MenuItemState = MenuItemState.ENABLED,
+     shape: Shape = MaterialTheme.shapes.extraSmall,
++    iconShape: EmbermineShape? = null,
+     index: Int = 0,
+     onClick: () -> Unit,
+ ) {
+@@ -97,14 +101,19 @@ fun LibraryMenuItem(
+             horizontalAlignment = Alignment.CenterHorizontally,
+             modifier = Modifier.padding(horizontal = 4.dp, vertical = 12.dp),
+         ) {
+-            BadgedIcon(
+-                painter = painterResource(iconRes),
+-                isHighlighted = isHighlighted,
+-                size = BADGE_SIZE_SMALL,
+-                contentDescription = null,
+-                containerColor = MaterialTheme.colorScheme.information,
+-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+-            )
++            ShapedIconBackground(
++                shape = iconShape,
++                defaultContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
++            ) { contentColor ->
++                BadgedIcon(
++                    painter = painterResource(iconRes),
++                    isHighlighted = isHighlighted,
++                    size = BADGE_SIZE_SMALL,
++                    contentDescription = null,
++                    containerColor = MaterialTheme.colorScheme.information,
++                    tint = contentColor,
++                )
++            }
+ 
+             Spacer(Modifier.height(4.dp))
+ 
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/MainMenu.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/MainMenu.kt
+index aec18f553f7e70e4c9f1776f5e9c5b4be1e01ff7..ca2de3391b393ace37e06f5b4a5c69d836260d5a 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/MainMenu.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/MainMenu.kt
+@@ -45,6 +45,7 @@ import androidx.compose.ui.tooling.preview.Preview
+ import androidx.compose.ui.tooling.preview.PreviewParameter
+ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
+ import androidx.compose.ui.unit.dp
++import mozilla.components.compose.base.embermine.EmbermineShape
+ import mozilla.components.compose.base.theme.PreviewThemeProvider
+ import mozilla.components.compose.base.theme.Theme
+ import mozilla.components.compose.base.theme.ThemedValue
+@@ -210,6 +211,7 @@ fun MainMenu(
+                     onShareButtonClick = onShareButtonClick,
+                     goBackState = if (canGoBack) MenuItemState.ENABLED else MenuItemState.DISABLED,
+                     goForwardState = if (canGoForward) MenuItemState.ENABLED else MenuItemState.DISABLED,
++                    shapedIcons = true,
+                 )
+ 
+                 if (scrollState.canScrollBackward) {
+@@ -234,6 +236,7 @@ fun MainMenu(
+                     onShareButtonClick = onShareButtonClick,
+                     goBackState = if (canGoBack) MenuItemState.ENABLED else MenuItemState.DISABLED,
+                     goForwardState = if (canGoForward) MenuItemState.ENABLED else MenuItemState.DISABLED,
++                    shapedIcons = true,
+                 )
+             }
+         },
+@@ -265,6 +268,7 @@ fun MainMenu(
+                     state = ipProtectionMenuState,
+                     onToggle = onIPProtectionClick,
+                     onNavigate = onIPProtectionNavigate,
++                    beforeIconShape = EmbermineShape.Cookie12Sided,
+                 )
+             }
+         }
+@@ -279,6 +283,7 @@ fun MainMenu(
+                     webExtensionMenuCount = webExtensionMenuCount,
+                     extensionsMenuItemDescription = extensionsMenuItemDescription,
+                     onExtensionsMenuClick = onExtensionsMenuClick,
++                    beforeIconShape = EmbermineShape.Cookie12Sided,
+                     extensionSubmenu = extensionSubmenu,
+                 )
+             }
+@@ -334,6 +339,7 @@ fun MainMenu(
+             MenuItem(
+                 label = stringResource(id = R.string.browser_menu_settings),
+                 beforeIconPainter = painterResource(id = iconsR.drawable.mozac_ic_settings_24),
++                beforeIconShape = EmbermineShape.Cookie12Sided,
+                 onClick = onSettingsButtonClick,
+             )
+         }
+@@ -399,6 +405,7 @@ private fun ToolsAndActionsMenuGroup(
+             MenuItem(
+                 label = stringResource(id = R.string.browser_menu_edit_bookmark),
+                 beforeIconPainter = painterResource(id = iconsR.drawable.mozac_ic_bookmark_fill_24),
++                beforeIconShape = EmbermineShape.Cookie12Sided,
+                 state = MenuItemState.ACTIVE,
+                 onClick = onEditBookmarkButtonClick,
+             )
+@@ -406,6 +413,7 @@ private fun ToolsAndActionsMenuGroup(
+             MenuItem(
+                 label = stringResource(id = R.string.browser_menu_bookmark_this_page_2),
+                 beforeIconPainter = painterResource(id = iconsR.drawable.mozac_ic_bookmark_24),
++                beforeIconShape = EmbermineShape.Cookie12Sided,
+                 onClick = onBookmarkPageMenuClick,
+             )
+         }
+@@ -413,6 +421,7 @@ private fun ToolsAndActionsMenuGroup(
+         MenuItem(
+             label = stringResource(id = R.string.browser_menu_find_in_page),
+             beforeIconPainter = painterResource(id = iconsR.drawable.mozac_ic_search_24),
++            beforeIconShape = EmbermineShape.Cookie12Sided,
+             onClick = onFindInPageMenuClick,
+         )
+ 
+@@ -429,6 +438,7 @@ private fun ToolsAndActionsMenuGroup(
+             label = stringResource(id = labelId),
+             stateDescription = badgeText,
+             beforeIconPainter = painterResource(id = iconsR.drawable.mozac_ic_device_desktop_24),
++            beforeIconShape = EmbermineShape.Cookie12Sided,
+             state = menuItemState,
+             onClick = onSwitchToDesktopSiteMenuClick,
+         ) {
+@@ -450,6 +460,7 @@ private fun ToolsAndActionsMenuGroup(
+             webExtensionMenuCount = webExtensionMenuCount,
+             extensionsMenuItemDescription = extensionsMenuItemDescription,
+             onExtensionsMenuClick = onExtensionsMenuClick,
++            beforeIconShape = EmbermineShape.Cookie12Sided,
+             extensionSubmenu = extensionSubmenu,
+         )
+ 
+@@ -476,6 +487,7 @@ private fun MoreMenuButtonGroup(
+         label = stringResource(id = R.string.browser_menu_more_settings),
+         stateDescription = "Collapsed",
+         beforeIconPainter = painterResource(id = iconsR.drawable.mozac_ic_ellipsis_horizontal_24),
++        beforeIconShape = EmbermineShape.Cookie12Sided,
+         isBeforeIconHighlighted = isMoreMenuHighlighted,
+         onClick = onMoreMenuClick,
+     ) {
+@@ -541,6 +553,7 @@ private fun LibraryMenuGroup(
+         LibraryMenuItem(
+             modifier = Modifier.weight(1f).fillMaxHeight(),
+             iconRes = iconsR.drawable.mozac_ic_history_24,
++            iconShape = EmbermineShape.Sunny,
+             labelRes = R.string.library_history,
+             shape = leftShape,
+             index = 0,
+@@ -552,6 +565,7 @@ private fun LibraryMenuGroup(
+         LibraryMenuItem(
+             modifier = Modifier.weight(1f).fillMaxHeight(),
+             iconRes = iconsR.drawable.mozac_ic_bookmark_tray_fill_24,
++            iconShape = EmbermineShape.Slanted,
+             labelRes = R.string.library_bookmarks,
+             shape = middleShape,
+             index = 1,
+@@ -564,6 +578,7 @@ private fun LibraryMenuGroup(
+             modifier = Modifier.weight(1f).fillMaxHeight(),
+             isHighlighted = isDownloadHighlighted,
+             iconRes = iconsR.drawable.mozac_ic_download_24,
++            iconShape = EmbermineShape.Flower,
+             labelRes = R.string.library_downloads,
+             shape = if (showPasswords) middleShape else rightShape,
+             index = 2,
+@@ -576,6 +591,7 @@ private fun LibraryMenuGroup(
+             LibraryMenuItem(
+                 modifier = Modifier.weight(1f).fillMaxHeight(),
+                 iconRes = iconsR.drawable.mozac_ic_login_24,
++                iconShape = EmbermineShape.Pentagon,
+                 labelRes = R.string.browser_menu_passwords,
+                 shape = rightShape,
+                 index = 3,
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/MenuItem.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/MenuItem.kt
+index 26d1f7905c4ca7188975e9db23aebf72c6ea6104..dfac29d41416b463f2d8ab1f57d90f011f01933c 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/MenuItem.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/MenuItem.kt
+@@ -53,6 +53,7 @@ import androidx.compose.ui.text.style.TextOverflow
+ import androidx.compose.ui.tooling.preview.PreviewLightDark
+ import androidx.compose.ui.unit.dp
+ import mozilla.components.compose.base.button.IconButton
++import mozilla.components.compose.base.embermine.EmbermineShape
+ import mozilla.components.compose.base.modifier.thenConditional
+ import mozilla.components.ui.icons.R as iconsR
+ import org.mozilla.fenix.R
+@@ -75,6 +76,7 @@ private val MENU_ITEM_HEIGHT_WITH_DESC = 56.dp
+  * @param labelModifier [Modifier] to be applied to the label.
+  * @param beforeIconDescription Content description of the icon.
+  * @param isBeforeIconHighlighted Whether or not the menu item should be highlighted with a notification icon.
++ * @param beforeIconShape Optional [EmbermineShape] drawn behind [beforeIconPainter].
+  * @param description An optional description text below the label.
+  * @param maxDescriptionLines An optional maximum number of lines for the description text to span.
+  * @param stateDescription Extra content description about state to be added after the label and description.
+@@ -97,6 +99,7 @@ internal fun MenuItem(
+     labelModifier: Modifier = Modifier,
+     beforeIconDescription: String? = null,
+     isBeforeIconHighlighted: Boolean = false,
++    beforeIconShape: EmbermineShape? = null,
+     description: String? = null,
+     maxDescriptionLines: Int = 2,
+     stateDescription: String = "",
+@@ -171,6 +174,7 @@ internal fun MenuItem(
+         beforeIconDescription = beforeIconDescription,
+         beforeIconTint = iconTint,
+         isBeforeIconHighlighted = isBeforeIconHighlighted,
++        beforeIconShape = beforeIconShape,
+         showDivider = showDivider,
+         afterIconPainter = afterIconPainter,
+         afterIconDescription = afterIconDescription,
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/MenuNavigation.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/MenuNavigation.kt
+index 021825312c54e1e139141c4251aa9a516694276f..47f04ac7e894e29d74e0b749edd7fe96193ac058 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/MenuNavigation.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/MenuNavigation.kt
+@@ -35,6 +35,8 @@ import androidx.compose.ui.text.style.TextAlign
+ import androidx.compose.ui.tooling.preview.Preview
+ import androidx.compose.ui.tooling.preview.PreviewParameter
+ import androidx.compose.ui.unit.dp
++import mozilla.components.compose.base.embermine.EmbermineShape
++import mozilla.components.compose.base.embermine.ShapedIconBackground
+ import mozilla.components.compose.base.theme.PreviewThemeProvider
+ import mozilla.components.compose.base.theme.Theme
+ import mozilla.components.ui.icons.R as iconsR
+@@ -55,6 +57,7 @@ internal fun MenuNavigation(
+     state: MenuItemState = MenuItemState.ENABLED,
+     goBackState: MenuItemState = MenuItemState.ENABLED,
+     goForwardState: MenuItemState = MenuItemState.ENABLED,
++    shapedIcons: Boolean = false,
+ ) {
+     val navigationHeaderContentDescription =
+         stringResource(id = R.string.browser_main_menu_content_description_navigation_header)
+@@ -83,6 +86,7 @@ internal fun MenuNavigation(
+             state = goBackState,
+             painter = painterResource(id = iconsR.drawable.mozac_ic_back_24),
+             label = stringResource(id = R.string.browser_menu_back),
++            iconShape = EmbermineShape.Cookie9Sided.takeIf { shapedIcons },
+             onClick = { onBackButtonClick(false) },
+             onLongClick = { onBackButtonClick(true) },
+         )
+@@ -92,6 +96,7 @@ internal fun MenuNavigation(
+             state = goForwardState,
+             painter = painterResource(id = iconsR.drawable.mozac_ic_forward_24),
+             label = stringResource(id = R.string.browser_menu_forward),
++            iconShape = EmbermineShape.Clover4Leaf.takeIf { shapedIcons },
+             onClick = { onForwardButtonClick(false) },
+             onLongClick = { onForwardButtonClick(true) },
+         )
+@@ -101,6 +106,7 @@ internal fun MenuNavigation(
+             state = state,
+             painter = painterResource(id = iconsR.drawable.mozac_ic_share_android_24),
+             label = stringResource(id = R.string.browser_menu_share),
++            iconShape = EmbermineShape.Pill.takeIf { shapedIcons },
+             onClick = onShareButtonClick,
+         )
+ 
+@@ -110,6 +116,7 @@ internal fun MenuNavigation(
+                 state = state,
+                 painter = painterResource(id = iconsR.drawable.mozac_ic_cross_24),
+                 label = stringResource(id = R.string.browser_menu_stop),
++                iconShape = EmbermineShape.Flower.takeIf { shapedIcons },
+                 onClick = onStopButtonClick,
+             )
+         } else {
+@@ -118,6 +125,7 @@ internal fun MenuNavigation(
+                 state = state,
+                 painter = painterResource(id = iconsR.drawable.mozac_ic_arrow_clockwise_24),
+                 label = stringResource(id = R.string.browser_menu_refresh),
++                iconShape = EmbermineShape.Flower.takeIf { shapedIcons },
+                 onClick = { onRefreshButtonClick(false) },
+                 onLongClick = { onRefreshButtonClick(true) },
+             )
+@@ -131,6 +139,7 @@ private fun MenuNavItem(
+     state: MenuItemState = MenuItemState.ENABLED,
+     painter: Painter,
+     label: String,
++    iconShape: EmbermineShape? = null,
+     onClick: () -> Unit = {},
+     onLongClick: (() -> Unit)? = null,
+ ) {
+@@ -149,11 +158,17 @@ private fun MenuNavItem(
+         verticalArrangement = Arrangement.Top,
+         horizontalAlignment = Alignment.CenterHorizontally,
+     ) {
+-        Icon(
+-            painter = painter,
+-            contentDescription = null,
+-            tint = getIconTint(state = state),
+-        )
++        ShapedIconBackground(
++            shape = iconShape,
++            defaultContentColor = getIconTint(state = state),
++            enabled = state != MenuItemState.DISABLED,
++        ) { contentColor ->
++            Icon(
++                painter = painter,
++                contentDescription = null,
++                tint = contentColor,
++            )
++        }
+ 
+         Spacer(modifier = Modifier.height(FirefoxTheme.layout.space.static50))
+ 
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/header/MozillaAccountMenuItem.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/header/MozillaAccountMenuItem.kt
+index 876982af79245ce3c703d816ec64f7386e6cde74..7dd227de076fd30e0ce0ca8006ba02ba5f8b8f87 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/header/MozillaAccountMenuItem.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/header/MozillaAccountMenuItem.kt
+@@ -38,6 +38,8 @@ import androidx.compose.ui.text.style.TextOverflow
+ import androidx.compose.ui.tooling.preview.Preview
+ import androidx.compose.ui.tooling.preview.PreviewParameter
+ import androidx.compose.ui.unit.dp
++import mozilla.components.compose.base.embermine.EmbermineShape
++import mozilla.components.compose.base.embermine.ShapedIconBackground
+ import mozilla.components.compose.base.theme.ThemedValue
+ import mozilla.components.compose.base.theme.ThemedValueProvider
+ import mozilla.components.service.fxa.manager.AccountState
+@@ -151,11 +153,11 @@ internal fun MozillaAccountMenuItem(
+ }
+ 
+ @Composable
+-private fun FallbackAvatarIcon() {
++private fun FallbackAvatarIcon(tint: Color) {
+     Icon(
+         painter = painterResource(id = iconsR.drawable.mozac_ic_avatar_circle_24),
+         contentDescription = null,
+-        tint = MaterialTheme.colorScheme.onSurfaceVariant,
++        tint = tint,
+     )
+ }
+ 
+@@ -173,21 +175,26 @@ private fun AvatarIcon(
+     account: Account?,
+     accountState: AccountState,
+ ) {
+-    if (accountState is AuthenticationProblem) {
+-        WarningAvatarIcon()
+-    } else {
+-        val avatarUrl = account?.avatar?.url
+-
+-        if (avatarUrl != null) {
+-            Image(
+-                url = avatarUrl,
+-                modifier = Modifier.clip(CircleShape).size(AVATAR_SIZE),
+-                targetSize = AVATAR_SIZE,
+-                placeholder = { FallbackAvatarIcon() },
+-                fallback = { FallbackAvatarIcon() },
+-            )
++    ShapedIconBackground(
++        shape = EmbermineShape.Cookie12Sided,
++        defaultContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
++    ) { contentColor ->
++        if (accountState is AuthenticationProblem) {
++            WarningAvatarIcon()
+         } else {
+-            FallbackAvatarIcon()
++            val avatarUrl = account?.avatar?.url
++
++            if (avatarUrl != null) {
++                Image(
++                    url = avatarUrl,
++                    modifier = Modifier.clip(CircleShape).size(AVATAR_SIZE),
++                    targetSize = AVATAR_SIZE,
++                    placeholder = { FallbackAvatarIcon(contentColor) },
++                    fallback = { FallbackAvatarIcon(contentColor) },
++                )
++            } else {
++                FallbackAvatarIcon(contentColor)
++            }
+         }
+     }
+ }
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/list/ListItem.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/list/ListItem.kt
+index 2bed1c8efb4131ae3861222986d1469c394af652..1699bc1b94ba93b54912f0cc29bff8cf4f2731a3 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/list/ListItem.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/list/ListItem.kt
+@@ -67,6 +67,8 @@ import mozilla.components.compose.base.badge.BADGE_SIZE_SMALL
+ import mozilla.components.compose.base.badge.BadgedIcon
+ import mozilla.components.compose.base.button.IconButton
+ import mozilla.components.compose.base.button.RadioButton
++import mozilla.components.compose.base.embermine.EmbermineShape
++import mozilla.components.compose.base.embermine.ShapedIconBackground
+ import mozilla.components.compose.base.modifier.thenConditional
+ import mozilla.components.compose.base.theme.information
+ import mozilla.components.ui.icons.R as iconsR
+@@ -257,6 +259,7 @@ fun FaviconListItem(
+  * @param beforeIconPainter [Painter] used to display an [Icon] before the list item.
+  * @param beforeIconDescription Content description of the icon.
+  * @param isBeforeIconHighlighted Whether or not the item should be highlighted with a notification icon.
++ * @param beforeIconShape Optional [EmbermineShape] drawn behind [beforeIconPainter].
+  * @param showDivider Whether or not to display a vertical divider line before the [IconButton] at the end.
+  * @param afterIconTint [Color] used to tint the icon. Note: Color.Unspecified is used when you wish to preserve the
+  *   original colors of the icon. This color should NOT be combined with ListItemColors because ListItemDefaults will
+@@ -285,6 +288,7 @@ fun IconListItem(
+     beforeIconPainter: Painter,
+     beforeIconDescription: String? = null,
+     isBeforeIconHighlighted: Boolean = false,
++    beforeIconShape: EmbermineShape? = null,
+     showDivider: Boolean = false,
+     afterIconTint: Color = ListItemDefaults.colors().leadingIconColor,
+     contentPaddingListItem: PaddingValues =
+@@ -316,6 +320,8 @@ fun IconListItem(
+                 painter = beforeIconPainter,
+                 description = beforeIconDescription,
+                 tint = if (enabled) beforeIconTint else colors.disabledLeadingIconColor,
++                shape = beforeIconShape,
++                enabled = enabled,
+             )
+         },
+         afterListItemAction = {
+@@ -332,22 +338,31 @@ fun IconListItem(
+     )
+ }
+ 
++@Suppress("LongParameterList")
+ @Composable
+ private fun IconListItemBeforeIcon(
+     isHighlighted: Boolean,
+     painter: Painter,
+     description: String?,
+     tint: Color,
++    shape: EmbermineShape? = null,
++    enabled: Boolean = true,
+ ) {
+-    BadgedIcon(
+-        painter = painter,
+-        isHighlighted = isHighlighted,
+-        tint = tint,
+-        size = BADGE_SIZE_SMALL,
+-        contentDescription = description,
+-        containerColor = MaterialTheme.colorScheme.information,
+-        modifier = Modifier.size(ICON_SIZE),
+-    )
++    ShapedIconBackground(
++        shape = shape,
++        defaultContentColor = tint,
++        enabled = enabled,
++    ) { contentColor ->
++        BadgedIcon(
++            painter = painter,
++            isHighlighted = isHighlighted,
++            tint = contentColor,
++            size = BADGE_SIZE_SMALL,
++            contentDescription = description,
++            containerColor = MaterialTheme.colorScheme.information,
++            modifier = Modifier.size(ICON_SIZE),
++        )
++    }
+ }
+ 
+ @Composable
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/trustpanel/ui/ProtectionPanel.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/trustpanel/ui/ProtectionPanel.kt
+index 0db33ca5971ceb1b7058c0eed11006d8532dadc4..38a6ab30c983ddf6ec78432fae184f0c462e4f46 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/trustpanel/ui/ProtectionPanel.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/trustpanel/ui/ProtectionPanel.kt
+@@ -38,6 +38,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
+ import androidx.compose.ui.unit.dp
+ import mozilla.components.compose.base.LinkText
+ import mozilla.components.compose.base.LinkTextState
++import mozilla.components.compose.base.embermine.EmbermineShape
+ import mozilla.components.compose.base.menu.DropdownMenu
+ import mozilla.components.compose.base.menu.MenuItem.CheckableItem
+ import mozilla.components.compose.base.text.Text
+@@ -130,6 +131,7 @@ internal fun ProtectionPanel(
+                     label = stringResource(id = R.string.clear_site_data),
+                     onClick = onClearSiteDataMenuClick,
+                     beforeIconPainter = painterResource(id = iconsR.drawable.mozac_ic_delete_24),
++                    beforeIconShape = EmbermineShape.Cookie12Sided,
+                 )
+             }
+         }
+@@ -251,6 +253,7 @@ private fun ConnectionSecurityMenuGroup(
+             MenuItem(
+                 label = stringResource(id = R.string.connection_security_panel_secure),
+                 beforeIconPainter = painterResource(id = iconsR.drawable.mozac_ic_lock_24),
++                beforeIconShape = EmbermineShape.Cookie12Sided,
+                 description =
+                     stringResource(
+                         id = R.string.connection_security_panel_verified_by,
+@@ -273,6 +276,7 @@ private fun ConnectionSecurityMenuGroup(
+             MenuItem(
+                 label = stringResource(id = R.string.connection_security_panel_not_secure),
+                 beforeIconPainter = painterResource(id = iconsR.drawable.mozac_ic_lock_slash_multicolor_24),
++                beforeIconShape = EmbermineShape.Cookie12Sided,
+                 state = MenuItemState.CRITICAL,
+             )
+         }
+@@ -292,6 +296,7 @@ private fun IPProtectionMenuGroup(
+                 state = ipProtectionMenuState,
+                 onToggle = onIPProtectionToggle,
+                 onNavigate = onIPProtectionNavigate,
++                beforeIconShape = EmbermineShape.Cookie12Sided,
+             )
+         }
+     }

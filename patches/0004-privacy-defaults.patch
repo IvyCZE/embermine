@@ -9,7 +9,7 @@ Gecko's own telemetry upload and region lookup default to off through GeckoPrefe
 
 Safe Browsing is disabled unless the optional SAFE_BROWSING_API_KEY is provided at build time (read from the git-ignored .safe_browsing_api_key file into BuildConfig). With a key, the Google legacy, v4 and v5 GeckoView providers use it; without one, no provider is configured and the Safe Browsing policy is NONE.
 
-The onboarding Terms of Use line says Embermine does not send diagnostic or interaction data to Mozilla unless turned on, in every locale.
+The onboarding Terms of Use line says Embermine does not send diagnostic or interaction data to Mozilla unless turned on, in every locale. Onboarding no longer submits the onboarding-opt-out ping when telemetry is off: that ping does not follow the collection setting, so it reached incoming.telemetry.mozilla.org on every fresh install.
 
 Co-authored-by: factory-droid[bot] <138933559+factory-droid[bot]@users.noreply.github.com>
 
@@ -304,6 +304,30 @@ index da844a25147f713c8c3358df64515604667828b4..f82d04dc64687c7f3fd0eb834b0bfdfa
              }
          }
  
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/OnboardingFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/OnboardingFragment.kt
+index 587faae07ca57058b2ec6566e790c91a5c802c8b..703b9dbdc2cea649eba1dc05d85ea9e82a3c0ed1 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/OnboardingFragment.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/OnboardingFragment.kt
+@@ -35,7 +35,6 @@ import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
+ import mozilla.components.support.base.log.logger.Logger
+ import mozilla.components.support.utils.Browsers
+ import mozilla.components.support.utils.BuildManufacturerChecker
+-import org.mozilla.fenix.GleanMetrics.Pings
+ import org.mozilla.fenix.R
+ import org.mozilla.fenix.components.accounts.FenixFxAEntryPoint
+ import org.mozilla.fenix.components.appstate.AppAction
+@@ -366,11 +365,6 @@ class OnboardingFragment : Fragment() {
+             )
+         }
+ 
+-        if (!settings.isTelemetryEnabled) {
+-            Pings.onboardingOptOut.setEnabled(true)
+-            Pings.onboardingOptOut.submit()
+-        }
+-
+         rtamoAttributionHandler.handleReferrer(InstallReferrerHandlingService.response)
+ 
+         // The marketing telemetry may be enabled after finishing onboarding.
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/view/OnboardingScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/view/OnboardingScreen.kt
 index 8e36d42a548f2a4ffba0a7cec571d16654368a95..5683e548203b155b7f135385387a35c8950788e0 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/view/OnboardingScreen.kt

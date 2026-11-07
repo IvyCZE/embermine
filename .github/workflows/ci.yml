@@ -58,7 +58,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-boot-timeout: 900
-          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -tcpdump /tmp/em.pcap
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -tcpdump /tmp/em.pcap
           script: python3 -m scripts.emulator.run --variant ${{ matrix.variant }} --apk-dir apk --out shots --debug debug
 
       - name: Network hosts
@@ -69,7 +69,7 @@ jobs:
           mkdir -p shots debug
           ls -la /tmp/em.pcap
           python3 -m scripts.emulator.netreport --pcap /tmp/em.pcap --out shots/network-hosts.txt \
-            --session "scripted walk of the $VARIANT variant with default settings (onboarding declined; settings changed: allow screenshots in private browsing, the toolbar position top then bottom, the toolbar layout Expanded then back to Simple, the secret settings unlock by five taps on the About logo, and the launcher's themed icons on then off; none of these touches the network). Pages: https://example.com plus a local test server on 10.0.2.2 that serves the page-load, pull-to-refresh and download files. Also: tab tray, downloads, history and settings screens, the About rows that open GitHub pages (releases, issues and PRIVACY.md on github.com) and about:license. The co-install check runs only in the legacy pass, which has no packet capture. Wi-Fi disabled" \
+            --session "scripted walk of the $VARIANT variant with default settings (onboarding declined; settings changed: allow screenshots in private browsing, the toolbar position top then bottom, the toolbar layout Expanded then back to Simple, the secret settings unlock by five taps on the About logo, and the launcher's themed icons on then off; none of these touches the network). Pages: https://example.com plus a local test server on 10.0.2.2 that serves the page-load, pull-to-refresh and download files. Also: tab tray, downloads, history and settings screens (the Sign in row shows Sync's QR sign-in screen because the emulator has a back camera, so no account web page loads), the About rows that open GitHub pages (releases, issues and PRIVACY.md on github.com) and about:license. The co-install check runs only in the legacy pass, which has no packet capture. Wi-Fi disabled" \
             --visited debug/visited-urls.txt
           cp /tmp/em.pcap debug/ || true
 

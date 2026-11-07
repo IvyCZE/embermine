@@ -83,6 +83,69 @@ index 7a51af95894b44676082b5c10981693946205493..32d63440b92e8bdb17b8d6f109f2ed56
              )
  
          notificationsDelegate.notify(
+diff --git a/mobile/android/fenix/app/nimbus.fml.yaml b/mobile/android/fenix/app/nimbus.fml.yaml
+index 0fb0a2cc86bcfa6f42cbe01ab9ca1bf0eaa18fab..e771bf2c76206e51f94527c291e52879dfa88f9e 100644
+--- a/mobile/android/fenix/app/nimbus.fml.yaml
++++ b/mobile/android/fenix/app/nimbus.fml.yaml
+@@ -666,7 +666,7 @@ features:
+           Experimental: When true, bypasses device restrictions and enables use on all devices.
+           May cause instability or unexpected behavior. This still requires the feature to be `enabled`.
+         type: Boolean
+-        default: false
++        default: true
+ 
+   homepage-as-new-tab:
+     description: Enables homepage as a a new tab.
+@@ -677,6 +677,9 @@ features:
+         type: Boolean
+         default: false
+     defaults:
++      - channel: release
++        value:
++          enabled: true
+       - channel: nightly
+         value:
+           enabled: true
+@@ -1169,6 +1172,9 @@ features:
+         type: Boolean
+         default: false
+     defaults:
++      - channel: release
++        value:
++          enabled: true
+       - channel: developer
+         value:
+           enabled: true
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bindings/HomepageTabBinding.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bindings/HomepageTabBinding.kt
+index 3d5a5fada0c1b585d4d6f124fef1e73a811c8cc9..51fab48761fa7d3269487dadd09b6673ccf60180 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bindings/HomepageTabBinding.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bindings/HomepageTabBinding.kt
+@@ -28,7 +28,7 @@ import org.mozilla.fenix.components.usecases.FenixBrowserUseCases
+  * tab is then added once the tab manager is dismissed.
+  *
+  * @param browserStore The [BrowserStore] to observe the tabs state from.
+- * @param appStore The [AppStore] used to determine if the tabs tray is visible.
++ * @param appStore The [AppStore] used to determine if the tabs tray is visible and to observe browsing mode changes.
+  * @param browsingModeManager [BrowsingModeManager] used to determine the current browsing mode.
+  * @param fenixBrowserUseCases [FenixBrowserUseCases] used to add the homepage tab.
+  * @param repository [HomepageAsANewTabPreferencesRepository] used to access the homepage as a new tab preferences.
+@@ -48,11 +48,11 @@ class HomepageTabBinding(
+ 
+     override suspend fun onState(flow: Flow<BrowserState>) {
+         combine(
+-                flow
+-                    .filter { repository.getHomepageAsANewTabEnabled() && it.restoreComplete }
+-                    .map { it.getNormalOrPrivateTabs(private = isPrivate).isEmpty() },
+-                appStore.flow().map { it.isTabsTrayVisible },
+-            ) { hasNoTabs, isTabsTrayVisible ->
++                flow.filter { repository.getHomepageAsANewTabEnabled() && it.restoreComplete },
++                // Observed so that switching the browsing mode re-checks the tabs of the new mode.
++                appStore.flow().map { it.isTabsTrayVisible to it.mode }.distinctUntilChanged(),
++            ) { browserState, (isTabsTrayVisible, _) ->
++                val hasNoTabs = browserState.getNormalOrPrivateTabs(private = isPrivate).isEmpty()
+                 hasNoTabs && !isTabsTrayVisible
+             }
+             .distinctUntilChanged()
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/share/QRCodeGenerator.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/share/QRCodeGenerator.kt
 index c25e8d606f0a65b7c57ac588783c902689ff97e8..29fc59dd2ea2a0a109537d2439382af0be21ef9b 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/share/QRCodeGenerator.kt
@@ -288,6 +351,19 @@ index 1956c4ef6f25d317f6a9b6bfa6c7c7ce3fdf7066..4b988a63892c7ac9675a0a9352aa0b7e
      private fun bindLightTheme() {
          radioLightTheme = requirePreference(R.string.pref_key_light_theme)
          radioLightTheme.onClickListener {
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/banner/TabsTrayBanner.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/banner/TabsTrayBanner.kt
+index 840dc9e1a50e802b3d3648eb5344112d1c32ccd7..fb98a6991ec2889518d63649f8162ad05077a881 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/banner/TabsTrayBanner.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/banner/TabsTrayBanner.kt
+@@ -262,7 +262,7 @@ private fun TabPageBanner(
+                             topStartPercent = 50,
+                             topEndPercent = 50,
+                         ),
+-                    color = MaterialTheme.colorScheme.onSurface,
++                    color = MaterialTheme.colorScheme.primary,
+                 )
+             },
+             divider = {},
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/theme/FirefoxTheme.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/theme/FirefoxTheme.kt
 index 9185fef2c847bd36a461872be258da182fb564f0..9e947beb2dca3e950be67cf0b364a8bbf4bc4cb4 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/theme/FirefoxTheme.kt

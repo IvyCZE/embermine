@@ -4,6 +4,7 @@
 /slow      sends the start of a page, then stalls, so the page-load line stays visible
 /refresh   loads at once the first time and stalls on every later request (pull-to-refresh)
 /small.bin a 1 MB download that finishes at once
+/small.rtf a 1 MB RTF document download that finishes at once (a second file type for the Downloads filter chips)
 /big.bin   a large download streamed slowly, so it is still running when the Downloads screen is photographed;
            honours Range requests, so a paused download can resume
 """
@@ -61,7 +62,7 @@ class Handler(BaseHTTPRequestHandler):
         except OSError:
             pass
 
-    def _download(self, name: str, size: int, *, head: bool) -> None:
+    def _download(self, name: str, size: int, *, head: bool, content_type: str = "application/octet-stream") -> None:
         start = 0
         status = 200
         match = _RANGE.fullmatch(self.headers.get("Range", "").strip())
@@ -75,7 +76,7 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             return
         self.send_response(status)
-        self.send_header("Content-Type", "application/octet-stream")
+        self.send_header("Content-Type", content_type)
         self.send_header("Content-Disposition", f'attachment; filename="{name}"')
         self.send_header("Accept-Ranges", "bytes")
         self.send_header("ETag", f'"{name}"')
@@ -107,6 +108,13 @@ class Handler(BaseHTTPRequestHandler):
         path = self.path.split("?", 1)[0]
         if path == "/small.bin":
             self._download("embermine-small-test-file.bin", self.server.small_size, head=head)
+        elif path == "/small.rtf":
+            self._download(
+                "embermine-small-test-file.rtf",
+                self.server.small_size,
+                head=head,
+                content_type="application/rtf",
+            )
         elif path == "/big.bin":
             self._download("embermine-large-test-file.bin", self.server.big_size, head=head)
         elif path == "/page":

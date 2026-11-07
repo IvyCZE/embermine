@@ -67,6 +67,15 @@ class DownloadEndpointTests(unittest.TestCase):
         self.assertIn("embermine-small-test-file.bin", response.getheader("Content-Disposition", ""))
         self.assertEqual(response.getheader("Accept-Ranges"), "bytes")
 
+    def test_rtf_file_is_a_document_attachment_with_the_announced_length(self) -> None:
+        response, body = self.request("GET", "/small.rtf")
+        self.assertEqual(response.status, 200)
+        self.assertEqual(len(body), 700)
+        self.assertEqual(response.getheader("Content-Length"), "700")
+        self.assertEqual(response.getheader("Content-Type"), "application/rtf")
+        self.assertIn("attachment", response.getheader("Content-Disposition", ""))
+        self.assertIn("embermine-small-test-file.rtf", response.getheader("Content-Disposition", ""))
+
     def test_big_file_streams_in_chunks_to_its_full_size(self) -> None:
         response, body = self.request("GET", "/big.bin")
         self.assertEqual(response.status, 200)

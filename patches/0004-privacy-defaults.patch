@@ -95,6 +95,18 @@ index 1b30426f6452e43a4ccdd9395877706674745b3b..cf7aea1ef40f145ebe0758099acf4d35
                  components.nimbus.geckoPrefHandler.getPreferenceStateFromGecko().await()
              }
          }
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
+index cc25d9e578e4e428013dda3b2b8eb8f2d5c66a90..e8a75d9438e517211cb5ef75f530e0d5b4b175ed 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
+@@ -291,6 +291,7 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, Crash
+             settings = components.settings,
+             resources = resources,
+             crashReporter = components.analytics.crashReporter,
++            isReleased = false,
+         )
+     }
+ 
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Analytics.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Analytics.kt
 index 6774a4eb6ce418a839cbde29581abc2df655a8fc..9b03a3a080dd4d8a026e481311d389fb3a7e1b6f 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Analytics.kt

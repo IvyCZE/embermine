@@ -50,7 +50,7 @@ def shade_capture(s: Session) -> None:
 
 
 def downloads(s: Session) -> None:
-    notes = [start_download(s, "/small.bin"), start_download(s, "/big.bin")]
+    notes = [start_download(s, "/small.bin"), start_download(s, "/small.rtf"), start_download(s, "/big.bin")]
     s.log("downloads: " + "; ".join(notes))
     s.dev.sleep(4.0)
     shade_capture(s)

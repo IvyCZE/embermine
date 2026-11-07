@@ -3,7 +3,7 @@
 usage: python3 -m scripts.emulator.run --variant light|dark|legacy [--accent on|off] --apk-dir DIR --out DIR --debug DIR
 
 --accent on is the default switch state (Use wallpaper colors on); the walk ends with the switch toggle captures.
---accent off turns the switch off in Customize before the walk, so every capture is dynamic-off.
+--accent off turns the switch off in Customize right after onboarding, so every capture after onboarding is dynamic-off.
 
 Install and launch failures end the run with a non-zero exit code. Every capture after that is fail-soft:
 a screen that cannot be reached is listed as MISSING (with the reason) in screens-index.md.
@@ -249,7 +249,7 @@ def main(argv: list[str] | None = None) -> int:
         apk = devsetup.find_apk(args.apk_dir)
         package, label = devsetup.apk_package_and_label(args.apk_dir / "apk-info.txt", apk.name)
         app_label = r"Embermine|Firefox" if not label else rf"{label}|Embermine|Firefox"
-        dynamic = not legacy and args.accent == "on"
+        dynamic = not legacy
         session = Session(
             dev, package, args.variant, args.out, args.debug, index, dynamic=dynamic, server=f"http://10.0.2.2:{SERVER_PORT}"
         )
@@ -262,8 +262,8 @@ def main(argv: list[str] | None = None) -> int:
         else:
             switch_line = (
                 "Use wallpaper colors: on (default); the toggle captures record each switch state"
-                if dynamic
-                else "Use wallpaper colors: turned off in Customize before the walk"
+                if args.accent == "on"
+                else "Use wallpaper colors: on during onboarding, turned off in Customize before the walk"
             )
             index.header = [
                 f"Variant: {args.variant} theme, accent {args.accent}, API 34 google_apis x86_64 emulator, Pixel 6 profile",

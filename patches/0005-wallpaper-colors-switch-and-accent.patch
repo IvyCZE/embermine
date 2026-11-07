@@ -9,20 +9,151 @@ When the switch is on and the theme is not private, EmbermineAccent copies only 
 
 EmbermineAccentScheme is plain Kotlin and its JVM test covers the slot mapping and the gradient stops.
 
+ThemeManager.setActivityTheme() also applies EmbermineAccentOverlay to the normal theme on Android 12 and newer when the switch is on. The overlay sets only accent roles (primary and tertiary families, secondaryContainer, colorControlActivated, textColorLink and the legacy accent attributes) from system_accent1 and system_accent2 tones. It is not Material's full dynamic color overlay, so View screens such as Settings, Customize, About and dialogs follow the accent while backgrounds and surfaces stay Firefox's.
+
+The hard-coded purples that follow the accent are the QR code logo background and the download notification. Both read the embermine_accent color, which is the accent primary in light and dark mode and fx_mobile_tertiary below Android 12. Private downloads keep fx_mobile_tertiary through AbstractFetchDownloadService.Style.privateNotificationAccentColor, and private QR codes keep fx_mobile_primary.
+
 Co-authored-by: factory-droid[bot] <138933559+factory-droid[bot]@users.noreply.github.com>
 
+diff --git a/mobile/android/android-components/components/feature/downloads/src/main/java/mozilla/components/feature/downloads/AbstractFetchDownloadService.kt b/mobile/android/android-components/components/feature/downloads/src/main/java/mozilla/components/feature/downloads/AbstractFetchDownloadService.kt
+index 7a51af95894b44676082b5c10981693946205493..32d63440b92e8bdb17b8d6f109f2ed5617d589bb 100644
+--- a/mobile/android/android-components/components/feature/downloads/src/main/java/mozilla/components/feature/downloads/AbstractFetchDownloadService.kt
++++ b/mobile/android/android-components/components/feature/downloads/src/main/java/mozilla/components/feature/downloads/AbstractFetchDownloadService.kt
+@@ -406,9 +406,16 @@ abstract class AbstractFetchDownloadService : Service() {
+     /**
+      * Data class for styling download notifications.
+      *
+-     * @param notificationAccentColor accent color for all download notifications.
++     * @param notificationAccentColor accent color for download notifications of normal tabs.
++     * @param privateNotificationAccentColor accent color for download notifications of private tabs.
+      */
+-    data class Style(@param:ColorRes val notificationAccentColor: Int = R.color.mozac_feature_downloads_notification)
++    data class Style(
++        @param:ColorRes val notificationAccentColor: Int = R.color.mozac_feature_downloads_notification,
++        @param:ColorRes val privateNotificationAccentColor: Int = notificationAccentColor,
++    ) {
++        internal fun accentColor(isPrivate: Boolean): Int =
++            if (isPrivate) privateNotificationAccentColor else notificationAccentColor
++    }
+ 
+     /**
+      * Updates the notification state with the passed [download] data. Be aware that you need to pass [latestUIStatus]
+@@ -427,7 +434,7 @@ abstract class AbstractFetchDownloadService : Service() {
+                         context = context,
+                         downloadState = download.state,
+                         fileSizeFormatter = fileSizeFormatter,
+-                        notificationAccentColor = style.notificationAccentColor,
++                        notificationAccentColor = style.accentColor(download.state.private),
+                         downloadEstimator = downloadEstimator,
+                     )
+                 PAUSED ->
+@@ -435,14 +442,14 @@ abstract class AbstractFetchDownloadService : Service() {
+                         context,
+                         download.state,
+                         download.createdTime,
+-                        style.notificationAccentColor,
++                        style.accentColor(download.state.private),
+                     )
+                 FAILED ->
+                     DownloadNotification.createDownloadFailedNotification(
+                         context,
+                         download.state,
+                         download.createdTime,
+-                        style.notificationAccentColor,
++                        style.accentColor(download.state.private),
+                     )
+                 COMPLETED -> {
+                     addToDownloadSystemDatabaseCompat(download.state, scope)
+@@ -450,7 +457,7 @@ abstract class AbstractFetchDownloadService : Service() {
+                         context = context,
+                         downloadState = download.state,
+                         createdTime = download.createdTime,
+-                        notificationAccentColor = style.notificationAccentColor,
++                        notificationAccentColor = style.accentColor(download.state.private),
+                         downloadFileUtils = downloadFileUtils,
+                     )
+                 }
+@@ -635,7 +642,8 @@ abstract class AbstractFetchDownloadService : Service() {
+                 context = context,
+                 fileSizeFormatter = fileSizeFormatter,
+                 notifications = downloadList,
+-                notificationAccentColor = style.notificationAccentColor,
++                notificationAccentColor =
++                    style.accentColor(downloadList.isNotEmpty() && downloadList.all { it.state.private }),
+             )
+ 
+         notificationsDelegate.notify(
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/share/QRCodeGenerator.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/share/QRCodeGenerator.kt
+index c25e8d606f0a65b7c57ac588783c902689ff97e8..29fc59dd2ea2a0a109537d2439382af0be21ef9b 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/share/QRCodeGenerator.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/share/QRCodeGenerator.kt
+@@ -21,6 +21,7 @@ import com.google.zxing.qrcode.encoder.QRCode
+ import kotlin.math.max
+ import kotlin.math.min
+ import org.mozilla.fenix.R
++import org.mozilla.fenix.embermine.EmbermineAccent
+ 
+ /** Utility class to generate QR codes. */
+ class QRCodeGenerator {
+@@ -116,7 +117,7 @@ class QRCodeGenerator {
+             RectF(0f, 0f, BACKGROUND_SIZE.toFloat(), BACKGROUND_SIZE.toFloat()),
+             LOGO_BACKGROUND_CORNER_RADIUS,
+             LOGO_BACKGROUND_CORNER_RADIUS,
+-            paint.apply { color = context.getColor(R.color.fx_mobile_primary) },
++            paint.apply { color = logoBackgroundColor(context) },
+         )
+ 
+         val centerXBg: Float = (width - centeredBitmapBackground.width) * 0.5f
+@@ -133,6 +134,13 @@ class QRCodeGenerator {
+         canvas.drawBitmap(centeredBitmap, centerXLogo, centerYLogo, paint)
+     }
+ 
++    private fun logoBackgroundColor(context: Context): Int =
++        if (EmbermineAccent.isViewAccentEnabled(context)) {
++            context.getColor(R.color.embermine_accent)
++        } else {
++            context.getColor(R.color.fx_mobile_primary)
++        }
++
+     @Suppress("LongParameterList")
+     private fun transformToCircularQRSegments(
+         inputHeight: Int,
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/downloads/DownloadService.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/downloads/DownloadService.kt
+index 5768ca8036228e54997a9a12b903068d7ce09297..0b089b758bb9ccaa1a1fa0f4e4db8c9719f4dad5 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/downloads/DownloadService.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/downloads/DownloadService.kt
+@@ -22,7 +22,17 @@ import org.mozilla.fenix.settings.downloads.DownloadLocationManager
+ class DownloadService : AbstractFetchDownloadService() {
+     override val httpClient by lazy { components.core.client }
+     override val store: BrowserStore by lazy { components.core.store }
+-    override val style: Style by lazy { Style(R.color.fx_mobile_tertiary) }
++    override val style: Style
++        get() =
++            Style(
++                notificationAccentColor =
++                    if (components.settings.isEmbermineWallpaperColorsEnabled) {
++                        R.color.embermine_accent
++                    } else {
++                        R.color.fx_mobile_tertiary
++                    },
++                privateNotificationAccentColor = R.color.fx_mobile_tertiary,
++            )
+     override val notificationsDelegate: NotificationsDelegate by lazy { components.notificationsDelegate }
+     override val fileSizeFormatter: FileSizeFormatter by lazy { components.core.fileSizeFormatter }
+     override val downloadEstimator: DownloadEstimator by lazy { components.core.downloadEstimator }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineAccent.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineAccent.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..47d60dcdaec8c2591ab13a2ee4aaab0a586efa70
+index 0000000000000000000000000000000000000000..15e0b2cbf1a0331d33c66b82752c9f79ec0e5880
 --- /dev/null
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineAccent.kt
-@@ -0,0 +1,41 @@
+@@ -0,0 +1,61 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 +
 +package org.mozilla.fenix.embermine
 +
++import android.app.Activity
 +import android.content.Context
 +import android.os.Build
 +import androidx.compose.material3.ColorScheme
@@ -30,6 +161,8 @@ index 0000000000000000000000000000000000000000..47d60dcdaec8c2591ab13a2ee4aaab0a
 +import androidx.compose.material3.dynamicLightColorScheme
 +import mozilla.components.compose.base.theme.AcornGradientScheme
 +import mozilla.components.compose.base.theme.Theme
++import org.mozilla.fenix.R
++import org.mozilla.fenix.browser.browsingmode.BrowsingMode
 +import org.mozilla.fenix.ext.components
 +
 +/**
@@ -47,6 +180,23 @@ index 0000000000000000000000000000000000000000..47d60dcdaec8c2591ab13a2ee4aaab0a
 +        val dynamic = dynamicScheme(context, theme) ?: return base
 +        return EmbermineAccentScheme.gradients(base, dynamic)
 +    }
++
++    fun applyViewOverlay(activity: Activity, mode: BrowsingMode) {
++        val switchOn = activity.components.settings.isEmbermineWallpaperColorsEnabled
++        if (isViewAccentEnabled(Build.VERSION.SDK_INT, switchOn, mode.isPrivate)) {
++            activity.theme.applyStyle(R.style.EmbermineAccentOverlay, true)
++        }
++    }
++
++    fun isViewAccentEnabled(context: Context): Boolean =
++        isViewAccentEnabled(
++            sdkInt = Build.VERSION.SDK_INT,
++            switchOn = context.components.settings.isEmbermineWallpaperColorsEnabled,
++            isPrivate = context.components.appStore.state.mode.isPrivate,
++        )
++
++    fun isViewAccentEnabled(sdkInt: Int, switchOn: Boolean, isPrivate: Boolean): Boolean =
++        sdkInt >= Build.VERSION_CODES.S && switchOn && !isPrivate
 +
 +    private fun dynamicScheme(context: Context, theme: Theme): ColorScheme? {
 +        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
@@ -184,6 +334,26 @@ index 9185fef2c847bd36a461872be258da182fb564f0..9e947beb2dca3e950be67cf0b364a8bb
  
      val tabGroupColors: TabGroupColorPalette =
          when (theme) {
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/theme/ThemeManager.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/theme/ThemeManager.kt
+index 904191f395544c1e557c5682213cf2eb9b42391d..6665581a92df2b53ec98d53c6f0950fa45543fe2 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/theme/ThemeManager.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/theme/ThemeManager.kt
+@@ -26,6 +26,7 @@ import org.mozilla.fenix.HomeActivity
+ import org.mozilla.fenix.R
+ import org.mozilla.fenix.browser.browsingmode.BrowsingMode
+ import org.mozilla.fenix.customtabs.ExternalAppBrowserActivity
++import org.mozilla.fenix.embermine.EmbermineAccent
+ 
+ abstract class ThemeManager {
+ 
+@@ -72,6 +73,7 @@ abstract class ThemeManager {
+ 
+     fun setActivityTheme(activity: Activity) {
+         activity.setTheme(currentThemeResource)
++        EmbermineAccent.applyViewOverlay(activity, currentTheme)
+     }
+ 
+     companion object {
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
 index 8875fe0f4d4caa287625dc68f778c36389b393a8..d57c8223c22b811e56063eb46e07794277f08da3 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
@@ -201,6 +371,97 @@ index 8875fe0f4d4caa287625dc68f778c36389b393a8..d57c8223c22b811e56063eb46e077942
      var isDynamicToolbarEnabled by
          booleanPreference(
              appContext.getPreferenceKey(R.string.pref_key_dynamic_toolbar),
+diff --git a/mobile/android/fenix/app/src/main/res/values-night-v31/embermine_accent.xml b/mobile/android/fenix/app/src/main/res/values-night-v31/embermine_accent.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..05774911249171cf42dfec6b607ee735d2392311
+--- /dev/null
++++ b/mobile/android/fenix/app/src/main/res/values-night-v31/embermine_accent.xml
+@@ -0,0 +1,33 @@
++<?xml version="1.0" encoding="utf-8" standalone="yes"?>
++<!-- This Source Code Form is subject to the terms of the Mozilla Public
++   - License, v. 2.0. If a copy of the MPL was not distributed with this
++   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
++<resources>
++    <color name="embermine_accent">@android:color/system_accent1_200</color>
++
++    <style name="EmbermineAccentOverlay">
++        <item name="colorPrimary">@android:color/system_accent1_200</item>
++        <item name="colorOnPrimary">@android:color/system_accent1_800</item>
++        <item name="colorPrimaryContainer">@android:color/system_accent1_700</item>
++        <item name="colorOnPrimaryContainer">@android:color/system_accent1_100</item>
++        <item name="colorPrimaryInverse">@android:color/system_accent1_600</item>
++        <item name="colorSecondaryContainer">@android:color/system_accent2_700</item>
++        <item name="colorOnSecondaryContainer">@android:color/system_accent2_100</item>
++        <item name="colorTertiary">@android:color/system_accent1_200</item>
++        <item name="colorOnTertiary">@android:color/system_accent1_800</item>
++        <item name="colorTertiaryContainer">@android:color/system_accent1_700</item>
++        <item name="colorOnTertiaryContainer">@android:color/system_accent1_100</item>
++        <item name="colorControlActivated">@android:color/system_accent1_200</item>
++        <item name="android:colorControlActivated">@android:color/system_accent1_200</item>
++        <item name="android:textColorLink">@android:color/system_accent1_200</item>
++        <item name="selectPromptHeaderTextColor">@android:color/system_accent1_200</item>
++        <item name="accentUsedOnDarkBackground">@android:color/system_accent1_200</item>
++        <item name="accent">@android:color/system_accent1_400</item>
++        <item name="accentBright">@android:color/system_accent1_600</item>
++        <item name="accentHighContrast">@android:color/system_accent1_500</item>
++        <item name="android:colorEdgeEffect">@android:color/system_accent1_400</item>
++        <item name="fillLinkFromClipboard">@android:color/system_accent1_500</item>
++        <item name="mozacPromptLoginEditTextCursorColor">@android:color/system_accent1_400</item>
++        <item name="mozacProtectionsDashboardProgressBar">@android:color/system_accent1_500</item>
++    </style>
++</resources>
+diff --git a/mobile/android/fenix/app/src/main/res/values-v31/embermine_accent.xml b/mobile/android/fenix/app/src/main/res/values-v31/embermine_accent.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..d89171aa8c90bd1b5efcef9d48087e0f3c5fa2fa
+--- /dev/null
++++ b/mobile/android/fenix/app/src/main/res/values-v31/embermine_accent.xml
+@@ -0,0 +1,33 @@
++<?xml version="1.0" encoding="utf-8" standalone="yes"?>
++<!-- This Source Code Form is subject to the terms of the Mozilla Public
++   - License, v. 2.0. If a copy of the MPL was not distributed with this
++   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
++<resources>
++    <color name="embermine_accent">@android:color/system_accent1_600</color>
++
++    <style name="EmbermineAccentOverlay">
++        <item name="colorPrimary">@android:color/system_accent1_600</item>
++        <item name="colorOnPrimary">@android:color/system_accent1_0</item>
++        <item name="colorPrimaryContainer">@android:color/system_accent1_100</item>
++        <item name="colorOnPrimaryContainer">@android:color/system_accent1_900</item>
++        <item name="colorPrimaryInverse">@android:color/system_accent1_200</item>
++        <item name="colorSecondaryContainer">@android:color/system_accent2_100</item>
++        <item name="colorOnSecondaryContainer">@android:color/system_accent2_900</item>
++        <item name="colorTertiary">@android:color/system_accent1_600</item>
++        <item name="colorOnTertiary">@android:color/system_accent1_0</item>
++        <item name="colorTertiaryContainer">@android:color/system_accent1_100</item>
++        <item name="colorOnTertiaryContainer">@android:color/system_accent1_900</item>
++        <item name="colorControlActivated">@android:color/system_accent1_600</item>
++        <item name="android:colorControlActivated">@android:color/system_accent1_600</item>
++        <item name="android:textColorLink">@android:color/system_accent1_600</item>
++        <item name="selectPromptHeaderTextColor">@android:color/system_accent1_600</item>
++        <item name="accentUsedOnDarkBackground">@android:color/system_accent1_600</item>
++        <item name="accent">@android:color/system_accent1_700</item>
++        <item name="accentBright">@android:color/system_accent1_600</item>
++        <item name="accentHighContrast">@android:color/system_accent1_700</item>
++        <item name="android:colorEdgeEffect">@android:color/system_accent1_700</item>
++        <item name="fillLinkFromClipboard">@android:color/system_accent1_700</item>
++        <item name="mozacPromptLoginEditTextCursorColor">@android:color/system_accent1_700</item>
++        <item name="mozacProtectionsDashboardProgressBar">@android:color/system_accent1_500</item>
++    </style>
++</resources>
+diff --git a/mobile/android/fenix/app/src/main/res/values/embermine_accent.xml b/mobile/android/fenix/app/src/main/res/values/embermine_accent.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..14b7a441909ab0428cb4d0f8f3b604f14da3f96c
+--- /dev/null
++++ b/mobile/android/fenix/app/src/main/res/values/embermine_accent.xml
+@@ -0,0 +1,7 @@
++<?xml version="1.0" encoding="utf-8" standalone="yes"?>
++<!-- This Source Code Form is subject to the terms of the Mozilla Public
++   - License, v. 2.0. If a copy of the MPL was not distributed with this
++   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
++<resources>
++    <color name="embermine_accent">@color/fx_mobile_tertiary</color>
++</resources>
 diff --git a/mobile/android/fenix/app/src/main/res/values/embermine_strings.xml b/mobile/android/fenix/app/src/main/res/values/embermine_strings.xml
 index fcce1b96472079f67617c73ab40a0fbe86af461b..84bea931e6c19df1954fbbdebb1de28643c29518 100644
 --- a/mobile/android/fenix/app/src/main/res/values/embermine_strings.xml
@@ -374,4 +635,39 @@ index 0000000000000000000000000000000000000000..4ca459223d9735877d58ac10565b7d2a
 +        type = AcornGradientType.Linear(angleInDegrees = 96f),
 +        colorStops = listOf(ColorStop(0f, start), ColorStop(0.71f, end)),
 +    )
++}
+diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineViewAccentTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineViewAccentTest.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..331ce9f2a19fe218dab6ce00f5dac1622ad51cf6
+--- /dev/null
++++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineViewAccentTest.kt
+@@ -0,0 +1,29 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine
++
++import org.junit.Assert.assertFalse
++import org.junit.Assert.assertTrue
++import org.junit.Test
++
++class EmbermineViewAccentTest {
++
++    @Test
++    fun `view accent is off below Android 12`() {
++        assertFalse(EmbermineAccent.isViewAccentEnabled(sdkInt = 30, switchOn = true, isPrivate = false))
++    }
++
++    @Test
++    fun `view accent follows the switch on Android 12 and newer`() {
++        assertTrue(EmbermineAccent.isViewAccentEnabled(sdkInt = 31, switchOn = true, isPrivate = false))
++        assertFalse(EmbermineAccent.isViewAccentEnabled(sdkInt = 31, switchOn = false, isPrivate = false))
++        assertTrue(EmbermineAccent.isViewAccentEnabled(sdkInt = 34, switchOn = true, isPrivate = false))
++    }
++
++    @Test
++    fun `private mode keeps the Firefox accent`() {
++        assertFalse(EmbermineAccent.isViewAccentEnabled(sdkInt = 34, switchOn = true, isPrivate = true))
++    }
 +}

@@ -240,7 +240,9 @@ jobs:
           find fx/obj-embermine/gradle/build/mobile/android/fenix -name 'TEST-*.xml' -path '*test-results*' \
             -exec cp --parents {} unit-test-results/ \;
           python3 scripts/junit_summary.py unit-test-results \
-            --require-class org.mozilla.fenix.embermine.EmbermineVersionTest
+            --require-class org.mozilla.fenix.embermine.EmbermineVersionTest \
+            --require-class org.mozilla.fenix.embermine.EmbermineNameArgsTest \
+            --require-class org.mozilla.fenix.embermine.EmbermineMetricControllerTest
 
       - name: Upload unit test results
         if: ${{ !cancelled() }}

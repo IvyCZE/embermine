@@ -142,8 +142,32 @@ def _moved(shape: Shape, m: Matrix) -> list[Subpath]:
 
 
 def _is_detail(shape: Shape) -> bool:
-    """Black eyes, ears, tail tips and leg lines: cut out of the monochrome silhouette."""
+    """Black eyes, ears, tail tips and stroke-only lines: never a silhouette loop."""
     return shape.fill == BLACK or (shape.fill is None and shape.stroke == BLACK)
+
+
+def _cut_outs(shape: Shape, m: Matrix) -> list[list[Point]]:
+    """Outlines that ``shape`` removes from the silhouette, each wound counter-clockwise.
+
+    Black details are removed whole. An open black stroke is removed as its stroke band, whether
+    the shape is stroke-only or a light fill with a black stroke (the leg lines of Path 62 and 63,
+    whose fill stays in the silhouette). A closed outline on a light fill stays in the silhouette.
+    """
+    half = shape.stroke_width * scale_factor(m) / 2 if shape.stroke else 0.0
+    outlines: list[list[Point]] = []
+    for sub in _moved(shape, m):
+        points = flatten(sub)
+        if shape.fill == BLACK:
+            outline = offset_closed(points, half) if half > 0 else points
+        elif shape.stroke == BLACK and not sub.closed:
+            outline = stroke_polygon(points, half)
+        elif _is_detail(shape):
+            raise ValueError(f"stroke-only detail {shape.name!r} must be an open path")
+        else:
+            continue
+        if len(outline) >= 3:
+            outlines.append(counter_clockwise(outline))
+    return outlines
 
 
 def color_pieces(art: IconArt, m: Matrix) -> list[Piece]:
@@ -171,7 +195,7 @@ def background_pieces(art: IconArt, m: Matrix, width: float, height: float) -> l
 
 
 def monochrome_pieces(art: IconArt, m: Matrix, fill: str) -> list[Piece]:
-    """One opaque silhouette: the flower and the ermine's light parts, minus the black details.
+    """One opaque silhouette: the flower and the ermine's light parts, minus the cut-outs.
 
     Each silhouette loop (a light shape or the flower, wound counter-clockwise) has every cut-out
     subtracted from it, so the holes stay exact where loops overlap. The loops are then filled with
@@ -179,19 +203,7 @@ def monochrome_pieces(art: IconArt, m: Matrix, fill: str) -> list[Piece]:
     """
     cut_outs: list[list[Point]] = []
     for shape in art.ermine:
-        if not _is_detail(shape):
-            continue
-        half = shape.stroke_width * scale_factor(m) / 2 if shape.stroke else 0.0
-        for sub in _moved(shape, m):
-            points = flatten(sub)
-            if shape.fill == BLACK:
-                outline = offset_closed(points, half) if half > 0 else points
-            else:
-                if sub.closed:
-                    raise ValueError(f"stroke-only detail {shape.name!r} must be an open path")
-                outline = stroke_polygon(points, half)
-            if len(outline) >= 3:
-                cut_outs.append(counter_clockwise(outline))
+        cut_outs.extend(_cut_outs(shape, m))
 
     loops: list[list[Point]] = []
     seen: set[tuple[tuple[float, float], ...]] = set()

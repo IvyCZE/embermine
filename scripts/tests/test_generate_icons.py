@@ -38,6 +38,11 @@ EYE = (237.07, 438.87)
 EAR = (323.0, 218.0)
 FLOWER = (413.0, 368.0)
 BODY = (300.0, 600.0)
+# Leg lines (open black strokes on Path 62 and Path 63) and a point inside each leg.
+LEG_LINE_62 = (245.7169, 526.1540)
+LEG_LINE_63 = (384.6095, 590.1412)
+LEG_INSIDE_62 = (248.2173, 503.9107)
+LEG_INSIDE_63 = (378.0092, 568.2203)
 
 
 def _fake_tree(root: Path) -> Path:
@@ -169,7 +174,9 @@ class OutputTest(unittest.TestCase):
         matrix = fit_matrix(art_bounds(self.art), safe_zone_box(108.0, 108.0))
         self.assertTrue(_filled(loops, apply(matrix, *FLOWER)))
         self.assertTrue(_filled(loops, apply(matrix, *BODY)))
-        for cut in (EYE, EAR):
+        for inside in (LEG_INSIDE_62, LEG_INSIDE_63):
+            self.assertTrue(_filled(loops, apply(matrix, *inside)), inside)
+        for cut in (EYE, EAR, LEG_LINE_62, LEG_LINE_63):
             self.assertFalse(_filled(loops, apply(matrix, *cut)), cut)
 
     def test_status_and_splash_icons_take_their_size_from_the_source(self):

@@ -159,6 +159,112 @@ index b1ebab7da8021208088b07e84c7957c0173386ad..6122d45cf9b531c158ab7e7ba420ee72
              }
      }
  
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/metrics/MetricController.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/metrics/MetricController.kt
+index 8c4cddd22adb0b6e60f5a5983d102b5fb4001ada..22dd448659f45ef2d4a172c1156954119d878fc3 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/metrics/MetricController.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/metrics/MetricController.kt
+@@ -72,6 +72,7 @@ import org.mozilla.fenix.GleanMetrics.Sync
+ import org.mozilla.fenix.GleanMetrics.SyncedTabs
+ import org.mozilla.fenix.GleanMetrics.TrackingProtection
+ import org.mozilla.fenix.components.share.ShareSource
++import org.mozilla.fenix.embermine.EmbermineMetricController
+ import org.mozilla.fenix.utils.Settings
+ 
+ interface MetricController {
+@@ -83,8 +84,8 @@ interface MetricController {
+ 
+     companion object {
+         /**
+-         * Instantiate either a debug or release version of the metric controller. The debug version writes logs rather
+-         * than sending real telemetry.
++         * Instantiate the release metric controller when release telemetry is on. Otherwise instantiate the Embermine
++         * metric controller, which starts only the Glean services the user has opted in to.
+          *
+          * @param services the list of available services to start
+          * @param isDataTelemetryEnabled has data telemetry been enabled?
+@@ -108,7 +109,11 @@ interface MetricController {
+                     settings,
+                 )
+             } else {
+-                DebugMetricController()
++                EmbermineMetricController(
++                    services = services,
++                    isDataTelemetryEnabled = isDataTelemetryEnabled,
++                    isUsageTelemetryEnabled = isUsageTelemetryEnabled,
++                )
+             }
+         }
+     }
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineMetricController.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineMetricController.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..a8252266bfca407772e32f90ad5c8613104c4f76
+--- /dev/null
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineMetricController.kt
+@@ -0,0 +1,64 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine
++
++import org.mozilla.fenix.components.metrics.Event
++import org.mozilla.fenix.components.metrics.GleanMetricsService
++import org.mozilla.fenix.components.metrics.GleanUsageReportingMetricsService
++import org.mozilla.fenix.components.metrics.MetricController
++import org.mozilla.fenix.components.metrics.MetricServiceType
++import org.mozilla.fenix.components.metrics.MetricsService
++
++/**
++ * Metric controller for builds with release telemetry off. It never registers a Facts processor and
++ * never starts the marketing or first-session services. The Glean services run only while the user
++ * has opted in.
++ */
++class EmbermineMetricController(
++    private val services: List<MetricsService>,
++    private val isDataTelemetryEnabled: () -> Boolean,
++    private val isUsageTelemetryEnabled: () -> Boolean,
++) : MetricController {
++    private val initialized = mutableSetOf<MetricServiceType>()
++
++    override fun start(type: MetricServiceType) {
++        if (!isEnabled(type) || type in initialized) return
++
++        permittedServices(type).forEach { it.start() }
++
++        initialized.add(type)
++    }
++
++    override fun stop(type: MetricServiceType) {
++        if (isEnabled(type) || type !in initialized) return
++
++        permittedServices(type).forEach { it.stop() }
++
++        initialized.remove(type)
++    }
++
++    override fun track(event: Event) {
++        services
++            .filter { isPermitted(it) && it.shouldTrack(event) }
++            .forEach {
++                if (!isEnabled(it.type) || it.type !in initialized) return@forEach
++
++                it.track(event)
++            }
++    }
++
++    private fun permittedServices(type: MetricServiceType): List<MetricsService> =
++        services.filter { it.type == type && isPermitted(it) }
++
++    private fun isPermitted(service: MetricsService): Boolean =
++        service is GleanMetricsService || service is GleanUsageReportingMetricsService
++
++    private fun isEnabled(type: MetricServiceType): Boolean =
++        when (type) {
++            MetricServiceType.Data -> isDataTelemetryEnabled()
++            MetricServiceType.UsageReporting -> isUsageTelemetryEnabled()
++            MetricServiceType.Marketing -> false
++        }
++}
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/GeckoPrivacyPrefs.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/GeckoPrivacyPrefs.kt
 new file mode 100644
 index 0000000000000000000000000000000000000000..8271b1487dba747fa31715f6f8227eaae8ba653d
@@ -427,6 +533,162 @@ index d5b8c756c685048c5d2516d006a2f6b5116e2998..fcce1b96472079f67617c73ab40a0fbe
      <string name="embermine_android_components_abbreviation" translatable="false">AC</string>
 +    <string name="embermine_onboarding_tou_body_line_3" translatable="false">Embermine does not send diagnostic or interaction data to Mozilla unless you turn it on. %1$s</string>
  </resources>
+diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineMetricControllerTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineMetricControllerTest.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..b89b5bf231ed41f5502937a5472b145d84815a58
+--- /dev/null
++++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineMetricControllerTest.kt
+@@ -0,0 +1,150 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine
++
++import io.mockk.every
++import io.mockk.mockk
++import io.mockk.verify
++import org.junit.Test
++import org.mozilla.fenix.components.metrics.AdjustMetricsService
++import org.mozilla.fenix.components.metrics.Event
++import org.mozilla.fenix.components.metrics.FirstSessionMetricsService
++import org.mozilla.fenix.components.metrics.GleanMetricsService
++import org.mozilla.fenix.components.metrics.GleanUsageReportingMetricsService
++import org.mozilla.fenix.components.metrics.InstallReferrerMetricsService
++import org.mozilla.fenix.components.metrics.MetricServiceType
++
++class EmbermineMetricControllerTest {
++
++    private var dataEnabled = false
++    private var usageEnabled = false
++
++    private val gleanData = mockk<GleanMetricsService>(relaxed = true) {
++        every { type } returns MetricServiceType.Data
++        every { shouldTrack(any()) } returns true
++    }
++    private val gleanUsage = mockk<GleanUsageReportingMetricsService>(relaxed = true) {
++        every { type } returns MetricServiceType.UsageReporting
++        every { shouldTrack(any()) } returns true
++    }
++    private val adjust = mockk<AdjustMetricsService>(relaxed = true) {
++        every { type } returns MetricServiceType.Marketing
++        every { shouldTrack(any()) } returns true
++    }
++    private val installReferrer = mockk<InstallReferrerMetricsService>(relaxed = true) {
++        every { type } returns MetricServiceType.Data
++        every { shouldTrack(any()) } returns true
++    }
++    private val firstSession = mockk<FirstSessionMetricsService>(relaxed = true) {
++        every { type } returns MetricServiceType.Data
++        every { shouldTrack(any()) } returns true
++    }
++
++    private val event = Event.GrowthData.ConversionEvent6
++
++    private fun controller() = EmbermineMetricController(
++        services = listOf(adjust, installReferrer, firstSession, gleanData, gleanUsage),
++        isDataTelemetryEnabled = { dataEnabled },
++        isUsageTelemetryEnabled = { usageEnabled },
++    )
++
++    @Test
++    fun `default off starts no service and tracks no event`() {
++        val controller = controller()
++
++        controller.start(MetricServiceType.Data)
++        controller.start(MetricServiceType.UsageReporting)
++        controller.track(event)
++
++        verify(exactly = 0) { gleanData.start() }
++        verify(exactly = 0) { gleanUsage.start() }
++        verify(exactly = 0) { gleanData.track(any()) }
++        verify(exactly = 0) { gleanUsage.track(any()) }
++    }
++
++    @Test
++    fun `usage reporting opt-in starts the service and opt-out stops it`() {
++        val controller = controller()
++
++        usageEnabled = true
++        controller.start(MetricServiceType.UsageReporting)
++        controller.track(event)
++        verify(exactly = 1) { gleanUsage.start() }
++        verify(exactly = 1) { gleanUsage.track(event) }
++
++        usageEnabled = false
++        controller.stop(MetricServiceType.UsageReporting)
++        controller.track(event)
++        verify(exactly = 1) { gleanUsage.stop() }
++        verify(exactly = 1) { gleanUsage.track(any()) }
++    }
++
++    @Test
++    fun `usage reporting restarts when the opt-in is persisted`() {
++        usageEnabled = true
++
++        controller().start(MetricServiceType.UsageReporting)
++
++        verify(exactly = 1) { gleanUsage.start() }
++    }
++
++    @Test
++    fun `data opt-in starts glean metrics and opt-out stops them`() {
++        val controller = controller()
++
++        dataEnabled = true
++        controller.start(MetricServiceType.Data)
++        controller.track(event)
++        verify(exactly = 1) { gleanData.start() }
++        verify(exactly = 1) { gleanData.track(event) }
++
++        dataEnabled = false
++        controller.stop(MetricServiceType.Data)
++        controller.track(event)
++        verify(exactly = 1) { gleanData.stop() }
++        verify(exactly = 1) { gleanData.track(any()) }
++    }
++
++    @Test
++    fun `data restarts when the opt-in is persisted`() {
++        dataEnabled = true
++
++        controller().start(MetricServiceType.Data)
++
++        verify(exactly = 1) { gleanData.start() }
++    }
++
++    @Test
++    fun `repeated start while opted in starts the service once`() {
++        dataEnabled = true
++        val controller = controller()
++
++        controller.start(MetricServiceType.Data)
++        controller.start(MetricServiceType.Data)
++
++        verify(exactly = 1) { gleanData.start() }
++    }
++
++    @Test
++    fun `marketing and first session services never start even when opted in`() {
++        dataEnabled = true
++        usageEnabled = true
++        val controller = controller()
++
++        controller.start(MetricServiceType.Marketing)
++        controller.start(MetricServiceType.Data)
++        controller.track(event)
++        controller.stop(MetricServiceType.Marketing)
++
++        verify(exactly = 0) { adjust.start() }
++        verify(exactly = 0) { adjust.stop() }
++        verify(exactly = 0) { adjust.track(any()) }
++        verify(exactly = 0) { installReferrer.start() }
++        verify(exactly = 0) { installReferrer.track(any()) }
++        verify(exactly = 0) { firstSession.start() }
++        verify(exactly = 0) { firstSession.track(any()) }
++        verify(exactly = 1) { gleanData.start() }
++    }
++}
 diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/GeckoPrivacyPrefsTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/GeckoPrivacyPrefsTest.kt
 new file mode 100644
 index 0000000000000000000000000000000000000000..bcce09bad437ce2db17cea37c741f660b0619124

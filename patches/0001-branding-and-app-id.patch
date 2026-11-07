@@ -43,6 +43,29 @@ index 4d8cdf341a237422f8311e6b1c42842007eba42c..e81e7e66717484dfa32db9422e7c5d6d
                      "deepLinkScheme": deepLinkSchemeValue,
              ])
          }
+diff --git a/mobile/android/fenix/app/src/androidTest/java/org/mozilla/fenix/ui/efficiency/selectors/SettingsSearchSelectors.kt b/mobile/android/fenix/app/src/androidTest/java/org/mozilla/fenix/ui/efficiency/selectors/SettingsSearchSelectors.kt
+index 9ec097ffb5cd254654c0b26552dd3fec8d4437d2..705a912be1822fbd2b70c0be9a093adb22d2e830 100644
+--- a/mobile/android/fenix/app/src/androidTest/java/org/mozilla/fenix/ui/efficiency/selectors/SettingsSearchSelectors.kt
++++ b/mobile/android/fenix/app/src/androidTest/java/org/mozilla/fenix/ui/efficiency/selectors/SettingsSearchSelectors.kt
+@@ -142,15 +142,15 @@ object SettingsSearchSelectors : SelectorContainer {
+             scrollDirection = SwipeDirection.UP,
+         )
+ 
+-    // The non-sponsored row's title is built at runtime from the app name, mirroring
+-    // SearchEngineFragment's getString(preferences_show_nonsponsored_suggestions, app_name).
++    // The non-sponsored row's title is built at runtime from the Firefox product name, mirroring
++    // SearchEngineFragment's getString(preferences_show_nonsponsored_suggestions, embermine_mozilla_product_firefox).
+     val NONSPONSORED_SUGGESTIONS_OPTION =
+         Selector(
+             strategy = SelectorStrategy.ESPRESSO_BY_TEXT,
+             value =
+                 getStringResource(
+                     R.string.preferences_show_nonsponsored_suggestions,
+-                    getStringResource(R.string.app_name),
++                    getStringResource(R.string.embermine_mozilla_product_firefox),
+                 ),
+             description = "Suggestions from the web (non-sponsored) option",
+             scrollDirection = SwipeDirection.UP,
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Core.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Core.kt
 index 37f1465be70213c0883c381ef6aa2cf281edaa74..b1ebab7da8021208088b07e84c7957c0173386ad 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Core.kt
@@ -123,6 +146,33 @@ index f5b50ef6def6bdef8b7e68169f13547fbb661fe6..a7115b6b4cc55e2ddebf7bfb8fd0ac43
              )
  
          else -> null
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineNameArgs.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineNameArgs.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..5edd9b72857a243ddaac4b7cc7c3f4b5227c7627
+--- /dev/null
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineNameArgs.kt
+@@ -0,0 +1,21 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine
++
++import androidx.annotation.StringRes
++import org.mozilla.fenix.R
++
++/**
++ * Picks the resource for the name argument of a string template. Templates that name a Mozilla
++ * product or service get the product name; app self-references get the app name.
++ */
++object EmbermineNameArgs {
++
++    @StringRes
++    fun nameArgument(@StringRes template: Int): Int = when (template) {
++        R.string.preferences_show_nonsponsored_suggestions -> R.string.embermine_mozilla_product_firefox
++        else -> R.string.app_name
++    }
++}
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/setup/ui/ChecklistView.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/setup/ui/ChecklistView.kt
 index 39a5306cfed96816af59f5eb7fc42af635b08679..651fca2f247cc9006c36a70b801909cc6a64f3a4 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/setup/ui/ChecklistView.kt
@@ -247,6 +297,59 @@ index 1a9f9ca087a5a8b42cb46443fdd1a0e7246e4027..f650d7937d4705ab2db92589e143cfc7
              ),
              AboutPageItem(
                  AboutItem.ExternalLink(
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/search/SearchEngineFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/search/SearchEngineFragment.kt
+index 2f7cc0a2b9399e6fee9c8001b049cee777221b8f..e28ee2399159a16f26e3cad3345caf2ead259756 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/search/SearchEngineFragment.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/search/SearchEngineFragment.kt
+@@ -20,6 +20,7 @@ import mozilla.components.browser.state.state.selectedOrDefaultSearchEngine
+ import mozilla.components.support.ktx.android.view.hideKeyboard
+ import org.mozilla.fenix.R
+ import org.mozilla.fenix.e2e.SystemInsetsPaddedFragment
++import org.mozilla.fenix.embermine.EmbermineNameArgs
+ import org.mozilla.fenix.ext.components
+ import org.mozilla.fenix.ext.getPreferenceKey
+ import org.mozilla.fenix.ext.navigateWithBreadcrumb
+@@ -149,7 +150,7 @@ class SearchEngineFragment : PreferenceFragmentCompat(), SystemInsetsPaddedFragm
+                 title =
+                     getString(
+                         R.string.preferences_show_nonsponsored_suggestions,
+-                        getString(R.string.app_name),
++                        getString(EmbermineNameArgs.nameArgument(R.string.preferences_show_nonsponsored_suggestions)),
+                     )
+             }
+         val showSuggestionCardsPreference =
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/settingssearch/DefaultFenixSettingsIndexer.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/settingssearch/DefaultFenixSettingsIndexer.kt
+index 3072be9e99e723480ae4ed0b5dcfc57cb0d19f90..5533d8cb9ca73a02ad5c0ac7d189d5ecaea9717a 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/settingssearch/DefaultFenixSettingsIndexer.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/settingssearch/DefaultFenixSettingsIndexer.kt
+@@ -15,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
+ import kotlinx.coroutines.withContext
+ import mozilla.components.support.base.log.logger.Logger
+ import org.mozilla.fenix.R
++import org.mozilla.fenix.embermine.EmbermineNameArgs
+ 
+ /**
+  * Indexes Settings preferences for the Settings Search screen.
+@@ -317,8 +318,8 @@ class DefaultFenixSettingsIndexer(
+             }
+ 
+             if (stringsWithRequiredFormatting.contains(resourceId)) {
+-                val appName = context.getString(R.string.app_name)
+-                context.getString(resourceId, appName)
++                val nameArgument = context.getString(EmbermineNameArgs.nameArgument(resourceId))
++                context.getString(resourceId, nameArgument)
+             } else {
+                 context.getString(resourceId)
+             }
+@@ -378,7 +379,7 @@ class DefaultFenixSettingsIndexer(
+         /**
+          * List of strings that require format args.
+          *
+-         * All of them require the app name.
++         * All of them require one name argument, chosen by [EmbermineNameArgs].
+          */
+         val stringsWithRequiredFormatting =
+             listOf(
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt
 index 6c864fd870764fc5c04a2831f66107f691f8aca2..c580868a2bf41bc3e5e49ea75c6736c65e4da3f4 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt
@@ -3640,6 +3743,45 @@ index 31d6b91379cbfe57cad0a80a849964a02052abe3..8d3caa4a046d636297735804f3033d02
              android:targetClass="org.mozilla.fenix.IntentReceiverActivity" />
      </shortcut>
  </shortcuts>
+diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineNameArgsTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineNameArgsTest.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..f3af2f3e7bc69ad8e1704c57eb0bb341c37f011d
+--- /dev/null
++++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineNameArgsTest.kt
+@@ -0,0 +1,33 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine
++
++import org.junit.Assert.assertEquals
++import org.junit.Test
++import org.mozilla.fenix.R
++
++class EmbermineNameArgsTest {
++
++    @Test
++    fun `Firefox Suggest provider label names the Mozilla product`() {
++        assertEquals(
++            R.string.embermine_mozilla_product_firefox,
++            EmbermineNameArgs.nameArgument(R.string.preferences_show_nonsponsored_suggestions),
++        )
++    }
++
++    @Test
++    fun `sponsored suggestions summary names the app`() {
++        assertEquals(
++            R.string.app_name,
++            EmbermineNameArgs.nameArgument(R.string.preferences_show_sponsored_suggestions_summary),
++        )
++    }
++
++    @Test
++    fun `about preference names the app`() {
++        assertEquals(R.string.app_name, EmbermineNameArgs.nameArgument(R.string.preferences_about))
++    }
++}
 diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/settings/IPProtectionScreenTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/settings/IPProtectionScreenTest.kt
 index e0f1166df7ab2965ae946c51392bc6eb6f146516..99680a63b0f9f5038d7c107c510e23f2daf9bf04 100644
 --- a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/settings/IPProtectionScreenTest.kt

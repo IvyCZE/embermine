@@ -115,10 +115,10 @@ index 0000000000000000000000000000000000000000..3c3de734d2358bfe5d415644c0a4a044
 +}
 diff --git a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/ShapedIconBackground.kt b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/ShapedIconBackground.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..e194d0dfd64c5e4032d7756e7db8acd4d95d2e8e
+index 0000000000000000000000000000000000000000..8978dcb2a9f728e97ba9f9d15d8419e6071094b8
 --- /dev/null
 +++ b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/ShapedIconBackground.kt
-@@ -0,0 +1,61 @@
+@@ -0,0 +1,62 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -133,6 +133,7 @@ index 0000000000000000000000000000000000000000..e194d0dfd64c5e4032d7756e7db8acd4
 +import androidx.compose.ui.draw.drawBehind
 +import androidx.compose.ui.geometry.Size
 +import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.graphics.drawOutline
 +import androidx.compose.ui.graphics.drawscope.translate
 +import androidx.compose.ui.unit.Dp
 +import androidx.compose.ui.unit.dp
@@ -172,7 +173,7 @@ index 0000000000000000000000000000000000000000..e194d0dfd64c5e4032d7756e7db8acd4
 +            val containerSize = SHAPE_CONTAINER_SIZE.toPx()
 +            val outline = containerShape.createOutline(Size(containerSize, containerSize), layoutDirection, this)
 +            translate(left = (size.width - containerSize) / 2f, top = (size.height - containerSize) / 2f) {
-+                drawOutline(outline = outline, color = containerColor)
++                drawOutline(outline, containerColor)
 +            }
 +        },
 +        contentAlignment = Alignment.Center,

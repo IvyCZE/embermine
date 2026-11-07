@@ -17,9 +17,8 @@ from svgart.regions import winding_number  # noqa: E402
 from svgart.layers import (  # noqa: E402
     art_bounds,
     art_from_document,
-    fit_matrix,
+    canvas_matrix,
     load_icon,
-    safe_zone_box,
 )
 from svgart.svgdoc import parse_document  # noqa: E402
 
@@ -144,10 +143,15 @@ class OutputTest(unittest.TestCase):
     def test_background_is_full_bleed_with_sunny_on_top(self):
         pieces = _pieces(self._output("embermine_launcher_background.xml"))
         self.assertEqual(len(pieces), 2)
-        (rect_attrs, rect_loops), (sunny_attrs, _) = pieces
+        (rect_attrs, rect_loops), (sunny_attrs, sunny_loops) = pieces
         self.assertEqual(rect_attrs[ANDROID + "fillColor"], "#471B18")
         self.assertEqual(sunny_attrs[ANDROID + "fillColor"], "#823C35")
         self.assertEqual(bounds(rect_loops[0]), (0.0, 0.0, 108.0, 108.0))
+        # Sunny's scallop peaks must stay within 30 dp of the centre, leaving a dark ring inside the
+        # launcher mask (about 33 dp to 36 dp from the centre).
+        for loop in sunny_loops:
+            for x, y in loop:
+                self.assertLessEqual(math.hypot(x - 54.0, y - 54.0), 30.0)
 
     def test_launcher_art_stays_inside_the_safe_zone_circle(self):
         # Google's adaptive icon safe zone is a 66 dp circle centred on the 108 dp canvas.
@@ -156,6 +160,21 @@ class OutputTest(unittest.TestCase):
                 for loop in loops:
                     for x, y in loop:
                         self.assertLessEqual(math.hypot(x - 54.0, y - 54.0), 33.0, suffix)
+
+    def test_launcher_art_bounds_lie_inside_the_66dp_safe_zone(self):
+        for suffix in ("ic_launcher_foreground.xml", "ic_launcher_monochrome.xml"):
+            for _, loops in _pieces(self._output(suffix)):
+                for loop in loops:
+                    x0, y0, x1, y1 = bounds(loop)
+                    for value in (x0, y0, x1, y1):
+                        self.assertTrue(21.0 <= value <= 87.0, (suffix, value))
+
+    def test_canvas_matrix_maps_icon_canvas_onto_the_safe_zone(self):
+        matrix = canvas_matrix(self.art, 108.0, 108.0)
+        self.assertAlmostEqual(matrix[0], 66.0 / self.art.size)
+        self.assertAlmostEqual(matrix[3], 66.0 / self.art.size)
+        self.assertAlmostEqual(matrix[4], 21.0)
+        self.assertAlmostEqual(matrix[5], 21.0)
 
     def test_launcher_art_keeps_the_palette_and_outlines(self):
         pieces = _pieces(self._output("ic_launcher_foreground.xml"))
@@ -171,7 +190,7 @@ class OutputTest(unittest.TestCase):
         attrs, loops = pieces[0]
         self.assertEqual(attrs[ANDROID + "fillColor"], "#000000")
         self.assertNotIn(ANDROID + "strokeColor", attrs)
-        matrix = fit_matrix(art_bounds(self.art), safe_zone_box(108.0, 108.0))
+        matrix = canvas_matrix(self.art, 108.0, 108.0)
         self.assertTrue(_filled(loops, apply(matrix, *FLOWER)))
         self.assertTrue(_filled(loops, apply(matrix, *BODY)))
         for inside in (LEG_INSIDE_62, LEG_INSIDE_63):

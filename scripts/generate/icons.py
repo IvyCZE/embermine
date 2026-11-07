@@ -18,19 +18,18 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from svgart import lottie
-from svgart.geometry import uniform
 from svgart.layers import (
     Box,
     IconArt,
     Piece,
     art_bounds,
     background_pieces,
+    canvas_matrix,
     color_pieces,
     fit_matrix,
     load_icon,
     margin_box,
     monochrome_pieces,
-    safe_zone_box,
 )
 from svgart.vectordrawable import vector_drawable
 from svgart.wordmark import WORDMARK_TEXT, wordmark_pieces
@@ -203,11 +202,11 @@ def _render(target: Target, art: IconArt, tree: Path) -> str:
     width, height, vw, vh = _dimensions(target, tree)
     fill = target.fill or MONOCHROME_FILL
     if target.kind == "background":
-        pieces: list[Piece] = background_pieces(art, uniform(vw / art.size), vw, vh)
+        pieces: list[Piece] = background_pieces(art, canvas_matrix(art, vw, vh), vw, vh)
     elif target.kind == "launcher":
-        pieces = color_pieces(art, fit_matrix(bounds, safe_zone_box(vw, vh)))
+        pieces = color_pieces(art, canvas_matrix(art, vw, vh))
     elif target.kind == "launcher-mono":
-        pieces = monochrome_pieces(art, fit_matrix(bounds, safe_zone_box(vw, vh)), fill)
+        pieces = monochrome_pieces(art, canvas_matrix(art, vw, vh), fill)
     elif target.kind == "art":
         pieces = color_pieces(art, fit_matrix(bounds, margin_box(vw, vh)))
     elif target.kind == "mono":

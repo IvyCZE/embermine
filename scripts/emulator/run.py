@@ -132,6 +132,7 @@ def flow_list(variant: str = "light") -> list[Flow]:
             + [
                 ("customize", "customize screen", False),
                 ("settings-data-collection", "settings data collection page", False),
+                ("settings-data-collection-scrolled", "settings data collection page, scrolled to crash reports and campaign measurement data", False),
                 ("settings-homepage", "homepage settings page", False),
                 ("settings-homepage-sponsored", "homepage settings page, Stories and Sponsored stories toggles", False),
                 ("wallpaper-picker", "wallpaper picker", False),

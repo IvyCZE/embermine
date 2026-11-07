@@ -116,6 +116,8 @@ def settings_pages(s: Session) -> None:
     ensure_settings_list(s)
     subpage(s, "settings-data-collection", r"Data collection", "settings data collection page")
     ensure_settings_list(s)
+    data_collection_scrolled(s)
+    ensure_settings_list(s)
     homepage_settings(s)
     ensure_settings_list(s)
     subpage(s, "about", r"About (Firefox|Embermine)", "about screen")
@@ -204,6 +206,17 @@ def about_pages(s: Session) -> None:
             if s.dev.wait_for(opened, timeout=30) is None:
                 raise StepError(f"{label}: the page did not open")
             shot.take(settle=3.0)
+
+
+def data_collection_scrolled(s: Session) -> None:
+    """The lower part of Data collection. The five controls do not fit on one screen, so the top capture and this one together show all of them."""
+    label = "settings data collection page, scrolled to crash reports and campaign measurement data"
+    with s.capture("settings-data-collection-scrolled", label=label) as shot:
+        open_row(s, r"Data collection")
+        s.dev.scroll_down()
+        s.dev.scroll_to(Selector(label=r"Campaign measurement data"), max_swipes=4)
+        shot.take(settle=1.5)
+        s.dev.back()
 
 
 def data_collection_opt_in(s: Session) -> None:

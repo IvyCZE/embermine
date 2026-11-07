@@ -20,6 +20,7 @@ FIXTURE = """<?xml version="1.0" encoding="utf-8"?>
     <string name="user_text">You’re a Firefox user</string>
     <string name="onboarding_term_of_service_line_one_link_text_2">Firefox Terms of Use</string>
     <string name="onboarding_term_of_service_line_two_2">Firefox cares about your privacy. Learn more in our %1$s.</string>
+    <string name="onboarding_term_of_service_line_three">To help improve the browser, Firefox sends diagnostic and interaction data to Mozilla. %1$s</string>
     <string name="preference_search_address_bar_fx_suggest">Address bar - Firefox Suggest</string>
     <string name="firefox_suggest_header">Firefox Suggest</string>
     <string name="firefox_labs_title">Firefox Labs</string>
@@ -83,13 +84,34 @@ class RenameTextTests(unittest.TestCase):
             "onboarding_redesign_sync_title",
             "ip_protection_location_fastest_description",
             "ip_protection_promo_headline",
-            "onboarding_term_of_service_line_two_2",
             "onboarding_term_of_service_line_three",
             "onboarding_redesign_tou_body_three",
             "nova_onboarding_tou_body_line_3",
         ):
             with self.subTest(name=name):
                 self.assertEqual(rs.rename_text(name, "Use Firefox"), "Use Firefox")
+
+    def test_terms_of_use_links_keep_firefox_by_phrase(self) -> None:
+        for name in (
+            "onboarding_term_of_service_line_one_link_text_2",
+            "onboarding_redesign_tou_body_one_link_text",
+            "nova_onboarding_tou_body_line_1_link_text",
+        ):
+            with self.subTest(name=name):
+                self.assertEqual(rs.rename_text(name, "Firefox Terms of Use"), "Firefox Terms of Use")
+
+    def test_privacy_line_two_is_renamed(self) -> None:
+        privacy = "Firefox cares about your privacy. Learn more in our %1$s."
+        for name in (
+            "onboarding_term_of_service_line_two_2",
+            "onboarding_redesign_tou_body_two",
+            "nova_onboarding_tou_body_line_2",
+        ):
+            with self.subTest(name=name):
+                self.assertEqual(
+                    rs.rename_text(name, privacy),
+                    "Embermine cares about your privacy. Learn more in our %1$s.",
+                )
 
     def test_only_the_keep_phrase_is_protected(self) -> None:
         self.assertEqual(
@@ -112,6 +134,7 @@ class RenameStringsTests(unittest.TestCase):
                 "onboarding_welcome_to_firefox",
                 "default_browser_text",
                 "user_text",
+                "onboarding_term_of_service_line_two_2",
                 "other_text",
                 "based_text",
                 "tabs_open",
@@ -130,10 +153,14 @@ class RenameStringsTests(unittest.TestCase):
             "from other Firefox devices.<",
             "open Firefox and go to <b>https://firefox.com/pair</b>",
             "Embermine is based on Firefox and uses Embermine.",
-            ">Firefox cares about your privacy. Learn more in our %1$s.<",
+            ">To help improve the browser, Firefox sends diagnostic and interaction data to Mozilla. %1$s<",
         ):
             with self.subTest(kept=kept):
                 self.assertIn(kept, self.out)
+
+    def test_privacy_line_two_is_renamed_in_the_document(self) -> None:
+        self.assertIn(">Embermine cares about your privacy. Learn more in our %1$s.<", self.out)
+        self.assertNotIn("Firefox cares about your privacy", self.out)
 
     def test_mixed_string(self) -> None:
         self.assertIn(
@@ -180,7 +207,7 @@ class RunTests(unittest.TestCase):
             self.assertIn("renamed onboarding_welcome_to_firefox", printed)
             self.assertIn("renamed tabs_open", printed)
             self.assertNotIn("renamed firefox_labs_title", printed)
-            self.assertIn("in 6 strings", printed)
+            self.assertIn("in 7 strings", printed)
             self.assertIn("Welcome to Embermine", (tree / rs.STRINGS_REL).read_text(encoding="utf-8"))
             self.assertEqual(locale.read_text(encoding="utf-8"), FIXTURE)
 

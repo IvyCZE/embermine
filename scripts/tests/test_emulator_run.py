@@ -25,7 +25,7 @@ class FlowWiringTests(unittest.TestCase):
             "bottom-navigation-bar", "14-main-menu-loading", "secret-settings-before", "secret-settings-unlocked",
             "secret-settings-after-restart", "about", "about-whatsnew", "about-support", "about-privacy",
             "about-licenses", "about-crashes", "about-before-logo-taps", "about-after-logo-taps",
-            "settings-data-collection", "settings-homepage-sponsored",
+            "settings-data-collection", "settings-data-collection-scrolled", "settings-homepage-sponsored",
         }
         self.assertEqual(wanted - {stem for stem, _ in stems}, set())
         self.assertIn(("12-tab-tray-header", True), stems)

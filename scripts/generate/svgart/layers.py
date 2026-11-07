@@ -1,8 +1,9 @@
 """Icon layers read from icon.svg, and the Android path pieces built from them.
 
-Every drawable fits the art with one matrix. The full-bleed background covers the whole canvas.
-The foreground and monochrome layers put the ermine and flower inside the 66 dp safe zone of the
-108 dp adaptive canvas. Illustrations fit the art into their own viewport.
+The adaptive launcher layers share one matrix: the whole icon.svg canvas is mapped into the 66 dp
+safe zone of the 108 dp canvas. The full-bleed background keeps the dark fill across the canvas,
+and Sunny, the ermine and the flower keep their icon.svg proportions inside the mask. Illustrations
+fit the art into their own viewport.
 """
 
 from __future__ import annotations
@@ -130,6 +131,15 @@ def safe_zone_box(width: float, height: float) -> Box:
     half = SAFE_ZONE_DP / 2 * width / CANVAS_DP
     cx, cy = width / 2, height / 2
     return (cx - half, cy - half, cx + half, cy + half)
+
+
+def canvas_matrix(art: IconArt, width: float, height: float) -> Matrix:
+    """Maps the whole icon.svg canvas into the safe zone of a ``width`` x ``height`` viewport.
+
+    Sunny (about 25.8 to 82.2 dp on the 108 dp canvas), the ermine and the flower all use this one
+    matrix, so the launcher layers keep the proportions of icon.svg and sit inside the mask.
+    """
+    return fit_matrix((0.0, 0.0, art.size, art.size), safe_zone_box(width, height))
 
 
 def margin_box(width: float, height: float) -> Box:

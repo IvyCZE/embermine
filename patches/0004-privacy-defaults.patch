@@ -3,7 +3,7 @@ From: IvyCZE <me@ivy.yt>
 Date: Fri, 6 Nov 2026 19:30:47 +0000
 Subject: [PATCH] Embermine: 0004-privacy-defaults
 
-Ship with telemetry and crash reporting off: BuildConfig TELEMETRY and CRASH_REPORTING default to false, the usage, daily usage ping, experimentation and sponsored/Pocket defaults are off, and crash reports are kept only in the local crash list (Socorro and Sentry are not added without CRASH_REPORTING). The Data collection page hides the crash report choice when crash reporting is not built in. Nimbus experiment fetches run only after the user opts in to experimentation. The Glean switch still follows the stored choice at the next launch.
+Ship with telemetry and crash reporting off: BuildConfig TELEMETRY and CRASH_REPORTING default to false, the usage, daily usage ping, experimentation, crash report and sponsored/Pocket defaults are off. Crashes stay in the local crash list, and Socorro is registered only after the user picks Ask or Auto in Data collection (Sentry still needs CRASH_REPORTING). The Data collection page shows the marketing data and crash report sections in every build. Nimbus experiment fetches run only after the user opts in to experimentation. The Glean collection switch follows the stored choice at launch and changes as soon as the user toggles it.
 
 Gecko's own telemetry upload and region lookup default to off through GeckoPreferenceController on the default branch, applied as soon as the runtime is created. Embermine ships Mozilla's prebuilt GeckoView, so a change to the bundled default pref file would never reach the APK.
 
@@ -96,7 +96,7 @@ index 1b30426f6452e43a4ccdd9395877706674745b3b..cf7aea1ef40f145ebe0758099acf4d35
              }
          }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Analytics.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Analytics.kt
-index 6774a4eb6ce418a839cbde29581abc2df655a8fc..0aa99dc472acadb0014bdb79428e6e918c6d61c1 100644
+index 6774a4eb6ce418a839cbde29581abc2df655a8fc..9b03a3a080dd4d8a026e481311d389fb3a7e1b6f 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Analytics.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Analytics.kt
 @@ -89,17 +89,19 @@ class Analytics(
@@ -114,7 +114,7 @@ index 6774a4eb6ce418a839cbde29581abc2df655a8fc..0aa99dc472acadb0014bdb79428e6e91
 -                distributionId = distributionId,
 -            )
 -        services.add(socorroService)
-+        if (BuildConfig.CRASH_REPORTING) {
++        if (BuildConfig.CRASH_REPORTING || settings.crashReportOption() != CrashReportOption.Never) {
 +            // The name "Fenix" here matches the product name on Socorro and is unrelated to the actual app name:
 +            // https://bugzilla.mozilla.org/show_bug.cgi?id=1523284
 +            val socorroService =
@@ -460,34 +460,74 @@ index ed369fc7c139cfb3caaf464644ee7e100619f465..36b3d632fcc51183a0bf6ebe94deb2c6
                              lineThreeLinkText = stringResource(id = R.string.nova_onboarding_tou_body_line_3_link_text),
                          ),
                      imageRes = R.drawable.nova_onboarding_tou,
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/datachoices/DataChoicesMiddleware.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/datachoices/DataChoicesMiddleware.kt
+index 38ec545d1d7ad53d36556c61ecaf5830caa43730..3442e15bb1c2b6124975cb977d09f02d4107d38b 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/datachoices/DataChoicesMiddleware.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/datachoices/DataChoicesMiddleware.kt
+@@ -50,7 +50,7 @@ internal class DataChoicesMiddleware(
+                             telemetryEnabled = settings.isTelemetryEnabled,
+                             usagePingEnabled = settings.isDailyUsagePingEnabled,
+                             studiesEnabled = settings.isExperimentationEnabled,
+-                            showMeasurementDataSection = settings.hasMadeMarketingTelemetrySelection,
++                            showMeasurementDataSection = true,
+                             measurementDataEnabled = settings.isMarketingTelemetryEnabled,
+                             crashReportOption = crashReportCache.getReportOption(),
+                         )
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/datachoices/DataChoicesScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/datachoices/DataChoicesScreen.kt
-index a7e5877bdc509ba6b18d96fc55839f5dcfcdb868..bd98cae30777cb6058807849ea2b91715d3482b7 100644
+index a7e5877bdc509ba6b18d96fc55839f5dcfcdb868..c253bdcf7e26696de4bf32ea135979cc336f7df0 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/datachoices/DataChoicesScreen.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/datachoices/DataChoicesScreen.kt
-@@ -42,6 +42,7 @@ import mozilla.components.compose.base.theme.PreviewThemeProvider
- import mozilla.components.compose.base.theme.Theme
- import mozilla.components.lib.crash.store.CrashReportOption
- import mozilla.components.lib.state.ext.observeAsComposableState
-+import org.mozilla.fenix.BuildConfig
- import org.mozilla.fenix.R
- import org.mozilla.fenix.compose.list.RadioButtonListItem
- import org.mozilla.fenix.compose.list.SwitchListItem
-@@ -201,7 +202,9 @@ private fun buildDataChoicesItems(state: DataChoicesState): List<DataChoicesSect
-             add(DataChoicesSectionKey.TECHNICAL_DATA)
-             add(DataChoicesSectionKey.STUDIES)
-             add(DataChoicesSectionKey.USAGE_DATA)
--            add(DataChoicesSectionKey.CRASH_REPORTS)
-+            if (BuildConfig.CRASH_REPORTING) {
-+                add(DataChoicesSectionKey.CRASH_REPORTS)
-+            }
-             if (state.showMeasurementDataSection) {
-                 add(DataChoicesSectionKey.CAMPAIGN_MEASUREMENT)
-             }
+@@ -220,7 +220,7 @@ private fun buildDataChoicesItems(state: DataChoicesState): List<DataChoicesSect
+ @Composable
+ private fun CrashReportsSection(
+     learnMoreText: String,
+-    selectedOption: CrashReportOption = CrashReportOption.Ask,
++    selectedOption: CrashReportOption = CrashReportOption.Never,
+     onOptionSelected: (CrashReportOption) -> Unit,
+     onLearnMoreClicked: () -> Unit,
+ ) {
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/datachoices/DataChoicesState.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/datachoices/DataChoicesState.kt
+index d342ee0b2ada83a6d3c159676c9bafbe201cf125..a99b6005902cef51d3fd7f31fce5f3a60dd5cd53 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/datachoices/DataChoicesState.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/datachoices/DataChoicesState.kt
+@@ -25,6 +25,6 @@ internal data class DataChoicesState(
+     val studiesEnabled: Boolean = true,
+     val showMeasurementDataSection: Boolean = true,
+     val measurementDataEnabled: Boolean = true,
+-    val selectedCrashOption: CrashReportOption = CrashReportOption.Ask,
++    val selectedCrashOption: CrashReportOption = CrashReportOption.Never,
+     val itemToScrollTo: String? = null,
+ ) : State
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
-index 00e5b4bb8b9e0b7b4e00dda7a29336a7c6fb0e23..7bb10e4dd834e9284b2ace7e8a7056457ae2f3e0 100644
+index 00e5b4bb8b9e0b7b4e00dda7a29336a7c6fb0e23..8875fe0f4d4caa287625dc68f778c36389b393a8 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
-@@ -200,7 +200,7 @@ class Settings(
+@@ -88,7 +88,6 @@ private const val MAX_ANIMATION_FOREGROUND = 5
+  * @param packageManagerCompatHelper Helper for accessing [android.content.pm.PackageManager] methods.
+  * @param isBenchmarkBuild Boolean that will be true only when the app is built for Baseline Profile or Macrobenchmark.
+  * @param currentTimeMillis provider for the current time in milliseconds, injectable for testing.
+- * @param isCrashReportEnabledInBuild Whether the build itself permits crash reporting at all. Injected for testing.
+  */
+ @Suppress("LargeClass", "TooManyFunctions")
+ class Settings(
+@@ -97,7 +96,6 @@ class Settings(
+     private val packageManagerCompatHelper: PackageManagerCompatHelper = appContext.packageManagerCompatHelper,
+     private val isBenchmarkBuild: Boolean = BuildConfig.IS_BENCHMARK_BUILD,
+     private val currentTimeMillis: () -> Long = { System.currentTimeMillis() },
+-    private val isCrashReportEnabledInBuild: Boolean = BuildConfig.CRASH_REPORTING && Config.channel.isReleased,
+ ) : PreferencesHolder {
+     companion object {
+         const val FENIX_PREFERENCES = "fenix_preferences"
+@@ -176,7 +174,7 @@ class Settings(
+     private val logger = Logger("Settings")
+ 
+     val isCrashReportingEnabled: Boolean
+-        get() = isCrashReportEnabledInBuild && crashReportOption() != CrashReportOption.Never
++        get() = crashReportOption() != CrashReportOption.Never
+ 
+     override val preferences: SharedPreferences = appContext.getSharedPreferences(FENIX_PREFERENCES, MODE_PRIVATE)
+ 
+@@ -200,7 +198,7 @@ class Settings(
          lazyFeatureFlagBooleanPreference(
              appContext.getPreferenceKey(R.string.pref_key_pocket_homescreen_recommendations),
              featureFlag = ContentRecommendationsFeatureHelper.isContentRecommendationsFeatureEnabled(appContext),
@@ -496,7 +536,7 @@ index 00e5b4bb8b9e0b7b4e00dda7a29336a7c6fb0e23..7bb10e4dd834e9284b2ace7e8a705645
          )
  
      /** Indicates what simple toolbar shortcut key is currently selected. */
-@@ -242,7 +242,7 @@ class Settings(
+@@ -242,7 +240,7 @@ class Settings(
      val showPocketSponsoredStories by
          lazyFeatureFlagBooleanPreference(
              key = appContext.getPreferenceKey(R.string.pref_key_pocket_sponsored_stories),
@@ -505,7 +545,16 @@ index 00e5b4bb8b9e0b7b4e00dda7a29336a7c6fb0e23..7bb10e4dd834e9284b2ace7e8a705645
              featureFlag = ContentRecommendationsFeatureHelper.isPocketSponsoredStoriesFeatureEnabled(appContext),
          )
  
-@@ -725,7 +725,7 @@ class Settings(
+@@ -713,7 +711,7 @@ class Settings(
+     var crashReportChoice by
+         stringPreference(
+             appContext.getPreferenceKey(R.string.pref_key_crash_reporting_choice),
+-            default = CrashReportOption.Ask.toString(),
++            default = CrashReportOption.Never.toString(),
+         )
+ 
+     val isRemoteDebuggingEnabled by
+@@ -725,7 +723,7 @@ class Settings(
      var isTelemetryEnabled by
          booleanPreference(
              appContext.getPreferenceKey(R.string.pref_key_telemetry),
@@ -514,7 +563,7 @@ index 00e5b4bb8b9e0b7b4e00dda7a29336a7c6fb0e23..7bb10e4dd834e9284b2ace7e8a705645
          )
  
      var isMarketingTelemetryEnabled by
-@@ -2372,7 +2372,7 @@ class Settings(
+@@ -2372,7 +2370,7 @@ class Settings(
      var showContileFeature by
          booleanPreference(
              key = appContext.getPreferenceKey(R.string.pref_key_enable_contile),
@@ -533,6 +582,19 @@ index d5b8c756c685048c5d2516d006a2f6b5116e2998..fcce1b96472079f67617c73ab40a0fbe
      <string name="embermine_android_components_abbreviation" translatable="false">AC</string>
 +    <string name="embermine_onboarding_tou_body_line_3" translatable="false">Embermine does not send diagnostic or interaction data to Mozilla unless you turn it on. %1$s</string>
  </resources>
+diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/crashes/CrashReporterControllerTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/crashes/CrashReporterControllerTest.kt
+index 48a614df113ea0495e1e42ae9b442674bb34be43..28dfe0e30f2ca3b6c1f8424879c8028cdabe0d63 100644
+--- a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/crashes/CrashReporterControllerTest.kt
++++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/crashes/CrashReporterControllerTest.kt
+@@ -34,7 +34,7 @@ class CrashReporterControllerTest {
+     private val sessionId = "testId"
+     private val components: Components = mockk(relaxed = true)
+ 
+-    private val settings: Settings = Settings(appContext = testContext, isCrashReportEnabledInBuild = true)
++    private val settings: Settings = Settings(appContext = testContext)
+ 
+     private val navController: NavController = mockk(relaxed = true)
+     private val crash: NativeCodeCrash = mockk(relaxed = true)
 diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineMetricControllerTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineMetricControllerTest.kt
 new file mode 100644
 index 0000000000000000000000000000000000000000..b89b5bf231ed41f5502937a5472b145d84815a58
@@ -782,9 +844,27 @@ index 0000000000000000000000000000000000000000..85b6c5bc754a7e511cacdce023dc5dab
 +    }
 +}
 diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/onboarding/store/DefaultPrivacyPreferencesRepositoryTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/onboarding/store/DefaultPrivacyPreferencesRepositoryTest.kt
-index 2ba6927b9b0ceeb6f2dd3269353979126475ef9b..47667a8fb5f77f8c6929e50bb9d44845733cf777 100644
+index 2ba6927b9b0ceeb6f2dd3269353979126475ef9b..4c5e152d19be28518ef5f66131a363877e8737ba 100644
 --- a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/onboarding/store/DefaultPrivacyPreferencesRepositoryTest.kt
 +++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/onboarding/store/DefaultPrivacyPreferencesRepositoryTest.kt
+@@ -32,7 +32,7 @@ class DefaultPrivacyPreferencesRepositoryTest {
+         runTest {
+             val settings = Settings(testContext)
+             val repository = DefaultPrivacyPreferencesRepository(settings, FakeNimbusApi(), createCrashReporter())
+-            assertTrue(CrashReportOption.fromLabel(settings.crashReportChoice) == CrashReportOption.Ask)
++            assertTrue(CrashReportOption.fromLabel(settings.crashReportChoice) == CrashReportOption.Never)
+             assertFalse(repository.getPreference(PreferenceType.CrashReporting))
+ 
+             settings.crashReportChoice = CrashReportOption.Auto.label
+@@ -47,7 +47,7 @@ class DefaultPrivacyPreferencesRepositoryTest {
+     fun `WHEN setPreference is enabled for crash reporting THEN settings is updated to Auto`() = runTest {
+         val settings = Settings(testContext)
+         val repository = DefaultPrivacyPreferencesRepository(settings, FakeNimbusApi(), createCrashReporter())
+-        assertTrue(CrashReportOption.fromLabel(settings.crashReportChoice) == CrashReportOption.Ask)
++        assertTrue(CrashReportOption.fromLabel(settings.crashReportChoice) == CrashReportOption.Never)
+         assertFalse(repository.getPreference(PreferenceType.CrashReporting))
+ 
+         repository.setPreference(PreferenceType.CrashReporting, true)
 @@ -71,14 +71,14 @@ class DefaultPrivacyPreferencesRepositoryTest {
          runTest {
              val settings = Settings(testContext)

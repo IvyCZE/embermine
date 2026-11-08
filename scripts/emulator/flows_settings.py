@@ -106,12 +106,24 @@ def settings_root(s: Session) -> None:
         shot.take(settle=1.5)
 
 
+TOOLBAR_BACK_FRACTION = (0.068, 0.084)
+
+
+def tap_toolbar_back(s: Session) -> None:
+    """Tap the shaped Back arrow at the top left of a Settings sub-page toolbar."""
+    width, height = s.dev.screen_size()
+    x, y = round(width * TOOLBAR_BACK_FRACTION[0]), round(height * TOOLBAR_BACK_FRACTION[1])
+    s.log(f"tap toolbar Back arrow at {x},{y}")
+    s.dev.tap_xy(x, y)
+    s.dev.sleep(1.5)
+
+
 def subpage(s: Session, stem: str, title: str, label: str, *, back_steps: int = 1) -> None:
     with s.capture(stem, label=label) as shot:
         open_row(s, title)
         shot.take(settle=1.5)
         for _ in range(back_steps):
-            s.dev.back()
+            tap_toolbar_back(s)
 
 
 def settings_pages(s: Session) -> None:

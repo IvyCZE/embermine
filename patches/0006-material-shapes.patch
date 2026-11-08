@@ -1054,7 +1054,7 @@ index 2bed1c8efb4131ae3861222986d1469c394af652..1699bc1b94ba93b54912f0cc29bff8cf
  
  @Composable
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/BrowserToolbarMiddleware.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/BrowserToolbarMiddleware.kt
-index 9c8c89423b273f3160dbaeaa0aa301b3559f129f..833c3d86cf87797e808d2c7b8b01660cde55c9fc 100644
+index 9c8c89423b273f3160dbaeaa0aa301b3559f129f..efb86d8b3775064e91a7f0015faf7dafda43f914 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/BrowserToolbarMiddleware.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/BrowserToolbarMiddleware.kt
 @@ -23,6 +23,7 @@ import mozilla.components.browser.state.selector.getNormalOrPrivateTabs
@@ -1065,7 +1065,15 @@ index 9c8c89423b273f3160dbaeaa0aa301b3559f129f..833c3d86cf87797e808d2c7b8b01660c
  import mozilla.components.compose.browser.toolbar.concept.Action
  import mozilla.components.compose.browser.toolbar.concept.Action.ActionButton
  import mozilla.components.compose.browser.toolbar.concept.Action.ActionButtonRes
-@@ -701,6 +702,7 @@ class BrowserToolbarMiddleware(
+@@ -402,6 +403,7 @@ class BrowserToolbarMiddleware(
+                     drawableResId = iconsR.drawable.mozac_ic_microphone_24,
+                     contentDescription = R.string.voice_search_content_description,
+                     onClick = VoiceSearchClicked,
++                    shape = EmbermineShape.Sunny,
+                 )
+             )
+         }
+@@ -701,6 +703,7 @@ class BrowserToolbarMiddleware(
                      contentDescription = R.string.content_description_menu,
                      highlighted = highlighted,
                      onClick = MenuClicked(source),
@@ -1102,11 +1110,47 @@ index 37f487b9077e86df557e453c44149f02e59600b9..27dec16e0bf3439b8bddc76a4ac0dab0
          colors = CardDefaults.cardColors(containerColor = backgroundColor),
          elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
      ) {
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/AddShortcutItem.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/AddShortcutItem.kt
+index d30c78a2a9dd033624f1c5dee847cf9bf6906848..6d509d14d12abed762b0c50d9401ee6b6876a1f4 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/AddShortcutItem.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/AddShortcutItem.kt
+@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxSize
+ import androidx.compose.foundation.layout.height
+ import androidx.compose.foundation.layout.size
+ import androidx.compose.foundation.layout.width
+-import androidx.compose.foundation.shape.CircleShape
+ import androidx.compose.material3.Card
+ import androidx.compose.material3.CardDefaults
+ import androidx.compose.material3.Icon
+@@ -36,6 +35,7 @@ import androidx.compose.ui.text.style.TextAlign
+ import androidx.compose.ui.text.style.TextOverflow
+ import androidx.compose.ui.tooling.preview.PreviewLightDark
+ import androidx.compose.ui.unit.dp
++import mozilla.components.compose.base.embermine.EmbermineShape
+ import mozilla.components.ui.icons.R as iconsR
+ import org.mozilla.fenix.R
+ import org.mozilla.fenix.home.topsites.TopSiteColors
+@@ -71,7 +71,7 @@ internal fun AddShortcutItem(
+ 
+             Card(
+                 modifier = Modifier.size(itemLayout.faviconCardSize),
+-                shape = CircleShape,
++                shape = EmbermineShape.Cookie6Sided.toShape(),
+                 colors = CardDefaults.cardColors(containerColor = topSiteColors.faviconCardBackgroundColor),
+                 elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+             ) {
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/ui/HomepageHeader.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/ui/HomepageHeader.kt
-index a83e54d4bc637c9d522dcf0eb1191e3b6b08476c..d77ea910329386fc91bb98d46edc66fd2639973d 100644
+index a83e54d4bc637c9d522dcf0eb1191e3b6b08476c..04be429f9c05cb02690de76defca52886cfb62d4 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/ui/HomepageHeader.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/ui/HomepageHeader.kt
-@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Spacer
+@@ -4,14 +4,12 @@
+ 
+ package org.mozilla.fenix.home.ui
+ 
+-import androidx.compose.foundation.background
+ import androidx.compose.foundation.layout.Column
+ import androidx.compose.foundation.layout.Row
+ import androidx.compose.foundation.layout.Spacer
  import androidx.compose.foundation.layout.fillMaxWidth
  import androidx.compose.foundation.layout.padding
  import androidx.compose.foundation.layout.wrapContentHeight
@@ -1114,7 +1158,7 @@ index a83e54d4bc637c9d522dcf0eb1191e3b6b08476c..d77ea910329386fc91bb98d46edc66fd
  import androidx.compose.material3.Icon
  import androidx.compose.material3.IconToggleButton
  import androidx.compose.material3.Surface
-@@ -31,6 +30,8 @@ import androidx.compose.ui.semantics.testTagsAsResourceId
+@@ -31,6 +29,8 @@ import androidx.compose.ui.semantics.testTagsAsResourceId
  import androidx.compose.ui.tooling.preview.Preview
  import androidx.compose.ui.tooling.preview.PreviewParameter
  import mozilla.components.compose.base.button.IconButton
@@ -1123,7 +1167,7 @@ index a83e54d4bc637c9d522dcf0eb1191e3b6b08476c..d77ea910329386fc91bb98d46edc66fd
  import mozilla.components.compose.base.theme.PreviewThemeProvider
  import mozilla.components.compose.base.theme.Theme
  import mozilla.components.ui.icons.R as iconsR
-@@ -111,11 +112,16 @@ private fun StoriesButton(
+@@ -111,11 +111,16 @@ private fun StoriesButton(
      onClick: () -> Unit,
  ) {
      IconButton(onClick = onClick, contentDescription = null) {
@@ -1145,15 +1189,47 @@ index a83e54d4bc637c9d522dcf0eb1191e3b6b08476c..d77ea910329386fc91bb98d46edc66fd
      }
  }
  
-@@ -129,7 +135,7 @@ private fun PrivateBrowsingButton(
+@@ -127,25 +132,26 @@ private fun PrivateBrowsingButton(
+ ) {
+     IconToggleButton(
          modifier =
-             Modifier.background(
-                     color = colorResource(getAttr(iconsR.attr.mozac_ic_private_mode_circle_fill_background_color)),
+-            Modifier.background(
+-                    color = colorResource(getAttr(iconsR.attr.mozac_ic_private_mode_circle_fill_background_color)),
 -                    shape = CircleShape,
-+                    shape = EmbermineShape.Cookie12Sided.toShape(),
-                 )
-                 .semantics {
-                     role = Role.Switch
+-                )
+-                .semantics {
+-                    role = Role.Switch
+-                    testTagsAsResourceId = true
+-                    testTag = PRIVATE_BROWSING_HOMEPAGE_BUTTON
+-                },
++            Modifier.semantics {
++                role = Role.Switch
++                testTagsAsResourceId = true
++                testTag = PRIVATE_BROWSING_HOMEPAGE_BUTTON
++            },
+         checked = browsingMode.isPrivate,
+         onCheckedChange = {
+             browsingModeChanged(BrowsingMode.fromBoolean(!browsingMode.isPrivate))
+         },
+     ) {
+-        Icon(
+-            tint = color,
+-            painter = painterResource(iconsR.drawable.mozac_ic_private_mode_24),
+-            contentDescription = stringResource(R.string.content_description_private_browsing),
+-        )
++        ShapedIconBackground(
++            shape = EmbermineShape.Cookie12Sided,
++            defaultContentColor = color,
++        ) { contentColor ->
++            Icon(
++                tint = contentColor,
++                painter = painterResource(iconsR.drawable.mozac_ic_private_mode_24),
++                contentDescription = stringResource(R.string.content_description_private_browsing),
++            )
++        }
+     }
+ }
+ 
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/search/BrowserToolbarSearchMiddleware.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/search/BrowserToolbarSearchMiddleware.kt
 index 1a19f03082a5ba2b908f9eda9d331546b3c83c76..aed53dc1d53c50aa80ff3c158c9bef1360fc1927 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/search/BrowserToolbarSearchMiddleware.kt

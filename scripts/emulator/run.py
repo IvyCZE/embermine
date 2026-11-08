@@ -36,7 +36,7 @@ from scripts.emulator.session import LaunchError, Session
 from scripts.emulator.testserver import WalkServer
 
 SERVER_PORT = 8765
-FLOW_BUDGET_SECONDS = 36 * 60
+FLOW_BUDGET_SECONDS = 38 * 60
 Expected = tuple[str, str, bool]  # file stem, index label, private
 
 
@@ -144,7 +144,15 @@ def flow_list(variant: str = "light", accent: str = "on") -> list[Flow]:
                 ("about", "about screen", False),
             ],
         ),
-        Flow("bottom navigation bar", flows_layout.bottom_navigation_bar, [("bottom-navigation-bar", "bottom navigation bar", False)]),
+        Flow(
+            "bottom navigation bar",
+            flows_layout.bottom_navigation_bar,
+            [
+                ("bottom-navigation-bar", "bottom navigation bar", False),
+                ("bottom-navigation-bar-back", "bottom navigation bar, Back shortcut", False),
+                ("bottom-navigation-bar-home", "bottom navigation bar, Homepage shortcut", False),
+            ],
+        ),
         Flow("about:config", f_set.about_config, [("about-config", "about:config page", False)]),
         Flow("motion", lambda s: f_motion.both_positions(s, motion), motion_expected),
         Flow("secret settings", flows_secret.secret_settings, SECRET_STEMS),

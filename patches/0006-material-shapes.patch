@@ -733,6 +733,42 @@ index a8c3408aaa69b5941ad94c463c5dceb72972712c..45687e100d07ce951279f95569ba7844
                              showMenu = false
                              onInteraction(event)
                          }
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
+index e8a75d9438e517211cb5ef75f530e0d5b4b175ed..cd1fb285a4fa0b4d21b0dfd8239188f3b4881dcc 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
+@@ -139,6 +139,7 @@ import org.mozilla.fenix.debugsettings.gleandebugtools.DefaultGleanDebugToolsSto
+ import org.mozilla.fenix.debugsettings.ui.FenixOverlay
+ import org.mozilla.fenix.downloads.DownloadSnackbar
+ import org.mozilla.fenix.e2e.EdgeToEdgeFragmentLifecycleCallbacks
++import org.mozilla.fenix.embermine.settingsBackNavigationShape
+ import org.mozilla.fenix.experiments.ResearchSurfaceDialogFragment
+ import org.mozilla.fenix.experiments.UninstallSurveyManager
+ import org.mozilla.fenix.ext.alreadyOnDestination
+@@ -1513,7 +1514,7 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, Crash
+             setSupportActionBar(navigationToolbar)
+             // Add ids to this that we don't want to have a toolbar back button
+             setupNavigationToolbar()
+-            setNavigationIcon(iconsR.drawable.mozac_ic_back_24)
++            setNavigationIcon(iconsR.drawable.mozac_ic_back_24, settingsBackNavigationShape(navHost.navController))
+ 
+             isToolbarInflated = true
+         }
+@@ -1527,6 +1528,14 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, Crash
+             navHost.navController,
+             AppBarConfiguration.Builder(*topLevelDestinationIds).build(),
+         )
++        navHost.navController.addOnDestinationChangedListener { controller, destination, _ ->
++            if (destination.id != R.id.historyFragment) {
++                setNavigationIcon(
++                    iconsR.drawable.mozac_ic_back_24,
++                    settingsBackNavigationShape(controller, destination),
++                )
++            }
++        }
+ 
+         navigationToolbar.setNavigationOnClickListener {
+             onBackPressedDispatcher.onBackPressed()
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/tabstrip/TabStrip.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/tabstrip/TabStrip.kt
 index 8155be98d747acd03460bc1c7ee5c6c1da022389..8afb796d767624ea1130ee3841df0d11ef253670 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/tabstrip/TabStrip.kt
@@ -1343,6 +1379,28 @@ index 2bed1c8efb4131ae3861222986d1469c394af652..1699bc1b94ba93b54912f0cc29bff8cf
  }
  
  @Composable
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/crashes/CrashListFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/crashes/CrashListFragment.kt
+index ed13626e643f9aa2470844474445612d500f27ea..b813f66d4f13967e7b8c4e1b94a838e26838c6c1 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/crashes/CrashListFragment.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/crashes/CrashListFragment.kt
+@@ -10,11 +10,17 @@ import mozilla.components.lib.crash.CrashReporter
+ import mozilla.components.lib.crash.ui.AbstractCrashListFragment
+ import org.mozilla.fenix.e2e.SystemInsetsPaddedFragment
+ import org.mozilla.fenix.ext.components
++import org.mozilla.fenix.ext.showToolbar
+ 
+ /** Fragment showing the list of past crashes. */
+ class CrashListFragment : AbstractCrashListFragment(), SystemInsetsPaddedFragment {
+     override val reporter: CrashReporter by lazy { requireContext().components.analytics.crashReporter }
+ 
++    override fun onResume() {
++        super.onResume()
++        showToolbar(getString(mozilla.components.lib.crash.R.string.mozac_lib_crash_activity_title))
++    }
++
+     override fun onCrashServiceSelected(url: String) {
+         val intent = Intent(Intent.ACTION_VIEW)
+         intent.data = url.toUri()
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/downloads/listscreen/DownloadsScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/downloads/listscreen/DownloadsScreen.kt
 index 374c33d9bdb640bdda2cbd3f4c2e8e3e19c01860..7d9196102a3b830f0f15a0d91e380a581f4487cf 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/downloads/listscreen/DownloadsScreen.kt
@@ -1443,10 +1501,10 @@ index 0000000000000000000000000000000000000000..21fecd5aa861072b33de6a120bf83546
 +}
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineViewShapes.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineViewShapes.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..8bb711ee0d520a04113742bb355abe0a6fd3530b
+index 0000000000000000000000000000000000000000..0d9aa3226aea4766d1126582404a4a27c8bd3163
 --- /dev/null
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineViewShapes.kt
-@@ -0,0 +1,143 @@
+@@ -0,0 +1,192 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -1462,6 +1520,8 @@ index 0000000000000000000000000000000000000000..8bb711ee0d520a04113742bb355abe0a
 +import android.widget.ImageView
 +import androidx.appcompat.widget.AppCompatImageButton
 +import androidx.fragment.app.Fragment
++import androidx.navigation.NavController
++import androidx.navigation.NavDestination
 +import androidx.navigation.fragment.findNavController
 +import androidx.preference.PreferenceFragmentCompat
 +import com.google.android.material.R as materialR
@@ -1514,6 +1574,48 @@ index 0000000000000000000000000000000000000000..8bb711ee0d520a04113742bb355abe0a
 +        R.id.tabsSettingsFragment,
 +        R.id.searchEngineFragment,
 +        R.id.trackingProtectionFragment,
++        R.id.settingsFragment,
++        R.id.customizationFragment,
++        R.id.wallpaperSettingsFragment,
++        R.id.homeSettingsFragment,
++        R.id.privateBrowsingFragment,
++        R.id.httpsOnlyFragment,
++        R.id.dataChoicesFragment,
++        R.id.studiesFragment,
++        R.id.sitePermissionsFragment,
++        R.id.accessibilityFragment,
++        R.id.secretSettingsPreference,
++        R.id.secretSettingsSearchFragment,
++        R.id.settingsSearchFragment,
++        R.id.remoteSettingsServerFragment,
++        R.id.searchOptimizationFragment,
++        R.id.openLinksInAppsFragment,
++        R.id.firefoxLabsFragment,
++        R.id.linkSharingFragment,
++        R.id.remoteImprovementsFragment,
++        R.id.syncDebugFragment,
++        R.id.trackingProtectionBlockingFragment,
++        R.id.ipProtectionFragment,
++        R.id.ipProtectionLocationsFragment,
++        R.id.addonsManagementFragment,
++        R.id.addonDetailsFragment,
++        R.id.installedAddonDetailsFragment,
++        R.id.notYetSupportedAddonFragment,
++        R.id.addonPermissionsDetailFragment,
++        R.id.addonInternalSettingsFragment,
++        R.id.webExtensionActionPopupFragment,
++        R.id.addons_management_graph,
++        R.id.site_permissions_exceptions_graph,
++        R.id.nimbus_experiment_graph,
++        R.id.autofill_graph,
++        R.id.savedLogins,
++        R.id.savedLoginsFragment,
++        R.id.creditCardEditorFragment,
++        R.id.addressEditorFragment,
++        R.id.defaultEngineFragment,
++        R.id.translations_settings_graph,
++        R.id.crashListFragment,
++        R.id.appIconSelectionFragment,
 +    )
 +
 +internal fun Context.embermineShapedIcon(icon: Drawable, shape: EmbermineShape): Drawable {
@@ -1561,7 +1663,24 @@ index 0000000000000000000000000000000000000000..8bb711ee0d520a04113742bb355abe0a
 + * and its graph, or the [PreferenceFragmentCompat] base class.
 + */
 +internal fun Fragment.settingsBackNavigationShape(): EmbermineShape? =
-+    EmbermineShape.Cookie12Sided.takeIf { isInSettingsBackStack() || isInSettingsSection() }
++    if (this is PreferenceFragmentCompat) {
++        EmbermineShape.Cookie12Sided
++    } else {
++        runCatching { findNavController() }.getOrNull()?.let { settingsBackNavigationShape(it) }
++    }
++
++internal fun settingsBackNavigationShape(
++    navController: NavController,
++    destination: NavDestination? = navController.currentDestination,
++): EmbermineShape? =
++    EmbermineShape.Cookie12Sided.takeIf {
++        runCatching { navController.getBackStackEntry(R.id.settingsFragment) }.isSuccess ||
++            isSettingsScreen(
++                isPreferenceFragment = false,
++                destinationId = destination?.id,
++                parentGraphId = destination?.parent?.id,
++            )
++    }
 +
 +internal fun isSettingsScreen(
 +    isPreferenceFragment: Boolean,
@@ -1569,18 +1688,6 @@ index 0000000000000000000000000000000000000000..8bb711ee0d520a04113742bb355abe0a
 +    parentGraphId: Int?,
 +): Boolean =
 +    isPreferenceFragment || listOfNotNull(destinationId, parentGraphId).any { it in settingsDestinationIds }
-+
-+private fun Fragment.isInSettingsBackStack(): Boolean =
-+    runCatching { findNavController().getBackStackEntry(R.id.settingsFragment) }.isSuccess
-+
-+private fun Fragment.isInSettingsSection(): Boolean {
-+    val destination = runCatching { findNavController().currentDestination }.getOrNull()
-+    return isSettingsScreen(
-+        isPreferenceFragment = this is PreferenceFragmentCompat,
-+        destinationId = destination?.id,
-+        parentGraphId = destination?.parent?.id,
-+    )
-+}
 +
 +private fun Context.dpToPx(dp: Float): Int =
 +    TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, resources.displayMetrics).roundToInt()
@@ -1633,7 +1740,7 @@ index 0e39c9cdc4d87cb7b7929174507e9e4a363e2c39..443d16a28805656d0b6b5419d36235f1
          it.setHomeAsUpIndicator(navigationIcon)
          it.setHomeActionContentDescription(R.string.action_bar_up_description)
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ext/Fragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ext/Fragment.kt
-index 0b85c6501b7577830753f4d0e36a03723f240cde..4becba55bbec6995190f276fa845db088a0ea654 100644
+index 0b85c6501b7577830753f4d0e36a03723f240cde..6b89eab266d044391a9948777be361d6e38e5003 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ext/Fragment.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ext/Fragment.kt
 @@ -27,6 +27,7 @@ import androidx.navigation.NavDirections
@@ -1653,16 +1760,17 @@ index 0b85c6501b7577830753f4d0e36a03723f240cde..4becba55bbec6995190f276fa845db08
  import org.mozilla.fenix.navigation.DefaultNavControllerProvider
  import org.mozilla.fenix.navigation.NavControllerProvider
  import org.mozilla.fenix.theme.ThemeManager
-@@ -73,7 +76,7 @@ fun Fragment.getPreferenceKey(@StringRes resourceId: Int): String = getString(re
+@@ -73,8 +76,8 @@ fun Fragment.getPreferenceKey(@StringRes resourceId: Int): String = getString(re
   */
  fun Fragment.showToolbar(title: String) {
      (requireActivity() as AppCompatActivity).title = title
 -    activity?.setNavigationIcon(iconsR.drawable.mozac_ic_back_24)
-+    activity?.setNavigationIcon(iconsR.drawable.mozac_ic_back_24, settingsBackNavigationShape())
      (activity as? NavHostActivity)?.getSupportActionBarAndInflateIfNecessary()?.show()
++    activity?.setNavigationIcon(iconsR.drawable.mozac_ic_back_24, settingsBackNavigationShape())
  }
  
-@@ -84,17 +87,19 @@ fun Fragment.showToolbar(title: String) {
+ /**
+@@ -84,18 +87,20 @@ fun Fragment.showToolbar(title: String) {
   * @param title The title of the toolbar.
   * @param contentDescription The content description of the icon button for accessibility.
   * @param iconResId The resource ID of the icon to be displayed.
@@ -1679,10 +1787,11 @@ index 0b85c6501b7577830753f4d0e36a03723f240cde..4becba55bbec6995190f276fa845db08
      val activity = requireActivity() as AppCompatActivity
      activity.title = title
 -    activity.setNavigationIcon(iconsR.drawable.mozac_ic_back_24)
-+    activity.setNavigationIcon(iconsR.drawable.mozac_ic_back_24, settingsBackNavigationShape())
      (activity as? NavHostActivity)?.getSupportActionBarAndInflateIfNecessary()?.show()
++    activity.setNavigationIcon(iconsR.drawable.mozac_ic_back_24, settingsBackNavigationShape())
  
      val menuHost = activity as MenuHost
+     val provider =
 @@ -108,6 +113,7 @@ fun Fragment.showToolbarWithIconButton(
                  val colorResId = ThemeManager.resolveAttribute(materialR.attr.colorOnSurface, activity)
                  item.iconTintList = ColorStateList.valueOf(activity.getColor(colorResId))
@@ -2068,6 +2177,26 @@ index 1a19f03082a5ba2b908f9eda9d331546b3c83c76..aed53dc1d53c50aa80ff3c158c9bef13
                      )
                  )
              }
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/HttpsOnlyFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/HttpsOnlyFragment.kt
+index e13b7a64b30496164ca8f5a1a6cb3d317d970b3b..34cfb726049deffc65616eae284be9eb03a96697 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/HttpsOnlyFragment.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/HttpsOnlyFragment.kt
+@@ -23,9 +23,15 @@ import org.mozilla.fenix.e2e.SystemInsetsPaddedFragment
+ import org.mozilla.fenix.ext.components
+ import org.mozilla.fenix.ext.openToBrowser
+ import org.mozilla.fenix.ext.requireComponents
++import org.mozilla.fenix.ext.showToolbar
+ 
+ /** Lets the user customize HTTPS-only mode. */
+ class HttpsOnlyFragment : Fragment(), SystemInsetsPaddedFragment {
++    override fun onResume() {
++        super.onResume()
++        showToolbar(getString(R.string.preferences_https_only_title))
++    }
++
+     override fun onCreateView(
+         inflater: LayoutInflater,
+         container: ViewGroup?,
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/IPProtectionScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/IPProtectionScreen.kt
 index 8997490e76fc4a2d84c3a4f6bc930393cd35a59f..375e52afea6cca60778c8bb0397423e335a5b7b7 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/IPProtectionScreen.kt
@@ -2192,6 +2321,33 @@ index 2b723d1fa100a98dde3ec2a7bbe063ad205110b2..b2faae9afd995aba8c9d94ada6e5a2c4
              }
          },
          actions = {
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/datachoices/DataChoicesFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/datachoices/DataChoicesFragment.kt
+index b89844be12035b6b7dcf361b1d207587b6b4e8d1..15b7f52a9a73bfb176ed9df156a51118bd452120 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/datachoices/DataChoicesFragment.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/datachoices/DataChoicesFragment.kt
+@@ -12,8 +12,10 @@ import androidx.fragment.app.Fragment
+ import androidx.fragment.compose.content
+ import androidx.navigation.findNavController
+ import androidx.navigation.fragment.navArgs
++import org.mozilla.fenix.R
+ import org.mozilla.fenix.e2e.SystemInsetsPaddedFragment
+ import org.mozilla.fenix.ext.components
++import org.mozilla.fenix.ext.showToolbar
+ import org.mozilla.fenix.settings.SupportUtils
+ import org.mozilla.fenix.theme.FirefoxTheme
+ 
+@@ -21,6 +23,11 @@ import org.mozilla.fenix.theme.FirefoxTheme
+ class DataChoicesFragment : Fragment(), SystemInsetsPaddedFragment {
+     private val args by navArgs<DataChoicesFragmentArgs>()
+ 
++    override fun onResume() {
++        super.onResume()
++        showToolbar(getString(R.string.preferences_data_collection))
++    }
++
+     override fun onCreateView(
+         inflater: LayoutInflater,
+         container: ViewGroup?,
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/ipprotection/IPProtectionLocations.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/ipprotection/IPProtectionLocations.kt
 index 7747ada0222fb99cb33b693fece0782daa2122b3..368bd36f82d6ffe714c1be8ca4a2b6f4c2570567 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/ipprotection/IPProtectionLocations.kt
@@ -2379,6 +2535,59 @@ index f21d6abb3c74daf2a4ab3e8ab3a9de262c63ecc3..a7e5498e2e875a3b33e35375ac8eb179
      }
  }
  
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/sitepermissions/SitePermissionsExceptionsFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/sitepermissions/SitePermissionsExceptionsFragment.kt
+index 2fb5e48c6b7a7cc30361cefa815fad7159ba8e12..3ceaff0ced972a2ca414b4575b7e4f17efab6592 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/sitepermissions/SitePermissionsExceptionsFragment.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/sitepermissions/SitePermissionsExceptionsFragment.kt
+@@ -36,6 +36,7 @@ import org.mozilla.fenix.e2e.SystemInsetsPaddedFragment
+ import org.mozilla.fenix.ext.components
+ import org.mozilla.fenix.ext.loadIntoView
+ import org.mozilla.fenix.ext.nav
++import org.mozilla.fenix.ext.showToolbar
+ 
+ private const val MAX_ITEMS_PER_PAGE = 50
+ 
+@@ -51,6 +52,11 @@ class SitePermissionsExceptionsFragment :
+         (activity as NavHostActivity).getSupportActionBarAndInflateIfNecessary().show()
+     }
+ 
++    override fun onResume() {
++        super.onResume()
++        showToolbar(getString(R.string.preference_exceptions))
++    }
++
+     override fun onViewCreated(rootView: View, savedInstanceState: Bundle?) {
+         super.onViewCreated(rootView, savedInstanceState)
+         bindEmptyContainerMess(rootView)
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/studies/StudiesFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/studies/StudiesFragment.kt
+index 72bde9927f23109324a6652237205f7ee32af8e0..a6f7630186ad8705d1d96ed59d1ac4847daddae1 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/studies/StudiesFragment.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/studies/StudiesFragment.kt
+@@ -11,10 +11,12 @@ import android.view.ViewGroup
+ import androidx.fragment.app.Fragment
+ import androidx.lifecycle.lifecycleScope
+ import androidx.navigation.fragment.findNavController
++import org.mozilla.fenix.R
+ import org.mozilla.fenix.databinding.SettingsStudiesBinding
+ import org.mozilla.fenix.e2e.SystemInsetsPaddedFragment
+ import org.mozilla.fenix.ext.openToBrowser
+ import org.mozilla.fenix.ext.requireComponents
++import org.mozilla.fenix.ext.showToolbar
+ 
+ /** Lets the users control studies settings. */
+ class StudiesFragment : Fragment(), SystemInsetsPaddedFragment {
+@@ -57,6 +59,11 @@ class StudiesFragment : Fragment(), SystemInsetsPaddedFragment {
+         return binding.root
+     }
+ 
++    override fun onResume() {
++        super.onResume()
++        showToolbar(getString(R.string.preference_experiments_2))
++    }
++
+     override fun onDestroyView() {
+         super.onDestroyView()
+         _binding = null
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/trustpanel/ui/ProtectionPanel.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/trustpanel/ui/ProtectionPanel.kt
 index 0db33ca5971ceb1b7058c0eed11006d8532dadc4..38a6ab30c983ddf6ec78432fae184f0c462e4f46 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/trustpanel/ui/ProtectionPanel.kt
@@ -2886,10 +3095,10 @@ index 0913d08f5422040486757dce8c44b17343987edc..38772948da04bf0a4550f0e1065d73d0
      private fun expectedBookmarkButton(source: Source = Source.AddressBar.BrowserEnd) =
 diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineViewShapesTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineViewShapesTest.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..335099aa1e654a88d35ecb7ce938b2cab32673e7
+index 0000000000000000000000000000000000000000..ee7930fbf68e5ce00343f31b8bcd8520cb08a9cb
 --- /dev/null
 +++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineViewShapesTest.kt
-@@ -0,0 +1,104 @@
+@@ -0,0 +1,111 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -2943,6 +3152,13 @@ index 0000000000000000000000000000000000000000..335099aa1e654a88d35ecb7ce938b2ca
 +            R.id.tabsSettingsFragment,
 +            R.id.searchEngineFragment,
 +            R.id.trackingProtectionFragment,
++            R.id.dataChoicesFragment,
++            R.id.wallpaperSettingsFragment,
++            R.id.customizationFragment,
++            R.id.studiesFragment,
++            R.id.httpsOnlyFragment,
++            R.id.crashListFragment,
++            R.id.settingsFragment,
 +        )
 +
 +    @Test

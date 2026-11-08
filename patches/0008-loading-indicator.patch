@@ -26,16 +26,17 @@ index ed334079e8101613de078bc55577be9a48fd07bb..44acf8beee96c2465a3450450db44297
              feature =
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineRefreshIndicator.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineRefreshIndicator.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..ffd2378358c7714ff0e2190a462d690e3c3a064d
+index 0000000000000000000000000000000000000000..ff4e1d662aea1898aa565ba976b33e6e859f3018
 --- /dev/null
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineRefreshIndicator.kt
-@@ -0,0 +1,89 @@
+@@ -0,0 +1,90 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 +
 +package org.mozilla.fenix.embermine
 +
++import android.graphics.Color
 +import android.view.ViewGroup
 +import android.widget.ImageView
 +import androidx.compose.material3.ContainedLoadingIndicator
@@ -65,7 +66,7 @@ index 0000000000000000000000000000000000000000..ffd2378358c7714ff0e2190a462d690e
 +    val parentGroup = parent as? ViewGroup ?: return
 +    val circle = children.filterIsInstance<ImageView>().firstOrNull() ?: return
 +    circle.setImageDrawable(null)
-+    circle.background = null
++    circle.setBackgroundColor(Color.TRANSPARENT)
 +    circle.elevation = 0f
 +
 +    val state = RefreshIndicatorState()

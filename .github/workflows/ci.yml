@@ -256,7 +256,9 @@ jobs:
             --require-class org.mozilla.fenix.embermine.EmbermineNameArgsTest \
             --require-class org.mozilla.fenix.embermine.EmbermineMetricControllerTest \
             --require-class org.mozilla.fenix.embermine.EmbermineAccentSchemeTest \
-            --require-class mozilla.components.compose.base.embermine.EmbermineShapeTest
+            --require-class org.mozilla.fenix.embermine.EmbermineWavyProgressTest \
+            --require-class mozilla.components.compose.base.embermine.EmbermineShapeTest \
+            --require-class mozilla.components.compose.base.embermine.EmberminePageProgressTest
 
       - name: Upload unit test results
         if: ${{ !cancelled() }}

@@ -1,0 +1,403 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: IvyCZE <me@ivy.yt>
+Date: Sun, 8 Nov 2026 18:56:48 +0000
+Subject: [PATCH] Embermine: 0007-wavy-progress-lines
+
+Draw the page-load line as a LinearWavyProgressIndicator overlay inside the
+8 dp band at the edge of the address bar, so the toolbar layout does not
+change. The wave is tinted with the switch-aware accent gradient (two-tone
+palette when on, Firefox gradient when off) and is hidden at 0 and 100
+percent. Downloads rows use a wavy bar whose amplitude drops to zero while
+paused. History delete, delete browsing data and payment methods use an
+indeterminate wavy bar in the accent color instead of the blue, pink and
+orange progress_gradient drawable. Add JVM tests for the page-load
+visibility rule and the paused amplitude.
+
+Co-authored-by: factory-droid[bot] <138933559+factory-droid[bot]@users.noreply.github.com>
+
+diff --git a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/EmberminePageProgress.kt b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/EmberminePageProgress.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..3606ef8024cae34a5875207e8d88b93fa04cbea4
+--- /dev/null
++++ b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/EmberminePageProgress.kt
+@@ -0,0 +1,97 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package mozilla.components.compose.base.embermine
++
++import android.view.View
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.height
++import androidx.compose.material3.LinearWavyProgressIndicator
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.LaunchedEffect
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.draw.drawWithContent
++import androidx.compose.ui.graphics.BlendMode
++import androidx.compose.ui.graphics.Brush
++import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.graphics.CompositingStrategy
++import androidx.compose.ui.graphics.graphicsLayer
++import androidx.compose.ui.platform.LocalLayoutDirection
++import androidx.compose.ui.platform.LocalView
++import androidx.compose.ui.semantics.ProgressBarRangeInfo
++import androidx.compose.ui.semantics.progressBarRangeInfo
++import androidx.compose.ui.semantics.semantics
++import androidx.compose.ui.unit.LayoutDirection
++import androidx.compose.ui.unit.dp
++import mozilla.components.compose.base.R
++import mozilla.components.compose.base.theme.AcornTheme
++
++private const val MAX_PERCENTAGE = 100
++private const val BAND_HEIGHT_DP = 8
++private const val WAVELENGTH_DP = 24
++
++internal fun isEmberminePageProgressVisible(progress: Int): Boolean =
++    progress > 0 && progress < MAX_PERCENTAGE
++
++@Composable
++fun EmberminePageProgress(
++    progress: Int,
++    modifier: Modifier = Modifier,
++    color: List<Color>? = null,
++) {
++    val view = LocalView.current
++    LaunchedEffect(progress) {
++        view.announceProgressForAccessibility(progress)
++    }
++
++    val layoutDirection = LocalLayoutDirection.current
++    val gradientColors = color ?: AcornTheme.gradients.accent.colorStops.map { it.color }
++    val colors =
++        if (layoutDirection == LayoutDirection.Rtl) gradientColors.asReversed() else gradientColors
++
++    Box(
++        modifier =
++            modifier
++                .fillMaxWidth()
++                .height(BAND_HEIGHT_DP.dp)
++                .semantics {
++                    progressBarRangeInfo =
++                        ProgressBarRangeInfo(
++                            current = progress.toFloat(),
++                            range = 0f..MAX_PERCENTAGE.toFloat(),
++                            steps = MAX_PERCENTAGE,
++                        )
++                }
++    ) {
++        if (isEmberminePageProgressVisible(progress)) {
++            LinearWavyProgressIndicator(
++                progress = { progress / MAX_PERCENTAGE.toFloat() },
++                modifier =
++                    Modifier.fillMaxSize()
++                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
++                        .drawWithContent {
++                            drawContent()
++                            drawRect(
++                                brush = Brush.horizontalGradient(colors = colors, endX = size.width),
++                                blendMode = BlendMode.SrcIn,
++                            )
++                        },
++                color = Color.White,
++                trackColor = Color.Transparent,
++                stopSize = 0.dp,
++                amplitude = { 1f },
++                wavelength = WAVELENGTH_DP.dp,
++            )
++        }
++    }
++}
++
++@Suppress("DEPRECATION")
++private fun View.announceProgressForAccessibility(progress: Int) {
++    if (progress == 0) {
++        announceForAccessibility(context.getString(R.string.mozac_compose_base_progress_loading))
++    }
++}
+diff --git a/mobile/android/android-components/components/compose/base/src/test/java/mozilla/components/compose/base/embermine/EmberminePageProgressTest.kt b/mobile/android/android-components/components/compose/base/src/test/java/mozilla/components/compose/base/embermine/EmberminePageProgressTest.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..130f2babf982149f3304e069217f1b3bafd5d838
+--- /dev/null
++++ b/mobile/android/android-components/components/compose/base/src/test/java/mozilla/components/compose/base/embermine/EmberminePageProgressTest.kt
+@@ -0,0 +1,20 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package mozilla.components.compose.base.embermine
++
++import org.junit.Assert.assertFalse
++import org.junit.Assert.assertTrue
++import org.junit.Test
++
++class EmberminePageProgressTest {
++
++    @Test
++    fun `page-load wave is shown only between 0 and 100 percent`() {
++        assertFalse(isEmberminePageProgressVisible(0))
++        assertTrue(isEmberminePageProgressVisible(1))
++        assertTrue(isEmberminePageProgressVisible(99))
++        assertFalse(isEmberminePageProgressVisible(100))
++    }
++}
+diff --git a/mobile/android/android-components/components/compose/browser-toolbar/src/main/java/mozilla/components/compose/browser/toolbar/ui/FullDisplayToolbar.kt b/mobile/android/android-components/components/compose/browser-toolbar/src/main/java/mozilla/components/compose/browser/toolbar/ui/FullDisplayToolbar.kt
+index 06487da225db8e6a53ae37f2b9f1292d7d2e55de..c09de4ee64a406061ecedc4e32651a32a0709edd 100644
+--- a/mobile/android/android-components/components/compose/browser-toolbar/src/main/java/mozilla/components/compose/browser/toolbar/ui/FullDisplayToolbar.kt
++++ b/mobile/android/android-components/components/compose/browser-toolbar/src/main/java/mozilla/components/compose/browser/toolbar/ui/FullDisplayToolbar.kt
+@@ -29,7 +29,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
+ import androidx.compose.ui.unit.Constraints
+ import androidx.compose.ui.unit.dp
+ import androidx.window.core.layout.WindowSizeClass
+-import mozilla.components.compose.base.progressbar.AnimatedProgressBar
++import mozilla.components.compose.base.embermine.EmberminePageProgress
+ import mozilla.components.compose.base.theme.AcornTheme
+ import mozilla.components.compose.base.theme.acornPrivateColorScheme
+ import mozilla.components.compose.base.theme.privateColorPalette
+@@ -184,10 +184,9 @@ internal fun FullDisplayToolbar(
+             )
+ 
+             if (progressBarConfig != null) {
+-                AnimatedProgressBar(
++                EmberminePageProgress(
+                     progress = progressBarConfig.progress,
+                     color = progressBarConfig.color,
+-                    trackColor = Color.Transparent,
+                     modifier =
+                         Modifier.semantics {
+                                 testTag = ADDRESSBAR_PROGRESSBAR
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/downloads/listscreen/ui/FileListItem.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/downloads/listscreen/ui/FileListItem.kt
+index b1abe8c8f3d1355ec3811f3d547f905ac74c695e..7e72073ad2b1d7aa6ca5a6583108f1d4925f4a80 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/downloads/listscreen/ui/FileListItem.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/downloads/listscreen/ui/FileListItem.kt
+@@ -9,12 +9,12 @@ import androidx.compose.foundation.background
+ import androidx.compose.foundation.combinedClickable
+ import androidx.compose.foundation.layout.Column
+ import androidx.compose.foundation.layout.Spacer
++import androidx.compose.foundation.layout.fillMaxWidth
+ import androidx.compose.foundation.layout.height
+ import androidx.compose.foundation.layout.size
+ import androidx.compose.foundation.layout.width
+ import androidx.compose.foundation.progressSemantics
+ import androidx.compose.material3.Icon
+-import androidx.compose.material3.LinearProgressIndicator
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.SwipeToDismissBox
+ import androidx.compose.material3.SwipeToDismissBoxState
+@@ -54,6 +54,7 @@ import org.mozilla.fenix.compose.swipeToDismissFade
+ import org.mozilla.fenix.downloads.listscreen.DownloadsListTestTag
+ import org.mozilla.fenix.downloads.listscreen.store.FileItem
+ import org.mozilla.fenix.downloads.listscreen.store.TimeCategory
++import org.mozilla.fenix.embermine.EmbermineWavyProgress
+ import org.mozilla.fenix.theme.FirefoxTheme
+ 
+ /**
+@@ -194,16 +195,16 @@ private fun FileListItemMainContent(
+ private fun FileListItemProgressIndicator(status: FileItem.Status) {
+     when (status) {
+         FileItem.Status.Initiated -> {
+-            DownloadProgressIndicator(progress = null)
++            DownloadProgressIndicator(progress = null, paused = false)
+         }
+ 
+         is FileItem.Status.Downloading -> {
+-            DownloadProgressIndicator(progress = status.progress)
++            DownloadProgressIndicator(progress = status.progress, paused = false)
+         }
+ 
+         is FileItem.Status.Paused -> {
+             if (status.progress != null) {
+-                DownloadProgressIndicator(progress = status.progress)
++                DownloadProgressIndicator(progress = status.progress, paused = true)
+             }
+         }
+ 
+@@ -299,19 +300,15 @@ private fun AfterListItemAction(
+ }
+ 
+ @Composable
+-private fun DownloadProgressIndicator(@FloatRange(from = 0.0, to = 1.0) progress: Float?) {
++private fun DownloadProgressIndicator(@FloatRange(from = 0.0, to = 1.0) progress: Float?, paused: Boolean) {
+     Column {
+         Spacer(modifier = Modifier.height(6.dp))
+ 
+-        if (progress == null) {
+-            LinearProgressIndicator(modifier = Modifier.clearAndSetSemantics {})
+-        } else {
+-            LinearProgressIndicator(
+-                modifier = Modifier.clearAndSetSemantics {},
+-                progress = { progress },
+-                drawStopIndicator = {},
+-            )
+-        }
++        EmbermineWavyProgress(
++            modifier = Modifier.fillMaxWidth().clearAndSetSemantics {},
++            progress = progress,
++            paused = paused,
++        )
+     }
+ }
+ 
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineIndeterminateProgressBar.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineIndeterminateProgressBar.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..9ba0151f1119bf301fc8c44b4676d48f87e037a0
+--- /dev/null
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineIndeterminateProgressBar.kt
+@@ -0,0 +1,39 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine
++
++import android.content.Context
++import android.util.AttributeSet
++import android.view.View
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.setValue
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.platform.ComposeView
++import org.mozilla.fenix.theme.FirefoxTheme
++
++class EmbermineIndeterminateProgressBar @JvmOverloads constructor(
++    context: Context,
++    attrs: AttributeSet? = null,
++) : ComposeView(context, attrs) {
++
++    private var showContent by mutableStateOf(visibility == View.VISIBLE)
++
++    init {
++        setContent {
++            FirefoxTheme {
++                if (showContent) {
++                    EmbermineWavyProgress(modifier = Modifier.fillMaxWidth())
++                }
++            }
++        }
++    }
++
++    override fun setVisibility(visibility: Int) {
++        super.setVisibility(visibility)
++        showContent = visibility == View.VISIBLE
++    }
++}
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineWavyProgress.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineWavyProgress.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..5ed443e3af2aec28c4a061cf1467a6eb9a17de83
+--- /dev/null
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineWavyProgress.kt
+@@ -0,0 +1,36 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine
++
++import androidx.compose.material3.LinearWavyProgressIndicator
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.unit.dp
++
++@Composable
++fun EmbermineWavyProgress(
++    modifier: Modifier = Modifier,
++    progress: Float? = null,
++    paused: Boolean = false,
++) {
++    val color = MaterialTheme.colorScheme.primary
++    if (progress == null) {
++        LinearWavyProgressIndicator(
++            modifier = modifier,
++            color = color,
++        )
++    } else {
++        LinearWavyProgressIndicator(
++            progress = { progress },
++            modifier = modifier,
++            color = color,
++            amplitude = { embermineWavyAmplitude(paused) },
++            stopSize = 0.dp,
++        )
++    }
++}
++
++internal fun embermineWavyAmplitude(paused: Boolean): Float = if (paused) 0f else 1f
+diff --git a/mobile/android/fenix/app/src/main/res/layout/component_credit_cards.xml b/mobile/android/fenix/app/src/main/res/layout/component_credit_cards.xml
+index 0e791b496bac2ef2479cda6ee51fe76063c9fe9d..c6dd06abfb941cb0ef2d199c9f9a2ffdc520dd33 100644
+--- a/mobile/android/fenix/app/src/main/res/layout/component_credit_cards.xml
++++ b/mobile/android/fenix/app/src/main/res/layout/component_credit_cards.xml
+@@ -9,10 +9,8 @@
+     android:layout_width="match_parent"
+     android:layout_height="wrap_content">
+ 
+-    <ProgressBar
++    <org.mozilla.fenix.embermine.EmbermineIndeterminateProgressBar
+         android:id="@+id/progress_bar"
+-        style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+-        android:indeterminate="true"
+         android:layout_width="match_parent"
+         android:layout_height="8dp"
+         android:translationY="-3dp"
+diff --git a/mobile/android/fenix/app/src/main/res/layout/component_history.xml b/mobile/android/fenix/app/src/main/res/layout/component_history.xml
+index 776cbd4a2e33b550f4fe4d4a075f764d7e40de37..5bb780564d62d42867c1286835e9366820b41035 100644
+--- a/mobile/android/fenix/app/src/main/res/layout/component_history.xml
++++ b/mobile/android/fenix/app/src/main/res/layout/component_history.xml
+@@ -9,12 +9,10 @@
+     android:layout_width="match_parent"
+     android:layout_height="match_parent">
+ 
+-    <ProgressBar
++    <org.mozilla.fenix.embermine.EmbermineIndeterminateProgressBar
+         android:id="@+id/progress_bar"
+-        style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+         android:layout_width="match_parent"
+         android:layout_height="8dp"
+-        android:indeterminate="true"
+         android:translationY="-3dp"
+         android:visibility="gone"
+         app:layout_constraintStart_toStartOf="parent"
+diff --git a/mobile/android/fenix/app/src/main/res/layout/fragment_delete_browsing_data.xml b/mobile/android/fenix/app/src/main/res/layout/fragment_delete_browsing_data.xml
+index 2d6edb028d5263c35f4f425ef3b2585cd568a01b..678668c70b50437cf960616d5718ca387347d841 100644
+--- a/mobile/android/fenix/app/src/main/res/layout/fragment_delete_browsing_data.xml
++++ b/mobile/android/fenix/app/src/main/res/layout/fragment_delete_browsing_data.xml
+@@ -7,10 +7,8 @@
+     xmlns:app="http://schemas.android.com/apk/res-auto"
+     android:layout_height="match_parent"
+     android:layout_width="match_parent">
+-    <ProgressBar
++    <org.mozilla.fenix.embermine.EmbermineIndeterminateProgressBar
+         android:id="@+id/progress_bar"
+-        style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+-        android:indeterminate="true"
+         android:layout_width="match_parent"
+         android:layout_height="8dp"
+         android:translationY="-3dp"
+diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineWavyProgressTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineWavyProgressTest.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..91d08e8f33af6cc31a4aa0f8322a5d896c093201
+--- /dev/null
++++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineWavyProgressTest.kt
+@@ -0,0 +1,17 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine
++
++import org.junit.Assert.assertEquals
++import org.junit.Test
++
++class EmbermineWavyProgressTest {
++
++    @Test
++    fun `download wave is flat only while paused`() {
++        assertEquals(0f, embermineWavyAmplitude(paused = true), 0f)
++        assertEquals(1f, embermineWavyAmplitude(paused = false), 0f)
++    }
++}

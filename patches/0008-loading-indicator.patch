@@ -1,0 +1,180 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: IvyCZE <me@ivy.yt>
+Date: Sun, 8 Nov 2026 21:08:29 +0000
+Subject: [PATCH] Embermine: 0008-loading-indicator
+
+
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/BaseBrowserFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/BaseBrowserFragment.kt
+index ed334079e8101613de078bc55577be9a48fd07bb..44acf8beee96c2465a3450450db44297fd538838 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/BaseBrowserFragment.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/BaseBrowserFragment.kt
+@@ -211,6 +211,7 @@ import org.mozilla.fenix.databinding.FragmentBrowserBinding
+ import org.mozilla.fenix.downloads.DownloadService
+ import org.mozilla.fenix.downloads.RenameAndChangeLocationDialogFragment
+ import org.mozilla.fenix.downloads.dialog.createDownloadAppDialog
++import org.mozilla.fenix.embermine.installEmbermineRefreshIndicator
+ import org.mozilla.fenix.ext.accessibilityManager
+ import org.mozilla.fenix.ext.breadcrumb
+ import org.mozilla.fenix.ext.components
+@@ -1457,6 +1458,7 @@ abstract class BaseBrowserFragment :
+                 view = view,
+             )
+         }
++        binding.swipeRefresh.installEmbermineRefreshIndicator()
+ 
+         webchannelIntegration.set(
+             feature =
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineRefreshIndicator.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineRefreshIndicator.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..ffd2378358c7714ff0e2190a462d690e3c3a064d
+--- /dev/null
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineRefreshIndicator.kt
+@@ -0,0 +1,89 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine
++
++import android.view.ViewGroup
++import android.widget.ImageView
++import androidx.compose.material3.ContainedLoadingIndicator
++import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableFloatStateOf
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.setValue
++import androidx.compose.ui.platform.ComposeView
++import androidx.core.view.children
++import androidx.core.view.isVisible
++import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
++import org.mozilla.fenix.theme.FirefoxTheme
++
++private class RefreshIndicatorState {
++    var refreshing by mutableStateOf(false)
++    var progress by mutableFloatStateOf(0f)
++}
++
++/**
++ * Hides the circle of this [SwipeRefreshLayout] and draws a contained morphing indicator in its place.
++ * The gesture handling is unchanged: the indicator mirrors the circle's position, scale, alpha and visibility.
++ */
++fun SwipeRefreshLayout.installEmbermineRefreshIndicator() {
++    val parentGroup = parent as? ViewGroup ?: return
++    val circle = children.filterIsInstance<ImageView>().firstOrNull() ?: return
++    circle.setImageDrawable(null)
++    circle.background = null
++    circle.elevation = 0f
++
++    val state = RefreshIndicatorState()
++    val overlay = ComposeView(context).apply {
++        setContent {
++            FirefoxTheme {
++                EmbermineRefreshIndicator(refreshing = state.refreshing, progress = { state.progress })
++            }
++        }
++    }
++    parentGroup.addView(
++        overlay,
++        parentGroup.indexOfChild(this) + 1,
++        ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT),
++    )
++
++    viewTreeObserver.addOnPreDrawListener {
++        state.refreshing = isRefreshing
++        state.progress = embermineRefreshProgress(circle.top, progressViewStartOffset, progressViewEndOffset)
++        overlay.isVisible = circle.isVisible
++        overlay.x = x + circle.x + (circle.width - overlay.width) / 2f
++        overlay.y = y + circle.y + (circle.height - overlay.height) / 2f
++        overlay.scaleX = circle.scaleX
++        overlay.scaleY = circle.scaleY
++        overlay.alpha = circle.alpha
++        true
++    }
++}
++
++@OptIn(ExperimentalMaterial3ExpressiveApi::class)
++@Composable
++private fun EmbermineRefreshIndicator(refreshing: Boolean, progress: () -> Float) {
++    val containerColor = MaterialTheme.colorScheme.primaryContainer
++    val indicatorColor = MaterialTheme.colorScheme.onPrimaryContainer
++    if (refreshing) {
++        ContainedLoadingIndicator(containerColor = containerColor, indicatorColor = indicatorColor)
++    } else {
++        ContainedLoadingIndicator(
++            progress = progress,
++            containerColor = containerColor,
++            indicatorColor = indicatorColor,
++        )
++    }
++}
++
++/**
++ * Pull fraction in 0..1. [SwipeRefreshLayout] moves the circle from [startTop] by the drag fraction times the
++ * trigger distance, so [triggerDistance] is the refresh position's offset from the layout's top.
++ */
++internal fun embermineRefreshProgress(top: Int, startTop: Int, triggerDistance: Int): Float {
++    if (triggerDistance <= 0) return 0f
++    return ((top - startTop).toFloat() / triggerDistance).coerceIn(0f, 1f)
++}
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/history/HistoryView.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/history/HistoryView.kt
+index a7dad8b3cd89e3ba6786a095d5bb63728090700a..e9348c7cff0a9bd5498d170185a89b7e2ae347a6 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/history/HistoryView.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/history/HistoryView.kt
+@@ -22,6 +22,7 @@ import mozilla.components.service.fxa.manager.FxaAccountManager
+ import mozilla.components.service.fxa.sync.SyncReason
+ import org.mozilla.fenix.R
+ import org.mozilla.fenix.databinding.ComponentHistoryBinding
++import org.mozilla.fenix.embermine.installEmbermineRefreshIndicator
+ import org.mozilla.fenix.ext.components
+ import org.mozilla.fenix.library.LibraryPageView
+ import org.mozilla.fenix.theme.ThemeManager
+@@ -89,6 +90,7 @@ class HistoryView(
+             setColorSchemeResources(primaryTextColor)
+             setProgressBackgroundColorSchemeResource(primaryBackgroundColor)
+         }
++        binding.swipeRefresh.installEmbermineRefreshIndicator()
+ 
+         binding.swipeRefresh.setOnRefreshListener {
+             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineRefreshIndicatorTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineRefreshIndicatorTest.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..8c05343cb0802e0b8195b289d6528d445b999db0
+--- /dev/null
++++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineRefreshIndicatorTest.kt
+@@ -0,0 +1,33 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine
++
++import org.junit.Assert.assertEquals
++import org.junit.Test
++
++class EmbermineRefreshIndicatorTest {
++
++    @Test
++    fun `progress is zero while the circle is at rest`() {
++        assertEquals(0f, embermineRefreshProgress(top = -105, startTop = -105, triggerDistance = 168), 0f)
++    }
++
++    @Test
++    fun `progress follows the circle to the refresh trigger`() {
++        assertEquals(0.5f, embermineRefreshProgress(top = -21, startTop = -105, triggerDistance = 168), 0.001f)
++        assertEquals(1f, embermineRefreshProgress(top = 63, startTop = -105, triggerDistance = 168), 0.001f)
++    }
++
++    @Test
++    fun `progress is clamped beyond the trigger and before rest`() {
++        assertEquals(1f, embermineRefreshProgress(top = 200, startTop = -105, triggerDistance = 168), 0f)
++        assertEquals(0f, embermineRefreshProgress(top = -140, startTop = -105, triggerDistance = 168), 0f)
++    }
++
++    @Test
++    fun `progress is zero without a trigger distance`() {
++        assertEquals(0f, embermineRefreshProgress(top = 10, startTop = -105, triggerDistance = 0), 0f)
++    }
++}

@@ -36,6 +36,15 @@ class WalkServerTests(unittest.TestCase):
         self.get("/reset")
         self.assertEqual(self.server.refresh_hits, 0)
 
+    def test_query_strings_select_the_same_route(self) -> None:
+        status, body = self.get("/slow?pos=bottom")
+        self.assertEqual(status, 200)
+        self.assertTrue(body.endswith(b"</p>"))
+        self.assertIn(b"Embermine refresh page", self.get("/refresh?pos=top")[1])
+        self.assertEqual(self.server.refresh_hits, 1)
+        self.get("/reset?pos=top")
+        self.assertEqual(self.server.refresh_hits, 0)
+
     def test_unknown_path_is_404(self) -> None:
         self.assertEqual(self.get("/nope")[0], 404)
 

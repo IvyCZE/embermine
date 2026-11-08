@@ -140,7 +140,7 @@ def main_menu_while_loading(s: Session) -> None:
     """The main menu opened while a page is still loading, where Refresh turns into Stop."""
     with s.capture("14-main-menu-loading", label="main menu while a page is loading (Stop state)") as shot:
         go_home(s)
-        s.open_url(f"{s.server}/slow")
+        s.open_url(f"{s.server}/slow?menu=1")
         s.dev.sleep(4.0)
         s.dev.tap(t.MENU_BUTTON)
         if s.dev.wait_for(t.MENU_SETTINGS, timeout=10) is None:

@@ -1,7 +1,6 @@
 """Captures of things that move: the page-load line and pull-to-refresh, for both toolbar positions."""
 from __future__ import annotations
 
-import subprocess
 from collections.abc import Callable
 
 from scripts.emulator import targets as t
@@ -33,39 +32,55 @@ def set_toolbar_position(s: Session, position: str) -> None:
     s.dev.sleep(1.0)
 
 
+PULL_START_FRACTION = 0.30
+PULL_PAUSE_FRACTION = 0.37
+PULL_RELEASE_FRACTION = 0.50
+PULL_STEPS = 6
+
+
 def page_load(s: Session, position: str) -> None:
     """The page-load line while a page is still loading and after it finished."""
     with s.capture(f"page-load-{position}-loading", label=f"page load, {position} toolbar, mid-load") as shot:
         go_home(s)
-        s.open_url(f"{s.server}/slow")
+        s.open_url(f"{s.server}/slow?pos={position}")
         s.dev.sleep(4.0)
         shot.take(settle=0.5)
     with s.capture(f"page-load-{position}-loaded", label=f"page load, {position} toolbar, after load") as shot:
-        s.open_url(f"{s.server}/page")
+        s.open_url(f"{s.server}/page?pos={position}")
         s.wait_page("10.0.2.2", timeout=30)
         s.dev.sleep(5.0)
         shot.take(settle=0.5)
 
 
+def _touch(s: Session, action: str, x: int, y: int) -> None:
+    s.dev.adb.shell(f"input motionevent {action} {x} {y}")
+
+
+def _drag_to(s: Session, x: int, y_from: int, y_to: int) -> None:
+    for step in range(1, PULL_STEPS + 1):
+        _touch(s, "MOVE", x, y_from + (y_to - y_from) * step // PULL_STEPS)
+        s.dev.sleep(0.15)
+
+
 def pull_to_refresh(s: Session, position: str) -> None:
-    """Drag the page down slowly and photograph the pull, then the reload that starts on release."""
+    """Hold the page part way down and photograph the pull, then release past the trigger so the reload starts."""
     with s.capture(f"pull-to-refresh-{position}-pulling", label=f"pull-to-refresh, {position} toolbar, during pull") as pulling:
-        s.open_url(f"{s.server}/reset")
+        s.open_url(f"{s.server}/reset?pos={position}")
         s.dev.sleep(1.0)
-        s.open_url(f"{s.server}/refresh")
+        s.open_url(f"{s.server}/refresh?pos={position}")
         s.wait_page("10.0.2.2", timeout=30)
         s.dev.sleep(5.0)
         width, height = s.dev.screen_size()
-        drag = subprocess.Popen(  # noqa: S603 - fixed adb arguments
-            [*s.dev.adb.prefix, "shell", f"input swipe {width // 2} {int(height * 0.30)} {width // 2} {int(height * 0.75)} 6000"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
+        x = width // 2
+        top, pause, release = (int(height * f) for f in (PULL_START_FRACTION, PULL_PAUSE_FRACTION, PULL_RELEASE_FRACTION))
+        _touch(s, "DOWN", x, top)
         try:
-            s.dev.sleep(3.5)
+            _drag_to(s, x, top, pause)
+            s.dev.sleep(0.5)
             pulling.take(settle=0.0)
+            _drag_to(s, x, pause, release)
         finally:
-            drag.wait(timeout=30)
+            _touch(s, "UP", x, release)
     with s.capture(f"pull-to-refresh-{position}-reloading", label=f"pull-to-refresh, {position} toolbar, while reloading") as reloading:
         s.dev.sleep(0.8)
         reloading.take(settle=0.0)

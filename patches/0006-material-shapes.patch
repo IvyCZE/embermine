@@ -195,6 +195,85 @@ index 0000000000000000000000000000000000000000..3c3de734d2358bfe5d415644c0a4a044
 +
 +    override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
 +}
+diff --git a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/EmbermineShapedIconDrawable.kt b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/EmbermineShapedIconDrawable.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..0792f5aad6c8919b4ec1e2450178003083e5b38f
+--- /dev/null
++++ b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/EmbermineShapedIconDrawable.kt
+@@ -0,0 +1,73 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package mozilla.components.compose.base.embermine
++
++import android.content.res.ColorStateList
++import android.graphics.Canvas
++import android.graphics.ColorFilter
++import android.graphics.PixelFormat
++import android.graphics.PorterDuff
++import android.graphics.Rect
++import android.graphics.drawable.Drawable
++import androidx.annotation.ColorInt
++
++/**
++ * A [Drawable] that draws [icon] centered on an [EmbermineShape] container, for View toolbars and menus.
++ *
++ * Tints and color filters apply to [icon] only, so the container keeps its [containerColor].
++ *
++ * @param shape The [EmbermineShape] of the container.
++ * @param containerColor The fill color of the container.
++ * @param icon The icon drawn on top of the container, at its intrinsic size.
++ * @param containerSizePx The intrinsic width and height of this drawable in pixels.
++ */
++class EmbermineShapedIconDrawable(
++    shape: EmbermineShape,
++    @ColorInt containerColor: Int,
++    private val icon: Drawable,
++    private val containerSizePx: Int,
++) : Drawable() {
++    private val container = EmbermineShapeDrawable(shape, containerColor)
++
++    override fun onBoundsChange(bounds: Rect) {
++        super.onBoundsChange(bounds)
++        container.setBounds(bounds)
++        val left = bounds.centerX() - icon.intrinsicWidth / 2
++        val top = bounds.centerY() - icon.intrinsicHeight / 2
++        icon.setBounds(left, top, left + icon.intrinsicWidth, top + icon.intrinsicHeight)
++    }
++
++    override fun draw(canvas: Canvas) {
++        container.draw(canvas)
++        icon.draw(canvas)
++    }
++
++    override fun getIntrinsicWidth(): Int = containerSizePx
++
++    override fun getIntrinsicHeight(): Int = containerSizePx
++
++    override fun setAlpha(alpha: Int) {
++        container.setAlpha(alpha)
++        icon.setAlpha(alpha)
++    }
++
++    override fun setColorFilter(colorFilter: ColorFilter?) {
++        icon.setColorFilter(colorFilter)
++    }
++
++    override fun setTint(tintColor: Int) {
++        icon.setTint(tintColor)
++    }
++
++    override fun setTintList(tint: ColorStateList?) {
++        icon.setTintList(tint)
++    }
++
++    override fun setTintMode(tintMode: PorterDuff.Mode?) {
++        icon.setTintMode(tintMode)
++    }
++
++    override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
++}
 diff --git a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/ShapedIconBackground.kt b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/ShapedIconBackground.kt
 new file mode 100644
 index 0000000000000000000000000000000000000000..6407eb95761ff9e2bfba97f6e9a23ccef4b0cff1
@@ -1216,6 +1295,264 @@ index 2bed1c8efb4131ae3861222986d1469c394af652..1699bc1b94ba93b54912f0cc29bff8cf
  }
  
  @Composable
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/downloads/listscreen/DownloadsScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/downloads/listscreen/DownloadsScreen.kt
+index 374c33d9bdb640bdda2cbd3f4c2e8e3e19c01860..7d9196102a3b830f0f15a0d91e380a581f4487cf 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/downloads/listscreen/DownloadsScreen.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/downloads/listscreen/DownloadsScreen.kt
+@@ -60,6 +60,8 @@ import mozilla.components.compose.base.button.FloatingActionButton
+ import mozilla.components.compose.base.button.IconButton
+ import mozilla.components.compose.base.button.RadioButton
+ import mozilla.components.compose.base.button.TextButton
++import mozilla.components.compose.base.embermine.EmbermineShape
++import mozilla.components.compose.base.embermine.ShapedIconBackground
+ import mozilla.components.compose.base.menu.DropdownMenu
+ import mozilla.components.compose.base.menu.MenuItem
+ import mozilla.components.compose.base.snackbar.Snackbar
+@@ -185,11 +187,16 @@ fun DownloadsScreen(
+                             },
+                             contentDescription = stringResource(R.string.download_navigate_back_description),
+                         ) {
+-                            Icon(
+-                                painter = painterResource(iconsR.drawable.mozac_ic_back_24),
+-                                contentDescription = null,
+-                                tint = toolbarConfig.iconColor,
+-                            )
++                            ShapedIconBackground(
++                                shape = EmbermineShape.Cookie12Sided,
++                                defaultContentColor = toolbarConfig.iconColor,
++                            ) { contentColor ->
++                                Icon(
++                                    painter = painterResource(iconsR.drawable.mozac_ic_back_24),
++                                    contentDescription = null,
++                                    tint = contentColor,
++                                )
++                            }
+                         }
+                     }
+                 },
+@@ -201,11 +208,16 @@ fun DownloadsScreen(
+                             },
+                             contentDescription = stringResource(R.string.download_navigate_settings_description),
+                         ) {
+-                            Icon(
+-                                painter = painterResource(iconsR.drawable.mozac_ic_settings_24),
+-                                contentDescription = null,
+-                                tint = toolbarConfig.iconColor,
+-                            )
++                            ShapedIconBackground(
++                                shape = EmbermineShape.Cookie12Sided,
++                                defaultContentColor = toolbarConfig.iconColor,
++                            ) { contentColor ->
++                                Icon(
++                                    painter = painterResource(iconsR.drawable.mozac_ic_settings_24),
++                                    contentDescription = null,
++                                    tint = contentColor,
++                                )
++                            }
+                         }
+                     }
+                     if (uiState.mode is Mode.Editing) {
+@@ -227,6 +239,7 @@ fun DownloadsScreen(
+                 FloatingActionButton(
+                     icon = painterResource(iconsR.drawable.mozac_ic_search_24),
+                     contentDescription = stringResource(R.string.download_search_placeholder),
++                    shape = EmbermineShape.Sunny.toShape(),
+                     onClick = { downloadsStore.dispatch(DownloadUIAction.SearchBarVisibilityRequest) },
+                 )
+             }
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineBackIcon.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineBackIcon.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..21fecd5aa861072b33de6a120bf83546ab830800
+--- /dev/null
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineBackIcon.kt
+@@ -0,0 +1,27 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine
++
++import androidx.compose.material3.Icon
++import androidx.compose.material3.LocalContentColor
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.res.painterResource
++import mozilla.components.compose.base.embermine.EmbermineShape
++import mozilla.components.compose.base.embermine.ShapedIconBackground
++import mozilla.components.ui.icons.R as iconsR
++
++@Composable
++internal fun EmbermineBackIcon() {
++    ShapedIconBackground(
++        shape = EmbermineShape.Cookie12Sided,
++        defaultContentColor = LocalContentColor.current,
++    ) { contentColor ->
++        Icon(
++            painter = painterResource(iconsR.drawable.mozac_ic_back_24),
++            contentDescription = null,
++            tint = contentColor,
++        )
++    }
++}
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineViewShapes.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineViewShapes.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..045d2aebc5dc170bdc6d5eb7f9c3d6cd13a94a84
+--- /dev/null
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineViewShapes.kt
+@@ -0,0 +1,53 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine
++
++import android.content.Context
++import android.content.res.ColorStateList
++import android.graphics.drawable.Drawable
++import android.util.TypedValue
++import android.view.MenuItem
++import androidx.fragment.app.Fragment
++import androidx.navigation.fragment.findNavController
++import com.google.android.material.R as materialR
++import mozilla.components.compose.base.embermine.EmbermineShape
++import mozilla.components.compose.base.embermine.EmbermineShapedIconDrawable
++import mozilla.components.support.ktx.android.content.getColorFromAttr
++import org.mozilla.fenix.R
++import kotlin.math.roundToInt
++
++private const val SHAPE_CONTAINER_SIZE_DP = 40f
++
++internal fun Context.embermineShapedIcon(icon: Drawable, shape: EmbermineShape): Drawable {
++    val containerSizePx =
++        TypedValue.applyDimension(
++            TypedValue.COMPLEX_UNIT_DIP,
++            SHAPE_CONTAINER_SIZE_DP,
++            resources.displayMetrics,
++        ).roundToInt()
++    val iconColor = getColorFromAttr(materialR.attr.colorOnPrimaryContainer)
++    return EmbermineShapedIconDrawable(
++        shape = shape,
++        containerColor = getColorFromAttr(materialR.attr.colorPrimaryContainer),
++        icon = icon.mutate().apply { setTint(iconColor) },
++        containerSizePx = containerSizePx,
++    )
++}
++
++internal fun MenuItem.setEmbermineShapedIcon(context: Context, shape: EmbermineShape) {
++    val currentIcon = icon ?: return
++    setIcon(context.embermineShapedIcon(currentIcon, shape))
++    iconTintList = ColorStateList.valueOf(context.getColorFromAttr(materialR.attr.colorOnPrimaryContainer))
++}
++
++/**
++ * The shape of the back arrow for a Settings screen, or `null` for every other screen. Release builds obfuscate
++ * fragment class names, so the Settings section is detected through the back stack.
++ */
++internal fun Fragment.settingsBackNavigationShape(): EmbermineShape? =
++    EmbermineShape.Cookie12Sided.takeIf { isInSettingsBackStack() }
++
++private fun Fragment.isInSettingsBackStack(): Boolean =
++    runCatching { findNavController().getBackStackEntry(R.id.settingsFragment) }.isSuccess
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ext/Activity.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ext/Activity.kt
+index 0e39c9cdc4d87cb7b7929174507e9e4a363e2c39..443d16a28805656d0b6b5419d36235f102605288 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ext/Activity.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ext/Activity.kt
+@@ -21,6 +21,7 @@ import androidx.navigation.NavDirections
+ import androidx.navigation.findNavController
+ import com.google.android.material.R as materialR
+ import java.security.InvalidParameterException
++import mozilla.components.compose.base.embermine.EmbermineShape
+ import mozilla.components.concept.base.crash.Breadcrumb
+ import mozilla.components.concept.engine.EngineSession
+ import mozilla.components.feature.intent.ext.getSessionId
+@@ -42,6 +43,7 @@ import org.mozilla.fenix.components.menu.MenuDialogFragmentDirections
+ import org.mozilla.fenix.customtabs.EXTRA_IS_SANDBOX_CUSTOM_TAB
+ import org.mozilla.fenix.customtabs.ExternalAppBrowserActivity
+ import org.mozilla.fenix.debugsettings.gleandebugtools.GleanDebugToolsFragmentDirections
++import org.mozilla.fenix.embermine.embermineShapedIcon
+ import org.mozilla.fenix.exceptions.trackingprotection.TrackingProtectionExceptionsFragmentDirections
+ import org.mozilla.fenix.home.HomeFragmentDirections
+ import org.mozilla.fenix.library.history.HistoryFragmentDirections
+@@ -216,13 +218,18 @@ private fun Activity.openDefaultBrowserSumoPage(
+  * Sets the icon for the back (up) navigation button.
+  *
+  * @param icon The resource id of the icon.
++ * @param shape The [EmbermineShape] drawn behind the icon, or `null` for a plain icon.
+  */
+-fun Activity.setNavigationIcon(@DrawableRes icon: Int) {
++fun Activity.setNavigationIcon(@DrawableRes icon: Int, shape: EmbermineShape? = null) {
+     (this as? AppCompatActivity)?.supportActionBar?.let {
+         it.setDisplayHomeAsUpEnabled(true)
+         val navigationIcon =
+-            AppCompatResources.getDrawable(this, icon)?.apply {
+-                setTint(getColorFromAttr(materialR.attr.colorOnSurface))
++            AppCompatResources.getDrawable(this, icon)?.let { drawable ->
++                if (shape == null) {
++                    drawable.apply { setTint(getColorFromAttr(materialR.attr.colorOnSurface)) }
++                } else {
++                    embermineShapedIcon(drawable, shape)
++                }
+             }
+         it.setHomeAsUpIndicator(navigationIcon)
+         it.setHomeActionContentDescription(R.string.action_bar_up_description)
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ext/Fragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ext/Fragment.kt
+index 0b85c6501b7577830753f4d0e36a03723f240cde..6768fff6cf66ac23113b04e820fe7cb92bec6b57 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ext/Fragment.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ext/Fragment.kt
+@@ -27,6 +27,7 @@ import androidx.navigation.NavDirections
+ import androidx.navigation.NavOptions
+ import androidx.navigation.fragment.findNavController
+ import com.google.android.material.R as materialR
++import mozilla.components.compose.base.embermine.EmbermineShape
+ import mozilla.components.concept.base.crash.Breadcrumb
+ import mozilla.components.support.utils.ext.isLandscape
+ import mozilla.components.support.utils.ext.pixelSizeFor
+@@ -36,6 +37,8 @@ import org.mozilla.fenix.R
+ import org.mozilla.fenix.components.Components
+ import org.mozilla.fenix.components.toolbar.ToolbarContainerView
+ import org.mozilla.fenix.components.toolbar.ToolbarPosition
++import org.mozilla.fenix.embermine.setEmbermineShapedIcon
++import org.mozilla.fenix.embermine.settingsBackNavigationShape
+ import org.mozilla.fenix.navigation.DefaultNavControllerProvider
+ import org.mozilla.fenix.navigation.NavControllerProvider
+ import org.mozilla.fenix.theme.ThemeManager
+@@ -73,7 +76,7 @@ fun Fragment.getPreferenceKey(@StringRes resourceId: Int): String = getString(re
+  */
+ fun Fragment.showToolbar(title: String) {
+     (requireActivity() as AppCompatActivity).title = title
+-    activity?.setNavigationIcon(iconsR.drawable.mozac_ic_back_24)
++    activity?.setNavigationIcon(iconsR.drawable.mozac_ic_back_24, settingsBackNavigationShape())
+     (activity as? NavHostActivity)?.getSupportActionBarAndInflateIfNecessary()?.show()
+ }
+ 
+@@ -84,17 +87,19 @@ fun Fragment.showToolbar(title: String) {
+  * @param title The title of the toolbar.
+  * @param contentDescription The content description of the icon button for accessibility.
+  * @param iconResId The resource ID of the icon to be displayed.
++ * @param iconShape The [EmbermineShape] drawn behind the icon button, or `null` for a plain icon.
+  * @param onClick The click event for the icon button.
+  */
+ fun Fragment.showToolbarWithIconButton(
+     title: String,
+     contentDescription: String,
+     iconResId: Int,
++    iconShape: EmbermineShape? = null,
+     onClick: () -> Unit,
+ ) {
+     val activity = requireActivity() as AppCompatActivity
+     activity.title = title
+-    activity.setNavigationIcon(iconsR.drawable.mozac_ic_back_24)
++    activity.setNavigationIcon(iconsR.drawable.mozac_ic_back_24, settingsBackNavigationShape())
+     (activity as? NavHostActivity)?.getSupportActionBarAndInflateIfNecessary()?.show()
+ 
+     val menuHost = activity as MenuHost
+@@ -107,6 +112,7 @@ fun Fragment.showToolbarWithIconButton(
+                 item.setIcon(iconResId)
+                 val colorResId = ThemeManager.resolveAttribute(materialR.attr.colorOnSurface, activity)
+                 item.iconTintList = ColorStateList.valueOf(activity.getColor(colorResId))
++                iconShape?.let { item.setEmbermineShapedIcon(activity, it) }
+                 item.contentDescription = contentDescription
+                 item.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+                 item.setOnMenuItemClickListener {
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/BrowserToolbarMiddleware.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/BrowserToolbarMiddleware.kt
 index 9c8c89423b273f3160dbaeaa0aa301b3559f129f..efb86d8b3775064e91a7f0015faf7dafda43f914 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/BrowserToolbarMiddleware.kt
@@ -1393,6 +1730,116 @@ index a83e54d4bc637c9d522dcf0eb1191e3b6b08476c..04be429f9c05cb02690de76defca5288
      }
  }
  
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/LibraryPageView.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/LibraryPageView.kt
+index e68dd4d1bb01e82b0d18ddcbfac4573c388f9f77..6a32ad93e0a2faff6c55c545a92faf5a6a10c356 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/LibraryPageView.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/LibraryPageView.kt
+@@ -7,11 +7,14 @@ package org.mozilla.fenix.library
+ import android.content.Context
+ import android.view.ViewGroup
+ import androidx.appcompat.R as appcompatR
++import androidx.appcompat.content.res.AppCompatResources
+ import androidx.appcompat.widget.Toolbar
+ import com.google.android.material.R as materialR
++import mozilla.components.compose.base.embermine.EmbermineShape
+ import mozilla.components.support.ktx.android.content.getColorFromAttr
+ import mozilla.components.ui.icons.R as iconsR
+ import org.mozilla.fenix.R
++import org.mozilla.fenix.embermine.embermineShapedIcon
+ import org.mozilla.fenix.ext.asActivity
+ import org.mozilla.fenix.ext.setToolbarColors
+ 
+@@ -21,11 +24,12 @@ open class LibraryPageView(val containerView: ViewGroup) {
+ 
+     protected val activity = context.asActivity()
+ 
+-    protected fun setUiForNormalMode(title: String?) {
++    protected fun setUiForNormalMode(title: String?, navigationIconShape: EmbermineShape? = null) {
+         updateToolbar(
+             title = title,
+             foregroundColor = context.getColorFromAttr(materialR.attr.colorOnSurface),
+             backgroundColor = context.getColorFromAttr(materialR.attr.colorSurface),
++            navigationIconShape = navigationIconShape,
+         )
+     }
+ 
+@@ -37,11 +41,23 @@ open class LibraryPageView(val containerView: ViewGroup) {
+         )
+     }
+ 
+-    private fun updateToolbar(title: String?, foregroundColor: Int, backgroundColor: Int) {
++    private fun updateToolbar(
++        title: String?,
++        foregroundColor: Int,
++        backgroundColor: Int,
++        navigationIconShape: EmbermineShape? = null,
++    ) {
+         activity?.title = title
+         val toolbar = activity?.findViewById<Toolbar>(R.id.navigationToolbar)
+         toolbar?.setToolbarColors(foregroundColor, backgroundColor)
+-        toolbar?.setNavigationIcon(iconsR.drawable.mozac_ic_back_24)
+-        toolbar?.navigationIcon?.setTint(foregroundColor)
++        if (navigationIconShape == null) {
++            toolbar?.setNavigationIcon(iconsR.drawable.mozac_ic_back_24)
++            toolbar?.navigationIcon?.setTint(foregroundColor)
++        } else {
++            toolbar?.navigationIcon =
++                AppCompatResources.getDrawable(context, iconsR.drawable.mozac_ic_back_24)?.let {
++                    context.embermineShapedIcon(it, navigationIconShape)
++                }
++        }
+     }
+ }
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/history/HistoryFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/history/HistoryFragment.kt
+index 2b23811faec65ca07e1b55a5c8a76f1d7ad709a0..e4526cfe7be1c77ae9973593be2248f77f42065f 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/history/HistoryFragment.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/history/HistoryFragment.kt
+@@ -69,6 +69,7 @@ import mozilla.components.browser.state.action.RecentlyClosedAction
+ import mozilla.components.browser.state.state.searchEngines
+ import mozilla.components.browser.state.store.BrowserStore
+ import mozilla.components.browser.storage.sync.PlacesHistoryStorage
++import mozilla.components.compose.base.embermine.EmbermineShape
+ import mozilla.components.compose.base.utils.BackInvokedHandler
+ import mozilla.components.compose.browser.awesomebar.AwesomeBar
+ import mozilla.components.compose.browser.awesomebar.AwesomeBarDefaults
+@@ -106,6 +107,7 @@ import org.mozilla.fenix.components.share.ShareSheetChooserAction
+ import org.mozilla.fenix.components.share.ShareSource
+ import org.mozilla.fenix.databinding.FragmentHistoryBinding
+ import org.mozilla.fenix.e2e.SystemInsetsPaddedFragment
++import org.mozilla.fenix.embermine.setEmbermineShapedIcon
+ import org.mozilla.fenix.ext.components
+ import org.mozilla.fenix.ext.getRootView
+ import org.mozilla.fenix.ext.nav
+@@ -325,6 +327,8 @@ class HistoryFragment :
+                 }
+         } else {
+             inflater.inflate(R.menu.history_menu, menu)
++            menu.findItem(R.id.history_search)?.setEmbermineShapedIcon(requireContext(), EmbermineShape.Cookie12Sided)
++            menu.findItem(R.id.history_delete)?.setEmbermineShapedIcon(requireContext(), EmbermineShape.Cookie12Sided)
+             deleteHistory = menu.findItem(R.id.history_delete)
+             updateDeleteMenuItemView(!historyStore.state.isEmpty)
+         }
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/history/HistoryView.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/history/HistoryView.kt
+index 6d2fe7b231d930d877071664512f5185333e7217..a7dad8b3cd89e3ba6786a095d5bb63728090700a 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/history/HistoryView.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/history/HistoryView.kt
+@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.SimpleItemAnimator
+ import com.google.android.material.R as materialR
+ import kotlinx.coroutines.CoroutineScope
+ import kotlinx.coroutines.launch
++import mozilla.components.compose.base.embermine.EmbermineShape
+ import mozilla.components.concept.sync.SyncEngine
+ import mozilla.components.service.fxa.manager.FxaAccountManager
+ import mozilla.components.service.fxa.sync.SyncReason
+@@ -126,7 +127,7 @@ class HistoryView(
+ 
+         when (val mode = state.mode) {
+             is HistoryFragmentState.Mode.Normal -> {
+-                setUiForNormalMode(context.getString(R.string.library_history))
++                setUiForNormalMode(context.getString(R.string.library_history), EmbermineShape.Cookie12Sided)
+             }
+             is HistoryFragmentState.Mode.Editing -> {
+                 setUiForSelectingMode(context.getString(R.string.history_multi_select_title, mode.selectedItems.size))
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/search/BrowserToolbarSearchMiddleware.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/search/BrowserToolbarSearchMiddleware.kt
 index 1a19f03082a5ba2b908f9eda9d331546b3c83c76..aed53dc1d53c50aa80ff3c158c9bef1360fc1927 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/search/BrowserToolbarSearchMiddleware.kt
@@ -1429,6 +1876,317 @@ index 1a19f03082a5ba2b908f9eda9d331546b3c83c76..aed53dc1d53c50aa80ff3c158c9bef13
                      )
                  )
              }
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/IPProtectionScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/IPProtectionScreen.kt
+index 8997490e76fc4a2d84c3a4f6bc930393cd35a59f..375e52afea6cca60778c8bb0397423e335a5b7b7 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/IPProtectionScreen.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/IPProtectionScreen.kt
+@@ -80,6 +80,7 @@ import mozilla.components.ui.icons.R as iconsR
+ import org.mozilla.fenix.R
+ import org.mozilla.fenix.compose.list.TextListItem
+ import org.mozilla.fenix.compose.settings.SettingsSectionHeader
++import org.mozilla.fenix.embermine.EmbermineBackIcon
+ import org.mozilla.fenix.theme.FirefoxTheme
+ 
+ private val PROMO_ILLUSTRATION_SIZE = 60.dp
+@@ -202,10 +203,7 @@ private fun IPProtectionTopAppBar(
+                 onClick = onNavigateBack,
+                 contentDescription = stringResource(R.string.ip_protection_navigate_back_button_content_description),
+             ) {
+-                Icon(
+-                    painter = painterResource(iconsR.drawable.mozac_ic_back_24),
+-                    contentDescription = null,
+-                )
++                EmbermineBackIcon()
+             }
+         },
+         actions = {
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/SettingsFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/SettingsFragment.kt
+index 27584e309412bfe517482cc13a15f19b9ea60f49..cfee3cc308184b6448deca2fe218727da5c17ca8 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/SettingsFragment.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/SettingsFragment.kt
+@@ -40,6 +40,7 @@ import kotlinx.coroutines.CoroutineScope
+ import kotlinx.coroutines.delay
+ import kotlinx.coroutines.launch
+ import mozilla.components.browser.state.state.selectedOrDefaultSearchEngine
++import mozilla.components.compose.base.embermine.EmbermineShape
+ import mozilla.components.concept.engine.Engine
+ import mozilla.components.concept.sync.AccountObserver
+ import mozilla.components.concept.sync.AuthType
+@@ -269,6 +270,7 @@ class SettingsFragment : PreferenceFragmentCompat(), SystemInsetsPaddedFragment
+                 title = toolbarTitle,
+                 contentDescription = getString(R.string.settings_search_button_content_description),
+                 iconResId = iconsR.drawable.mozac_ic_search_24,
++                iconShape = EmbermineShape.Cookie12Sided,
+                 onClick = {
+                     SettingsSearch.opened.record()
+                     findNavController().navigate(R.id.action_settingsFragment_to_settingsSearchFragment)
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/address/ui/edit/EditAddressTopBar.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/address/ui/edit/EditAddressTopBar.kt
+index 8c003e54b052e16162d96178a38b9180b4fe5d12..006fdde62d370bbde57154ad0bd1828adae66a36 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/address/ui/edit/EditAddressTopBar.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/address/ui/edit/EditAddressTopBar.kt
+@@ -26,6 +26,7 @@ import mozilla.components.compose.base.theme.Theme
+ import mozilla.components.concept.storage.Address
+ import mozilla.components.ui.icons.R as iconsR
+ import org.mozilla.fenix.R
++import org.mozilla.fenix.embermine.EmbermineBackIcon
+ import org.mozilla.fenix.settings.address.store.AddressState
+ import org.mozilla.fenix.settings.address.store.AddressStore
+ import org.mozilla.fenix.settings.address.store.BackTapped
+@@ -53,10 +54,7 @@ internal fun EditAddressTopBar(store: AddressStore) {
+                 onClick = { store.dispatch(BackTapped) },
+                 contentDescription = stringResource(R.string.bookmark_navigate_back_button_content_description),
+             ) {
+-                Icon(
+-                    painter = painterResource(iconsR.drawable.mozac_ic_back_24),
+-                    contentDescription = null,
+-                )
++                EmbermineBackIcon()
+             }
+         },
+         actions = {
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/autofill/ui/AutofillSettingsScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/autofill/ui/AutofillSettingsScreen.kt
+index dced1dc90861fce8228e4dfff7d4d11001ab65a9..afc01ee43a4be1c05ff98f4e845e0b47e8fbc31a 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/autofill/ui/AutofillSettingsScreen.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/autofill/ui/AutofillSettingsScreen.kt
+@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.height
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.material3.ExperimentalMaterial3Api
+ import androidx.compose.material3.HorizontalDivider
+-import androidx.compose.material3.Icon
+ import androidx.compose.material3.Scaffold
+ import androidx.compose.material3.Text
+ import androidx.compose.material3.TopAppBar
+@@ -44,6 +43,7 @@ import org.mozilla.fenix.debugsettings.addresses.FakeCreditCardsAddressesStorage
+ import org.mozilla.fenix.debugsettings.addresses.FakeCreditCardsAddressesStorage.Companion.toAddress
+ import org.mozilla.fenix.debugsettings.addresses.FakeCreditCardsAddressesStorage.Companion.toCreditCard
+ import org.mozilla.fenix.debugsettings.addresses.generateFakeAddressForLangTag
++import org.mozilla.fenix.embermine.EmbermineBackIcon
+ import org.mozilla.fenix.theme.FirefoxTheme
+ 
+ @Composable
+@@ -118,10 +118,7 @@ private fun AutofillSettingsTopBar(store: AutofillSettingsStore) {
+                 contentDescription =
+                     stringResource(R.string.autofill_settings_navigate_back_button_content_description),
+             ) {
+-                Icon(
+-                    painter = painterResource(iconsR.drawable.mozac_ic_back_24),
+-                    contentDescription = null,
+-                )
++                EmbermineBackIcon()
+             }
+         },
+     )
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/creditcards/ui/CreditCardEditorScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/creditcards/ui/CreditCardEditorScreen.kt
+index 2b723d1fa100a98dde3ec2a7bbe063ad205110b2..b2faae9afd995aba8c9d94ada6e5a2c46a15c2f3 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/creditcards/ui/CreditCardEditorScreen.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/creditcards/ui/CreditCardEditorScreen.kt
+@@ -58,6 +58,7 @@ import mozilla.components.compose.base.theme.ThemedValue
+ import mozilla.components.compose.base.theme.ThemedValueProvider
+ import mozilla.components.ui.icons.R as iconsR
+ import org.mozilla.fenix.R
++import org.mozilla.fenix.embermine.EmbermineBackIcon
+ import org.mozilla.fenix.settings.creditcards.ui.CreditCardEditorAction.DeleteDialogAction
+ import org.mozilla.fenix.settings.creditcards.ui.CreditCardEditorAction.FieldChanged
+ import org.mozilla.fenix.theme.FirefoxTheme
+@@ -167,10 +168,7 @@ private fun EditorTopBar(
+                 onClick = onBackClicked,
+                 contentDescription = stringResource(R.string.credit_cards_navigate_back_button_content_description),
+             ) {
+-                Icon(
+-                    painter = painterResource(iconsR.drawable.mozac_ic_back_24),
+-                    contentDescription = null,
+-                )
++                EmbermineBackIcon()
+             }
+         },
+         actions = {
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/ipprotection/IPProtectionLocations.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/ipprotection/IPProtectionLocations.kt
+index 7747ada0222fb99cb33b693fece0782daa2122b3..368bd36f82d6ffe714c1be8ca4a2b6f4c2570567 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/ipprotection/IPProtectionLocations.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/ipprotection/IPProtectionLocations.kt
+@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.rememberScrollState
+ import androidx.compose.foundation.verticalScroll
+ import androidx.compose.material3.ExperimentalMaterial3Api
+-import androidx.compose.material3.Icon
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Scaffold
+ import androidx.compose.material3.SnackbarHost
+@@ -56,6 +55,7 @@ import mozilla.components.ui.icons.R as iconsR
+ import org.mozilla.fenix.R
+ import org.mozilla.fenix.components.menu.compose.MenuGroup
+ import org.mozilla.fenix.components.menu.compose.MenuTextItem
++import org.mozilla.fenix.embermine.EmbermineBackIcon
+ import org.mozilla.fenix.theme.FirefoxTheme
+ 
+ /**
+@@ -260,10 +260,7 @@ private fun IPProtectionLocationsTopAppBar(onNavigateBack: () -> Unit) {
+                 contentDescription =
+                     stringResource(R.string.ip_protection_locations_navigate_back_button_content_description),
+             ) {
+-                Icon(
+-                    painter = painterResource(iconsR.drawable.mozac_ic_back_24),
+-                    contentDescription = null,
+-                )
++                EmbermineBackIcon()
+             }
+         },
+         windowInsets = WindowInsets(),
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/labs/ui/FirefoxLabsScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/labs/ui/FirefoxLabsScreen.kt
+index a3800852bf5469efd394d08ec92efcf5f069c1c9..81e9346ab0be833f900f72309b7431ea1cceb2aa 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/labs/ui/FirefoxLabsScreen.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/labs/ui/FirefoxLabsScreen.kt
+@@ -22,7 +22,6 @@ import androidx.compose.foundation.lazy.LazyColumn
+ import androidx.compose.foundation.lazy.items
+ import androidx.compose.material3.AlertDialog
+ import androidx.compose.material3.ExperimentalMaterial3Api
+-import androidx.compose.material3.Icon
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Scaffold
+ import androidx.compose.material3.Text
+@@ -56,9 +55,9 @@ import mozilla.components.compose.base.theme.ThemedValue
+ import mozilla.components.compose.base.theme.ThemedValueProvider
+ import mozilla.components.compose.base.theme.layout.AcornWindowSize
+ import mozilla.components.compose.base.utils.BackInvokedHandler
+-import mozilla.components.ui.icons.R as iconsR
+ import org.mozilla.fenix.R
+ import org.mozilla.fenix.compose.list.SwitchListItem
++import org.mozilla.fenix.embermine.EmbermineBackIcon
+ import org.mozilla.fenix.settings.labs.LabsItem
+ import org.mozilla.fenix.settings.labs.store.DialogState
+ import org.mozilla.fenix.settings.labs.store.LabsAction
+@@ -270,10 +269,7 @@ private fun FirefoxLabsTopAppBar(onNavigationIconClick: () -> Unit) {
+                 onClick = onNavigationIconClick,
+                 contentDescription = null,
+             ) {
+-                Icon(
+-                    painter = painterResource(iconsR.drawable.mozac_ic_back_24),
+-                    contentDescription = null,
+-                )
++                EmbermineBackIcon()
+             }
+         },
+         windowInsets =
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/logins/ui/AddLoginScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/logins/ui/AddLoginScreen.kt
+index 283b890ebfc2b0b194f565ff93a770a844743006..584543ffba87a55dc672b14735a2f98d9a3706a9 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/logins/ui/AddLoginScreen.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/logins/ui/AddLoginScreen.kt
+@@ -47,6 +47,7 @@ import mozilla.components.support.ktx.util.URLStringUtils.isHttpOrHttps
+ import mozilla.components.support.ktx.util.URLStringUtils.isValidHost
+ import mozilla.components.ui.icons.R as iconsR
+ import org.mozilla.fenix.R
++import org.mozilla.fenix.embermine.EmbermineBackIcon
+ import org.mozilla.fenix.theme.FirefoxTheme
+ 
+ @Composable
+@@ -108,10 +109,7 @@ private fun AddLoginTopBar(store: LoginsStore) {
+                 onClick = { store.dispatch(AddLoginBackClicked) },
+                 contentDescription = stringResource(R.string.add_login_navigate_back_button_content_description),
+             ) {
+-                Icon(
+-                    painter = painterResource(iconsR.drawable.mozac_ic_back_24),
+-                    contentDescription = null,
+-                )
++                EmbermineBackIcon()
+             }
+         },
+         actions = {
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/logins/ui/EditLoginScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/logins/ui/EditLoginScreen.kt
+index 1f6dfccb1e8b05b465661de76bd2ea04093bdc05..d14b24583acec0cfc83a3d6ba8f863f448eb0dc2 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/logins/ui/EditLoginScreen.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/logins/ui/EditLoginScreen.kt
+@@ -46,6 +46,7 @@ import mozilla.components.compose.base.theme.PreviewThemeProvider
+ import mozilla.components.compose.base.theme.Theme
+ import mozilla.components.ui.icons.R as iconsR
+ import org.mozilla.fenix.R
++import org.mozilla.fenix.embermine.EmbermineBackIcon
+ import org.mozilla.fenix.theme.FirefoxTheme
+ 
+ @Composable
+@@ -112,10 +113,7 @@ internal fun EditLoginTopBar(store: LoginsStore, loginItem: LoginItem) {
+                 onClick = { store.dispatch(EditLoginBackClicked) },
+                 contentDescription = stringResource(R.string.edit_login_navigate_back_button_content_description),
+             ) {
+-                Icon(
+-                    painter = painterResource(iconsR.drawable.mozac_ic_back_24),
+-                    contentDescription = null,
+-                )
++                EmbermineBackIcon()
+             }
+         },
+         actions = {
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/logins/ui/LoginDetailsScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/logins/ui/LoginDetailsScreen.kt
+index e879e5178a72c80ce535c985bfee02b0824236d9..5fda9b604eeba445405097780695a9a31235860d 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/logins/ui/LoginDetailsScreen.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/logins/ui/LoginDetailsScreen.kt
+@@ -59,6 +59,7 @@ import mozilla.components.compose.base.theme.PreviewThemeProvider
+ import mozilla.components.compose.base.theme.Theme
+ import mozilla.components.ui.icons.R as iconsR
+ import org.mozilla.fenix.R
++import org.mozilla.fenix.embermine.EmbermineBackIcon
+ import org.mozilla.fenix.ext.simplifiedUrl
+ import org.mozilla.fenix.theme.FirefoxTheme
+ 
+@@ -141,10 +142,7 @@ private fun LoginDetailTopBar(
+                 onClick = onBackClick,
+                 contentDescription = stringResource(R.string.login_details_navigate_back_button_content_description),
+             ) {
+-                Icon(
+-                    painter = painterResource(iconsR.drawable.mozac_ic_back_24),
+-                    contentDescription = null,
+-                )
++                EmbermineBackIcon()
+             }
+         },
+         actions = {
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/logins/ui/SavedLoginsScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/logins/ui/SavedLoginsScreen.kt
+index b0b071595e65618fa708d19af6a8b74ee6dad453..f29914b40421b2a85618e1dccc052e18cece7b87 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/logins/ui/SavedLoginsScreen.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/logins/ui/SavedLoginsScreen.kt
+@@ -67,6 +67,7 @@ import mozilla.components.ui.icons.R as iconsR
+ import org.mozilla.fenix.R
+ import org.mozilla.fenix.compose.list.IconListItem
+ import org.mozilla.fenix.compose.list.SelectableFaviconListItem
++import org.mozilla.fenix.embermine.EmbermineBackIcon
+ import org.mozilla.fenix.settings.biometric.ui.SecureScreen
+ import org.mozilla.fenix.settings.logins.ui.LoginsSortOrder.Alphabetical.isGuidToDelete
+ import org.mozilla.fenix.theme.FirefoxTheme
+@@ -287,10 +288,7 @@ private fun LoginsListTopBar(
+                 },
+                 contentDescription = stringResource(R.string.logins_navigate_back_button_content_description),
+             ) {
+-                Icon(
+-                    painter = painterResource(iconsR.drawable.mozac_ic_back_24),
+-                    contentDescription = null,
+-                )
++                EmbermineBackIcon()
+             }
+         },
+         actions = {
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/settingssearch/SettingsSearchBar.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/settingssearch/SettingsSearchBar.kt
+index f21d6abb3c74daf2a4ab3e8ab3a9de262c63ecc3..a7e5498e2e875a3b33e35375ac8eb17995b4c2f9 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/settingssearch/SettingsSearchBar.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/settingssearch/SettingsSearchBar.kt
+@@ -35,6 +35,7 @@ import mozilla.components.compose.base.button.IconButton
+ import mozilla.components.lib.state.ext.observeAsComposableState
+ import mozilla.components.ui.icons.R as iconsR
+ import org.mozilla.fenix.R
++import org.mozilla.fenix.embermine.EmbermineBackIcon
+ import org.mozilla.fenix.theme.FirefoxTheme
+ 
+ /**
+@@ -152,10 +153,7 @@ private fun BackButton(onClick: () -> Unit) {
+         onClick = onClick,
+         contentDescription = stringResource(R.string.content_description_settings_search_navigate_back),
+     ) {
+-        Icon(
+-            painter = painterResource(iconsR.drawable.mozac_ic_back_24),
+-            contentDescription = null,
+-        )
++        EmbermineBackIcon()
+     }
+ }
+ 
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/trustpanel/ui/ProtectionPanel.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/trustpanel/ui/ProtectionPanel.kt
 index 0db33ca5971ceb1b7058c0eed11006d8532dadc4..38a6ab30c983ddf6ec78432fae184f0c462e4f46 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/trustpanel/ui/ProtectionPanel.kt

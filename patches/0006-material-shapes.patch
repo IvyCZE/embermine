@@ -21,7 +21,7 @@ and the search bar mic, Lens and QR buttons take Sunny.
 Co-authored-by: factory-droid[bot] <138933559+factory-droid[bot]@users.noreply.github.com>
 
 diff --git a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/RadioCheckmark.kt b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/RadioCheckmark.kt
-index 1ecb019424bd0a9515450215e568587447c5cf02..1b3f1837615a121432fc84af007dd40847ce586e 100644
+index 1ecb019424bd0a9515450215e568587447c5cf02..10440fca6059936dd7c4fcf54e727de8c2d17c6d 100644
 --- a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/RadioCheckmark.kt
 +++ b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/RadioCheckmark.kt
 @@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
@@ -52,6 +52,25 @@ index 1ecb019424bd0a9515450215e568587447c5cf02..1b3f1837615a121432fc84af007dd408
          } else {
              modifier.border(
                  width = borderWidthDp,
+@@ -91,6 +94,18 @@ data class RadioCheckmarkColors(
+                 checkmarkColor = checkmarkColor,
+                 borderColor = borderColor,
+             )
++
++        /** The colors for a [RadioCheckmark] whose selected state is drawn with a shape. */
++        @ReadOnlyComposable
++        @Composable
++        fun shapedDefault(
++            borderColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
++        ) =
++            default(
++                backgroundColor = MaterialTheme.colorScheme.primaryContainer,
++                checkmarkColor = MaterialTheme.colorScheme.onPrimaryContainer,
++                borderColor = borderColor,
++            )
+     }
+ }
+ 
 diff --git a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/button/FloatingActionButton.kt b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/button/FloatingActionButton.kt
 index 4ca27d732a6957293d3203fe0797125991d12f75..f39ff937e701bb1d2df190eb303f7552ead5abaa 100644
 --- a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/button/FloatingActionButton.kt
@@ -345,7 +364,7 @@ index 0000000000000000000000000000000000000000..6407eb95761ff9e2bfba97f6e9a23cce
 +    }
 +}
 diff --git a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/menu/DropdownMenu.kt b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/menu/DropdownMenu.kt
-index ace370d65f16c4448e59d3e4ef867d6d9040e959..8c445065a3c910555dcdc8613b95be30aceefee6 100644
+index ace370d65f16c4448e59d3e4ef867d6d9040e959..316f65f43c564b051770933129766ab30e2bf082 100644
 --- a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/menu/DropdownMenu.kt
 +++ b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/menu/DropdownMenu.kt
 @@ -29,6 +29,7 @@ import androidx.compose.material3.ExposedDropdownMenu
@@ -406,7 +425,7 @@ index ace370d65f16c4448e59d3e4ef867d6d9040e959..8c445065a3c910555dcdc8613b95be30
                          )
  
                      is MenuItem.CheckableItem ->
-@@ -310,11 +317,21 @@ private fun CheckableMenuItemContent(item: MenuItem.CheckableItem) {
+@@ -310,11 +317,22 @@ private fun CheckableMenuItemContent(item: MenuItem.CheckableItem) {
  }
  
  @Composable
@@ -419,8 +438,9 @@ index ace370d65f16c4448e59d3e4ef867d6d9040e959..8c445065a3c910555dcdc8613b95be30
 +    item: MenuItem.IconItem,
 +    iconShape: EmbermineShape?,
 +) {
++    val resolvedShape = item.iconShape ?: iconShape
 +    ShapedIconBackground(
-+        shape = iconShape,
++        shape = resolvedShape,
 +        defaultContentColor = LocalContentColor.current,
 +        enabled = item.enabled,
 +    ) { contentColor ->
@@ -433,6 +453,34 @@ index ace370d65f16c4448e59d3e4ef867d6d9040e959..8c445065a3c910555dcdc8613b95be30
  
      MenuItemText(
          text = item.text,
+diff --git a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/menu/MenuItem.kt b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/menu/MenuItem.kt
+index 83ff1f36a4e8511c566bf34bade24a2e0d04db79..9b79b6bad73069f9eed20e64b682a5a91ef06227 100644
+--- a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/menu/MenuItem.kt
++++ b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/menu/MenuItem.kt
+@@ -7,6 +7,7 @@ package mozilla.components.compose.base.menu
+ import androidx.annotation.DrawableRes
+ import androidx.compose.material3.DropdownMenuItem
+ import androidx.compose.runtime.Composable
++import mozilla.components.compose.base.embermine.EmbermineShape
+ import mozilla.components.compose.base.text.Text
+ 
+ /**
+@@ -111,6 +112,7 @@ sealed interface MenuItem {
+      * @property supportingText The supporting text to be displayed below [text].
+      * @property enabled Sets the enabled status for the item. By default, it is always set to true.
+      * @property onClick The action to be performed when the menu item is clicked.
++     * @property iconShape The [EmbermineShape] behind the icon, or `null` to keep the icon unshaped.
+      */
+     data class IconItem(
+         override val text: Text,
+@@ -120,6 +122,7 @@ sealed interface MenuItem {
+         override val supportingText: Text? = null,
+         override val enabled: Boolean = true,
+         override val onClick: () -> Unit,
++        val iconShape: EmbermineShape? = null,
+     ) :
+         FixedItem(
+             text = text,
 diff --git a/mobile/android/android-components/components/compose/base/src/test/java/mozilla/components/compose/base/embermine/EmbermineShapeTest.kt b/mobile/android/android-components/components/compose/base/src/test/java/mozilla/components/compose/base/embermine/EmbermineShapeTest.kt
 new file mode 100644
 index 0000000000000000000000000000000000000000..d9e51b078ed1d78e5a67bfcd911ad2d21988dce2
@@ -1395,10 +1443,10 @@ index 0000000000000000000000000000000000000000..21fecd5aa861072b33de6a120bf83546
 +}
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineViewShapes.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineViewShapes.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..045d2aebc5dc170bdc6d5eb7f9c3d6cd13a94a84
+index 0000000000000000000000000000000000000000..8bb711ee0d520a04113742bb355abe0a6fd3530b
 --- /dev/null
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineViewShapes.kt
-@@ -0,0 +1,53 @@
+@@ -0,0 +1,143 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -1410,8 +1458,12 @@ index 0000000000000000000000000000000000000000..045d2aebc5dc170bdc6d5eb7f9c3d6cd
 +import android.graphics.drawable.Drawable
 +import android.util.TypedValue
 +import android.view.MenuItem
++import android.view.ViewGroup
++import android.widget.ImageView
++import androidx.appcompat.widget.AppCompatImageButton
 +import androidx.fragment.app.Fragment
 +import androidx.navigation.fragment.findNavController
++import androidx.preference.PreferenceFragmentCompat
 +import com.google.android.material.R as materialR
 +import mozilla.components.compose.base.embermine.EmbermineShape
 +import mozilla.components.compose.base.embermine.EmbermineShapedIconDrawable
@@ -1420,38 +1472,124 @@ index 0000000000000000000000000000000000000000..045d2aebc5dc170bdc6d5eb7f9c3d6cd
 +import kotlin.math.roundToInt
 +
 +private const val SHAPE_CONTAINER_SIZE_DP = 40f
++private const val SHAPE_ACTION_SIZE_DP = 48f
++
++private val settingsDestinationIds =
++    setOf(
++        R.id.search_engine_graph,
++        R.id.aboutFragment,
++        R.id.aboutLibrariesFragment,
++        R.id.accountSettingsFragment,
++        R.id.turnOnSyncFragment,
++        R.id.pairFragment,
++        R.id.accountProblemFragment,
++        R.id.deleteBrowsingDataFragment,
++        R.id.deleteBrowsingDataOnQuitFragment,
++        R.id.localeSettingsFragment,
++        R.id.dohSettingsFragment,
++        R.id.emailMasksSettingsFragment,
++        R.id.aiControlsFragment,
++        R.id.pageSummariesSettingsFragment,
++        R.id.searchShortcutsFragment,
++        R.id.saveSearchEngineFragment,
++        R.id.autofillSettingFragment,
++        R.id.creditCardsManagementFragment,
++        R.id.addressManagementFragment,
++        R.id.savedLoginsAuthFragment,
++        R.id.saveLoginSettingFragment,
++        R.id.sitePermissionsExceptionsFragment,
++        R.id.SitePermissionsManagePhoneFeature,
++        R.id.sitePermissionsManageExceptionsPhoneFeatureFragment,
++        R.id.sitePermissionsDetailsExceptionsFragment,
++        R.id.loginExceptionsFragment,
++        R.id.trackingProtectionExceptionsFragment,
++        R.id.translationSettingsFragment,
++        R.id.automaticTranslationPreferenceFragment,
++        R.id.automaticTranslationOptionsPreferenceFragment,
++        R.id.neverTranslateSitePreferenceFragment,
++        R.id.downloadLanguagesPreferenceFragment,
++        R.id.nimbusExperimentsFragment,
++        R.id.nimbusBranchesFragment,
++        R.id.openDownloadsSettingsFragment,
++        R.id.tabsSettingsFragment,
++        R.id.searchEngineFragment,
++        R.id.trackingProtectionFragment,
++    )
 +
 +internal fun Context.embermineShapedIcon(icon: Drawable, shape: EmbermineShape): Drawable {
-+    val containerSizePx =
-+        TypedValue.applyDimension(
-+            TypedValue.COMPLEX_UNIT_DIP,
-+            SHAPE_CONTAINER_SIZE_DP,
-+            resources.displayMetrics,
-+        ).roundToInt()
 +    val iconColor = getColorFromAttr(materialR.attr.colorOnPrimaryContainer)
 +    return EmbermineShapedIconDrawable(
 +        shape = shape,
 +        containerColor = getColorFromAttr(materialR.attr.colorPrimaryContainer),
 +        icon = icon.mutate().apply { setTint(iconColor) },
-+        containerSizePx = containerSizePx,
++        containerSizePx = dpToPx(SHAPE_CONTAINER_SIZE_DP),
 +    )
 +}
 +
-+internal fun MenuItem.setEmbermineShapedIcon(context: Context, shape: EmbermineShape) {
++/**
++ * Shows the shaped icon as a 48 dp action view. Action menu items clamp plain icons to 32 dp, so the 40 dp container
++ * is drawn inside the action view instead. [onClick] runs when the action view is tapped.
++ */
++internal fun MenuItem.setEmbermineShapedIcon(
++    context: Context,
++    shape: EmbermineShape,
++    onClick: (() -> Unit)? = null,
++) {
 +    val currentIcon = icon ?: return
-+    setIcon(context.embermineShapedIcon(currentIcon, shape))
++    val shapedIcon = context.embermineShapedIcon(currentIcon, shape)
++    val label = title?.takeIf { it.isNotEmpty() } ?: contentDescription
++    setIcon(shapedIcon)
 +    iconTintList = ColorStateList.valueOf(context.getColorFromAttr(materialR.attr.colorOnPrimaryContainer))
++    actionView =
++        AppCompatImageButton(context).apply {
++            layoutParams =
++                ViewGroup.LayoutParams(
++                    context.dpToPx(SHAPE_ACTION_SIZE_DP),
++                    context.dpToPx(SHAPE_ACTION_SIZE_DP),
++                )
++            scaleType = ImageView.ScaleType.CENTER
++            setBackgroundResource(context.borderlessSelectableBackground())
++            contentDescription = label
++            setImageDrawable(shapedIcon)
++            setOnClickListener { onClick?.invoke() }
++        }
 +}
 +
 +/**
 + * The shape of the back arrow for a Settings screen, or `null` for every other screen. Release builds obfuscate
-+ * fragment class names, so the Settings section is detected through the back stack.
++ * fragment class names, so Settings screens are detected through the back stack, the current navigation destination
++ * and its graph, or the [PreferenceFragmentCompat] base class.
 + */
 +internal fun Fragment.settingsBackNavigationShape(): EmbermineShape? =
-+    EmbermineShape.Cookie12Sided.takeIf { isInSettingsBackStack() }
++    EmbermineShape.Cookie12Sided.takeIf { isInSettingsBackStack() || isInSettingsSection() }
++
++internal fun isSettingsScreen(
++    isPreferenceFragment: Boolean,
++    destinationId: Int?,
++    parentGraphId: Int?,
++): Boolean =
++    isPreferenceFragment || listOfNotNull(destinationId, parentGraphId).any { it in settingsDestinationIds }
 +
 +private fun Fragment.isInSettingsBackStack(): Boolean =
 +    runCatching { findNavController().getBackStackEntry(R.id.settingsFragment) }.isSuccess
++
++private fun Fragment.isInSettingsSection(): Boolean {
++    val destination = runCatching { findNavController().currentDestination }.getOrNull()
++    return isSettingsScreen(
++        isPreferenceFragment = this is PreferenceFragmentCompat,
++        destinationId = destination?.id,
++        parentGraphId = destination?.parent?.id,
++    )
++}
++
++private fun Context.dpToPx(dp: Float): Int =
++    TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, resources.displayMetrics).roundToInt()
++
++private fun Context.borderlessSelectableBackground(): Int {
++    val typedValue = TypedValue()
++    theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, typedValue, true)
++    return typedValue.resourceId
++}
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ext/Activity.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ext/Activity.kt
 index 0e39c9cdc4d87cb7b7929174507e9e4a363e2c39..443d16a28805656d0b6b5419d36235f102605288 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ext/Activity.kt
@@ -1495,7 +1633,7 @@ index 0e39c9cdc4d87cb7b7929174507e9e4a363e2c39..443d16a28805656d0b6b5419d36235f1
          it.setHomeAsUpIndicator(navigationIcon)
          it.setHomeActionContentDescription(R.string.action_bar_up_description)
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ext/Fragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ext/Fragment.kt
-index 0b85c6501b7577830753f4d0e36a03723f240cde..6768fff6cf66ac23113b04e820fe7cb92bec6b57 100644
+index 0b85c6501b7577830753f4d0e36a03723f240cde..4becba55bbec6995190f276fa845db088a0ea654 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ext/Fragment.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ext/Fragment.kt
 @@ -27,6 +27,7 @@ import androidx.navigation.NavDirections
@@ -1545,14 +1683,14 @@ index 0b85c6501b7577830753f4d0e36a03723f240cde..6768fff6cf66ac23113b04e820fe7cb9
      (activity as? NavHostActivity)?.getSupportActionBarAndInflateIfNecessary()?.show()
  
      val menuHost = activity as MenuHost
-@@ -107,6 +112,7 @@ fun Fragment.showToolbarWithIconButton(
-                 item.setIcon(iconResId)
+@@ -108,6 +113,7 @@ fun Fragment.showToolbarWithIconButton(
                  val colorResId = ThemeManager.resolveAttribute(materialR.attr.colorOnSurface, activity)
                  item.iconTintList = ColorStateList.valueOf(activity.getColor(colorResId))
-+                iconShape?.let { item.setEmbermineShapedIcon(activity, it) }
                  item.contentDescription = contentDescription
++                iconShape?.let { item.setEmbermineShapedIcon(activity, it, onClick) }
                  item.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
                  item.setOnMenuItemClickListener {
+                     onClick()
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/BrowserToolbarMiddleware.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/BrowserToolbarMiddleware.kt
 index 9c8c89423b273f3160dbaeaa0aa301b3559f129f..efb86d8b3775064e91a7f0015faf7dafda43f914 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/BrowserToolbarMiddleware.kt
@@ -1582,7 +1720,7 @@ index 9c8c89423b273f3160dbaeaa0aa301b3559f129f..efb86d8b3775064e91a7f0015faf7daf
              }
  
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/TopSites.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/TopSites.kt
-index 37f487b9077e86df557e453c44149f02e59600b9..27dec16e0bf3439b8bddc76a4ac0dab0d523cc4d 100644
+index 37f487b9077e86df557e453c44149f02e59600b9..cefbb7ca63a0a89bdc9900dc4a934f9f58fd5cf9 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/TopSites.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/TopSites.kt
 @@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.padding
@@ -1601,6 +1739,24 @@ index 37f487b9077e86df557e453c44149f02e59600b9..27dec16e0bf3439b8bddc76a4ac0dab0
  import mozilla.components.compose.base.modifier.rightClickable
  import mozilla.components.compose.base.theme.PreviewThemeProvider
  import mozilla.components.compose.base.theme.Theme
+@@ -273,7 +273,7 @@ data class TopSiteColors(
+         fun colors(
+             titleTextColor: Color = MaterialTheme.colorScheme.onSurface,
+             sponsoredTextColor: Color = MaterialTheme.colorScheme.onSurface,
+-            faviconCardBackgroundColor: Color = MaterialTheme.colorScheme.surfaceBright,
++            faviconCardBackgroundColor: Color = MaterialTheme.colorScheme.primaryContainer,
+         ) =
+             TopSiteColors(
+                 titleTextColor = titleTextColor,
+@@ -296,7 +296,7 @@ data class TopSiteColors(
+             return TopSiteColors(
+                 titleTextColor = titleTextColor,
+                 sponsoredTextColor = sponsoredTextColor,
+-                faviconCardBackgroundColor = MaterialTheme.colorScheme.surfaceBright,
++                faviconCardBackgroundColor = MaterialTheme.colorScheme.primaryContainer,
+             )
+         }
+     }
 @@ -491,7 +491,7 @@ private fun TopSiteFaviconCard(
                      testTag = TOP_SITE_CARD_FAVICON
                  }
@@ -1611,10 +1767,10 @@ index 37f487b9077e86df557e453c44149f02e59600b9..27dec16e0bf3439b8bddc76a4ac0dab0
          elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
      ) {
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/AddShortcutItem.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/AddShortcutItem.kt
-index d30c78a2a9dd033624f1c5dee847cf9bf6906848..6d509d14d12abed762b0c50d9401ee6b6876a1f4 100644
+index d30c78a2a9dd033624f1c5dee847cf9bf6906848..556e8f18688830e8b005ea7213336a9d7fd7d832 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/AddShortcutItem.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/AddShortcutItem.kt
-@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxSize
+@@ -15,10 +15,10 @@ import androidx.compose.foundation.layout.fillMaxSize
  import androidx.compose.foundation.layout.height
  import androidx.compose.foundation.layout.size
  import androidx.compose.foundation.layout.width
@@ -1622,7 +1778,11 @@ index d30c78a2a9dd033624f1c5dee847cf9bf6906848..6d509d14d12abed762b0c50d9401ee6b
  import androidx.compose.material3.Card
  import androidx.compose.material3.CardDefaults
  import androidx.compose.material3.Icon
-@@ -36,6 +35,7 @@ import androidx.compose.ui.text.style.TextAlign
++import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Surface
+ import androidx.compose.material3.Text
+ import androidx.compose.runtime.Composable
+@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
  import androidx.compose.ui.text.style.TextOverflow
  import androidx.compose.ui.tooling.preview.PreviewLightDark
  import androidx.compose.ui.unit.dp
@@ -1630,7 +1790,7 @@ index d30c78a2a9dd033624f1c5dee847cf9bf6906848..6d509d14d12abed762b0c50d9401ee6b
  import mozilla.components.ui.icons.R as iconsR
  import org.mozilla.fenix.R
  import org.mozilla.fenix.home.topsites.TopSiteColors
-@@ -71,7 +71,7 @@ internal fun AddShortcutItem(
+@@ -71,7 +72,7 @@ internal fun AddShortcutItem(
  
              Card(
                  modifier = Modifier.size(itemLayout.faviconCardSize),
@@ -1639,6 +1799,14 @@ index d30c78a2a9dd033624f1c5dee847cf9bf6906848..6d509d14d12abed762b0c50d9401ee6b
                  colors = CardDefaults.cardColors(containerColor = topSiteColors.faviconCardBackgroundColor),
                  elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
              ) {
+@@ -82,6 +83,7 @@ internal fun AddShortcutItem(
+                     Icon(
+                         painter = painterResource(iconsR.drawable.mozac_ic_plus_24),
+                         contentDescription = null,
++                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                     )
+                 }
+             }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/ui/HomepageHeader.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/ui/HomepageHeader.kt
 index a83e54d4bc637c9d522dcf0eb1191e3b6b08476c..04be429f9c05cb02690de76defca52886cfb62d4 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/ui/HomepageHeader.kt
@@ -1791,7 +1959,7 @@ index e68dd4d1bb01e82b0d18ddcbfac4573c388f9f77..6a32ad93e0a2faff6c55c545a92faf5a
      }
  }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/history/HistoryFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/history/HistoryFragment.kt
-index 2b23811faec65ca07e1b55a5c8a76f1d7ad709a0..e4526cfe7be1c77ae9973593be2248f77f42065f 100644
+index 2b23811faec65ca07e1b55a5c8a76f1d7ad709a0..8af16162e94b1a4833581ac28412c6da10a253af 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/history/HistoryFragment.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/history/HistoryFragment.kt
 @@ -69,6 +69,7 @@ import mozilla.components.browser.state.action.RecentlyClosedAction
@@ -1810,15 +1978,39 @@ index 2b23811faec65ca07e1b55a5c8a76f1d7ad709a0..e4526cfe7be1c77ae9973593be2248f7
  import org.mozilla.fenix.ext.components
  import org.mozilla.fenix.ext.getRootView
  import org.mozilla.fenix.ext.nav
-@@ -325,6 +327,8 @@ class HistoryFragment :
+@@ -299,6 +301,8 @@ class HistoryFragment :
+         val closedTabs = requireContext().components.core.store.state.closedTabs.size
+         if (!isEnabled && closedTabs == 0) {
+             deleteHistory?.isEnabled = false
++            deleteHistory?.actionView?.isEnabled = false
++            deleteHistory?.actionView?.alpha = DISABLED_ACTION_ALPHA
+             deleteHistory?.icon?.setTint(requireContext().getColorFromAttr(materialR.attr.colorOnSurfaceVariant))
+         }
+     }
+@@ -325,6 +329,16 @@ class HistoryFragment :
                  }
          } else {
              inflater.inflate(R.menu.history_menu, menu)
-+            menu.findItem(R.id.history_search)?.setEmbermineShapedIcon(requireContext(), EmbermineShape.Cookie12Sided)
-+            menu.findItem(R.id.history_delete)?.setEmbermineShapedIcon(requireContext(), EmbermineShape.Cookie12Sided)
++            menu.findItem(R.id.history_search)?.let { item ->
++                item.setEmbermineShapedIcon(requireContext(), EmbermineShape.Cookie12Sided) {
++                    onMenuItemSelected(item)
++                }
++            }
++            menu.findItem(R.id.history_delete)?.let { item ->
++                item.setEmbermineShapedIcon(requireContext(), EmbermineShape.Cookie12Sided) {
++                    onMenuItemSelected(item)
++                }
++            }
              deleteHistory = menu.findItem(R.id.history_delete)
              updateDeleteMenuItemView(!historyStore.state.isEmpty)
          }
+@@ -830,5 +844,6 @@ class HistoryFragment :
+ 
+     companion object {
+         private const val PAGE_SIZE = 25
++        private const val DISABLED_ACTION_ALPHA = 0.38f
+     }
+ }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/history/HistoryView.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/history/HistoryView.kt
 index 6d2fe7b231d930d877071664512f5185333e7217..a7dad8b3cd89e3ba6786a095d5bb63728090700a 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/history/HistoryView.kt
@@ -2267,7 +2459,7 @@ index 386ec9645b84be55de88ef203f01d8f82f30d6d0..3a8cedc964a11d28f15b41e1aee56f83
  }
  
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/banner/TabsTrayBanner.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/banner/TabsTrayBanner.kt
-index fb98a6991ec2889518d63649f8162ad05077a881..1edc9c934bbe969b67da6e4e895ad7429860f807 100644
+index fb98a6991ec2889518d63649f8162ad05077a881..9e01c7a8062bc79467facf477c9636c31baab030 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/banner/TabsTrayBanner.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/banner/TabsTrayBanner.kt
 @@ -47,6 +47,8 @@ import androidx.compose.ui.unit.dp
@@ -2454,6 +2646,14 @@ index fb98a6991ec2889518d63649f8162ad05077a881..1edc9c934bbe969b67da6e4e895ad742
              }
          },
          expandedHeight = RowHeight,
+@@ -556,6 +616,7 @@ private fun generateMultiSelectBannerMenuItems(
+                 text = Text.Resource(R.string.tab_manager_multiselect_menu_item_add_to_tab_group),
+                 drawableRes = iconsR.drawable.mozac_ic_tab_group_24,
+                 onClick = onAddToTabGroup,
++                iconShape = EmbermineShape.Cookie12Sided,
+             )
+         )
+     }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/fab/TabManagerFloatingToolbar.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/fab/TabManagerFloatingToolbar.kt
 index 5805b06685b80b4e5fb1a686a48cd754b2312c0b..38dc9a0112993a7e0be1490e72ff2fa9aec8fa08 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/fab/TabManagerFloatingToolbar.kt
@@ -2483,7 +2683,7 @@ index 5805b06685b80b4e5fb1a686a48cd754b2312c0b..38dc9a0112993a7e0be1490e72ff2fa9
      )
  }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/tabitems/SharedTabItemUi.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/tabitems/SharedTabItemUi.kt
-index 293936da4b20efa79fdafd4745b616b02fda7505..9e886b1f2c9cf2398feab6aeb135383b34743881 100644
+index 293936da4b20efa79fdafd4745b616b02fda7505..b2e69a37ba8178e24bbf222abf83d90d8f6605b2 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/tabitems/SharedTabItemUi.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/tabitems/SharedTabItemUi.kt
 @@ -51,6 +51,8 @@ import androidx.compose.ui.unit.dp
@@ -2495,10 +2695,12 @@ index 293936da4b20efa79fdafd4745b616b02fda7505..9e886b1f2c9cf2398feab6aeb135383b
  import mozilla.components.compose.base.menu.DropdownMenu
  import mozilla.components.compose.base.menu.MenuItem
  import mozilla.components.compose.base.modifier.thenConditional
-@@ -191,6 +193,7 @@ fun MultiSelectTabButton(
+@@ -190,7 +192,8 @@ fun MultiSelectTabButton(
+     ) {
          RadioCheckmark(
              isSelected = isSelected,
-             colors = RadioCheckmarkColors.default(borderColor = uncheckedBorderColor),
+-            colors = RadioCheckmarkColors.default(borderColor = uncheckedBorderColor),
++            colors = RadioCheckmarkColors.shapedDefault(borderColor = uncheckedBorderColor),
 +            selectedShape = EmbermineShape.Cookie12Sided.toShape(),
          )
      }
@@ -2529,49 +2731,55 @@ index 293936da4b20efa79fdafd4745b616b02fda7505..9e886b1f2c9cf2398feab6aeb135383b
              menuItems =
                  generateTabGroupMenuItems(
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/tabitems/TabListTabItem.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/tabitems/TabListTabItem.kt
-index 92e53c93511a439d83b08f8a0200ff54feb3fb00..385649e932f6f9308d70fe556c63c061cb06eb21 100644
+index 92e53c93511a439d83b08f8a0200ff54feb3fb00..15048c4cbc1ff584dca42152b50b4106d9b70876 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/tabitems/TabListTabItem.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/tabitems/TabListTabItem.kt
-@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.Dp
+@@ -36,6 +36,8 @@ import androidx.compose.ui.unit.Dp
  import androidx.compose.ui.unit.dp
  import mozilla.components.browser.tabstray.R as tabstrayR
  import mozilla.components.compose.base.RadioCheckmark
++import mozilla.components.compose.base.RadioCheckmarkColors
 +import mozilla.components.compose.base.embermine.EmbermineShape
  import mozilla.components.support.base.utils.MAX_URI_LENGTH
  import org.mozilla.fenix.R
  import org.mozilla.fenix.compose.SwipeToDismissBackground
-@@ -199,6 +200,7 @@ private fun TabListIcon(
+@@ -199,6 +201,8 @@ private fun TabListIcon(
          RadioCheckmark(
              isSelected = selectionState.isSelected,
              modifier = Modifier.padding(end = FirefoxTheme.layout.space.dynamic200),
++            colors = RadioCheckmarkColors.shapedDefault(),
 +            selectedShape = EmbermineShape.Cookie12Sided.toShape(),
          )
      }
  }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/tabpage/TabLayout.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/tabpage/TabLayout.kt
-index 4225e89d3ef507f521de61b9e167f848b7a00fa7..7681366105edd7e12b81d260e4f0d59b85a7a614 100644
+index 4225e89d3ef507f521de61b9e167f848b7a00fa7..0cd9d4dd6844f08e8b3d167de5f26e03c03c680a 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/tabpage/TabLayout.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/tabpage/TabLayout.kt
-@@ -85,6 +85,7 @@ import kotlinx.coroutines.flow.filterNotNull
+@@ -84,7 +84,9 @@ import kotlin.math.max
+ import kotlinx.coroutines.flow.filterNotNull
  import kotlinx.coroutines.flow.first
  import mozilla.components.compose.base.RadioCheckmark
++import mozilla.components.compose.base.RadioCheckmarkColors
  import mozilla.components.compose.base.annotation.FlexibleWindowPreview
 +import mozilla.components.compose.base.embermine.EmbermineShape
  import mozilla.components.compose.base.modifier.thenConditional
  import mozilla.components.compose.base.theme.Theme
  import mozilla.components.compose.base.theme.ThemedValue
-@@ -1176,6 +1177,7 @@ private fun TabListItemContent(
+@@ -1176,6 +1178,8 @@ private fun TabListItemContent(
                          RadioCheckmark(
                              isSelected = selectionState.isSelected,
                              modifier = Modifier.padding(end = FirefoxTheme.layout.space.dynamic200),
++                            colors = RadioCheckmarkColors.shapedDefault(),
 +                            selectedShape = EmbermineShape.Cookie12Sided.toShape(),
                          )
                      } else {
                          TabGroupMenuButton(
-@@ -1696,6 +1698,7 @@ private fun ReorderableTabList(
+@@ -1696,6 +1700,8 @@ private fun ReorderableTabList(
                                          RadioCheckmark(
                                              isSelected = selectionState.isSelected,
                                              modifier = Modifier.padding(end = FirefoxTheme.layout.space.dynamic200),
++                                            colors = RadioCheckmarkColors.shapedDefault(),
 +                                            selectedShape = EmbermineShape.Cookie12Sided.toShape(),
                                          )
                                      } else {
@@ -2676,6 +2884,116 @@ index 0913d08f5422040486757dce8c44b17343987edc..38772948da04bf0a4550f0e1065d73d0
          )
  
      private fun expectedBookmarkButton(source: Source = Source.AddressBar.BrowserEnd) =
+diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineViewShapesTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineViewShapesTest.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..335099aa1e654a88d35ecb7ce938b2cab32673e7
+--- /dev/null
++++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineViewShapesTest.kt
+@@ -0,0 +1,104 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine
++
++import org.junit.Assert.assertFalse
++import org.junit.Assert.assertTrue
++import org.junit.Test
++import org.mozilla.fenix.R
++
++class EmbermineViewShapesTest {
++
++    private val settingsDestinationIds =
++        listOf(
++            R.id.search_engine_graph,
++            R.id.aboutFragment,
++            R.id.aboutLibrariesFragment,
++            R.id.accountSettingsFragment,
++            R.id.turnOnSyncFragment,
++            R.id.pairFragment,
++            R.id.accountProblemFragment,
++            R.id.deleteBrowsingDataFragment,
++            R.id.deleteBrowsingDataOnQuitFragment,
++            R.id.localeSettingsFragment,
++            R.id.dohSettingsFragment,
++            R.id.emailMasksSettingsFragment,
++            R.id.aiControlsFragment,
++            R.id.pageSummariesSettingsFragment,
++            R.id.searchShortcutsFragment,
++            R.id.saveSearchEngineFragment,
++            R.id.autofillSettingFragment,
++            R.id.creditCardsManagementFragment,
++            R.id.addressManagementFragment,
++            R.id.savedLoginsAuthFragment,
++            R.id.saveLoginSettingFragment,
++            R.id.sitePermissionsExceptionsFragment,
++            R.id.SitePermissionsManagePhoneFeature,
++            R.id.sitePermissionsManageExceptionsPhoneFeatureFragment,
++            R.id.sitePermissionsDetailsExceptionsFragment,
++            R.id.loginExceptionsFragment,
++            R.id.trackingProtectionExceptionsFragment,
++            R.id.translationSettingsFragment,
++            R.id.automaticTranslationPreferenceFragment,
++            R.id.automaticTranslationOptionsPreferenceFragment,
++            R.id.neverTranslateSitePreferenceFragment,
++            R.id.downloadLanguagesPreferenceFragment,
++            R.id.nimbusExperimentsFragment,
++            R.id.nimbusBranchesFragment,
++            R.id.openDownloadsSettingsFragment,
++            R.id.tabsSettingsFragment,
++            R.id.searchEngineFragment,
++            R.id.trackingProtectionFragment,
++        )
++
++    @Test
++    fun `every Settings destination is a Settings screen without a preference fragment`() {
++        settingsDestinationIds.forEach { id ->
++            assertTrue(isSettingsScreen(isPreferenceFragment = false, destinationId = id, parentGraphId = null))
++        }
++    }
++
++    @Test
++    fun `a destination inside a Settings graph is a Settings screen`() {
++        assertTrue(
++            isSettingsScreen(
++                isPreferenceFragment = false,
++                destinationId = R.id.searchEngineFragment,
++                parentGraphId = R.id.search_engine_graph,
++            ),
++        )
++        assertTrue(
++            isSettingsScreen(
++                isPreferenceFragment = false,
++                destinationId = R.id.homeFragment,
++                parentGraphId = R.id.search_engine_graph,
++            ),
++        )
++    }
++
++    @Test
++    fun `a preference fragment is a Settings screen even without a known destination`() {
++        assertTrue(settingsScreen(destinationId = null, isPreferenceFragment = true))
++        assertTrue(settingsScreen(destinationId = R.id.homeFragment, isPreferenceFragment = true))
++    }
++
++    @Test
++    fun `other destinations are not Settings screens`() {
++        assertFalse(settingsScreen(destinationId = null))
++        assertFalse(settingsScreen(destinationId = R.id.homeFragment))
++        assertFalse(settingsScreen(destinationId = R.id.browserFragment, parentGraphId = R.id.nav_graph))
++        assertFalse(settingsScreen(destinationId = null, parentGraphId = R.id.nav_graph))
++    }
++
++    private fun settingsScreen(
++        destinationId: Int?,
++        parentGraphId: Int? = null,
++        isPreferenceFragment: Boolean = false,
++    ) = isSettingsScreen(
++        isPreferenceFragment = isPreferenceFragment,
++        destinationId = destinationId,
++        parentGraphId = parentGraphId,
++    )
++}
 diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/home/toolbar/BrowserToolbarMiddlewareTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/home/toolbar/BrowserToolbarMiddlewareTest.kt
 index 6b008bf19db599e14a4d1f509ffe62a483bb054f..4119ac2d9eacdbb26920043893a3c351df01332c 100644
 --- a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/home/toolbar/BrowserToolbarMiddlewareTest.kt

@@ -34,6 +34,7 @@ SHEET_HANDLE = Selector(desc=r"View tab group, collapse drag handle")
 LOCK_BANNER_DISMISS = Selector(label=r"No thanks")
 ONBOARDING_DISMISS = Selector(desc=r"Dismiss tab group onboarding")
 SYNCED_MENU_ACCOUNT = Selector(label=r"Account settings")
+ADD_TAB_FAB = Selector(desc=r"Add tab")
 
 # Card width as a share of the screen width: two columns with margins.
 CARD_MIN_WIDTH, CARD_MAX_WIDTH = 0.30, 0.62
@@ -202,7 +203,20 @@ def tab_tray(s: Session) -> None:
         s.dev.wait_for(SYNCED_MENU_ACCOUNT, timeout=6)
         shot.take(settle=0.5, note="signed out: no account on the emulator, so no synced devices or tabs")
         s.dev.back()
+    new_tab_from_fab(s)
     close_tray(s)
+
+
+def new_tab_from_fab(s: Session) -> None:
+    """Normal tabs: the shaped New tab button closes the tray and opens a new tab on the homepage."""
+    with s.capture("tab-tray-new-tab-fab", label="new tab opened by the tab tray New tab button") as shot:
+        ensure_tray(s, BANNER_NORMAL, "normal tabs")
+        s.dev.tap(ADD_TAB_FAB, timeout=8, settle=2.0)
+        if tray_visible(s):
+            raise StepError("the tab tray stayed open after tapping the New tab button")
+        if s.dev.wait_for(t.HOMEPAGE_VIEW, t.HOMEPAGE_BAR, timeout=6, label="new-tab-homepage") is None:
+            raise StepError("no new tab homepage after tapping the New tab button")
+        shot.take(settle=1.0)
 
 
 def private_tab_tray(s: Session) -> None:

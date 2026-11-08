@@ -58,6 +58,7 @@ TAB_TRAY_STEMS = [
     ("02-tab-groups-list", "tab groups list", False),
     ("03-tab-group-sheet", "tab group sheet", False),
     ("01-synced-tabs", "synced tabs", False),
+    ("tab-tray-new-tab-fab", "new tab opened by the tab tray New tab button", False),
 ]
 DOWNLOAD_STEMS = [
     ("download-notification", "download notification", False),

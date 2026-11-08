@@ -243,10 +243,10 @@ index b1abe8c8f3d1355ec3811f3d547f905ac74c695e..7e72073ad2b1d7aa6ca5a6583108f1d4
  
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineIndeterminateProgressBar.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineIndeterminateProgressBar.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..9ba0151f1119bf301fc8c44b4676d48f87e037a0
+index 0000000000000000000000000000000000000000..ec1a56e4e0d7eb5b826c6e285ba782dd11700089
 --- /dev/null
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineIndeterminateProgressBar.kt
-@@ -0,0 +1,39 @@
+@@ -0,0 +1,45 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -256,6 +256,7 @@ index 0000000000000000000000000000000000000000..9ba0151f1119bf301fc8c44b4676d48f
 +import android.content.Context
 +import android.util.AttributeSet
 +import android.view.View
++import android.widget.FrameLayout
 +import androidx.compose.foundation.layout.fillMaxWidth
 +import androidx.compose.runtime.getValue
 +import androidx.compose.runtime.mutableStateOf
@@ -267,18 +268,23 @@ index 0000000000000000000000000000000000000000..9ba0151f1119bf301fc8c44b4676d48f
 +class EmbermineIndeterminateProgressBar @JvmOverloads constructor(
 +    context: Context,
 +    attrs: AttributeSet? = null,
-+) : ComposeView(context, attrs) {
++) : FrameLayout(context, attrs) {
 +
 +    private var showContent by mutableStateOf(visibility == View.VISIBLE)
 +
 +    init {
-+        setContent {
-+            FirefoxTheme {
-+                if (showContent) {
-+                    EmbermineWavyProgress(modifier = Modifier.fillMaxWidth())
++        addView(
++            ComposeView(context).apply {
++                setContent {
++                    FirefoxTheme {
++                        if (showContent) {
++                            EmbermineWavyProgress(modifier = Modifier.fillMaxWidth())
++                        }
++                    }
 +                }
-+            }
-+        }
++            },
++            FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT),
++        )
 +    }
 +
 +    override fun setVisibility(visibility: Int) {

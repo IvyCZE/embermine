@@ -4,6 +4,151 @@ Date: Sun, 8 Nov 2026 21:08:29 +0000
 Subject: [PATCH] Embermine: 0008-loading-indicator
 
 
+diff --git a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/EmbermineLoadingIndicator.kt b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/EmbermineLoadingIndicator.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..85283d8955855ab31114b8e049aff447b24b7b0d
+--- /dev/null
++++ b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/EmbermineLoadingIndicator.kt
+@@ -0,0 +1,21 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package mozilla.components.compose.base.embermine
++
++import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
++import androidx.compose.material3.LoadingIndicator
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.graphics.Color
++
++@OptIn(ExperimentalMaterial3ExpressiveApi::class)
++@Composable
++fun EmbermineLoadingIndicator(
++    modifier: Modifier = Modifier,
++    color: Color = MaterialTheme.colorScheme.primary,
++) {
++    LoadingIndicator(modifier = modifier, color = color)
++}
+diff --git a/mobile/android/android-components/components/feature/importer/src/main/java/mozilla/components/feature/importer/ImporterDialog.kt b/mobile/android/android-components/components/feature/importer/src/main/java/mozilla/components/feature/importer/ImporterDialog.kt
+index 58d768060c4181f25f264cba37b8f234f1bc0b6e..f4c65787cc5cac430e648aa84138eab230605ddd 100644
+--- a/mobile/android/android-components/components/feature/importer/src/main/java/mozilla/components/feature/importer/ImporterDialog.kt
++++ b/mobile/android/android-components/components/feature/importer/src/main/java/mozilla/components/feature/importer/ImporterDialog.kt
+@@ -6,7 +6,8 @@ package mozilla.components.feature.importer
+ 
+ import androidx.compose.foundation.layout.size
+ import androidx.compose.material3.AlertDialog
+-import androidx.compose.material3.CircularProgressIndicator
++import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
++import androidx.compose.material3.LoadingIndicator
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Text
+ import androidx.compose.material3.TextButton
+@@ -27,6 +28,7 @@ import androidx.compose.ui.window.DialogProperties
+  * The caller is responsible for hiding this dialog by observing the importer state and only composing it while the
+  * import is in progress.
+  */
++@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+ @Composable
+ internal fun ImporterDialog(
+     onImportStarted: () -> Unit,
+@@ -44,7 +46,7 @@ internal fun ImporterDialog(
+             ),
+         onDismissRequest = {},
+         icon = {
+-            CircularProgressIndicator(modifier = Modifier.size(24.dp))
++            LoadingIndicator(modifier = Modifier.size(24.dp))
+         },
+         title = {
+             Text(
+diff --git a/mobile/android/android-components/components/feature/password-importer/src/main/java/mozilla/components/feature/password/importer/PasswordsImporterDialog.kt b/mobile/android/android-components/components/feature/password-importer/src/main/java/mozilla/components/feature/password/importer/PasswordsImporterDialog.kt
+index 22d15715e28560802b834a3999e521f22de67482..1454c874d4a180f419a8996fea1abb5bcc5180d4 100644
+--- a/mobile/android/android-components/components/feature/password-importer/src/main/java/mozilla/components/feature/password/importer/PasswordsImporterDialog.kt
++++ b/mobile/android/android-components/components/feature/password-importer/src/main/java/mozilla/components/feature/password/importer/PasswordsImporterDialog.kt
+@@ -6,7 +6,6 @@ package mozilla.components.feature.password.importer
+ 
+ import androidx.compose.foundation.layout.size
+ import androidx.compose.material3.AlertDialog
+-import androidx.compose.material3.CircularProgressIndicator
+ import androidx.compose.material3.Text
+ import androidx.compose.material3.TextButton
+ import androidx.compose.runtime.Composable
+@@ -14,6 +13,7 @@ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.window.DialogProperties
++import mozilla.components.compose.base.embermine.EmbermineLoadingIndicator
+ import mozilla.components.compose.base.theme.AcornTheme
+ 
+ /**
+@@ -33,7 +33,7 @@ internal fun PasswordsImporterDialog(onCancel: () -> Unit) {
+             ),
+         onDismissRequest = {},
+         icon = {
+-            CircularProgressIndicator(modifier = Modifier.size(24.dp))
++            EmbermineLoadingIndicator(modifier = Modifier.size(24.dp))
+         },
+         title = {
+             Text(
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bookmarks/BookmarksScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bookmarks/BookmarksScreen.kt
+index 8b89f9131590bf42d8271e7b1be907b26efc82ee..b8c14d6c97dd8bb86d7acb0822ff38b778b80b86 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bookmarks/BookmarksScreen.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bookmarks/BookmarksScreen.kt
+@@ -30,7 +30,6 @@ import androidx.compose.foundation.lazy.LazyListScope
+ import androidx.compose.foundation.lazy.items
+ import androidx.compose.foundation.lazy.itemsIndexed
+ import androidx.compose.material3.AlertDialog
+-import androidx.compose.material3.CircularProgressIndicator
+ import androidx.compose.material3.ExperimentalMaterial3Api
+ import androidx.compose.material3.HorizontalDivider
+ import androidx.compose.material3.Icon
+@@ -93,6 +92,7 @@ import mozilla.components.compose.base.button.FloatingActionButton
+ import mozilla.components.compose.base.button.IconButton
+ import mozilla.components.compose.base.button.OutlinedButton
+ import mozilla.components.compose.base.button.TextButton
++import mozilla.components.compose.base.embermine.EmbermineLoadingIndicator
+ import mozilla.components.compose.base.menu.DropdownMenu
+ import mozilla.components.compose.base.menu.MenuItem
+ import mozilla.components.compose.base.searchbar.TopSearchBar
+@@ -317,7 +317,7 @@ private fun BookmarksList(store: BookmarksStore) {
+         when {
+             state.isLoading -> {
+                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+-                    CircularProgressIndicator()
++                    EmbermineLoadingIndicator()
+                 }
+             }
+             emptyListState != null -> {
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bookmarks/ui/SelectFolderScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bookmarks/ui/SelectFolderScreen.kt
+index 2abebcabaf8f06fc0b8db810c3bdeb4dbc3ffe67..9ea1c86fd29188bca7214ee9d6a22aab720b164d 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bookmarks/ui/SelectFolderScreen.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bookmarks/ui/SelectFolderScreen.kt
+@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.width
+ import androidx.compose.foundation.lazy.LazyColumn
+ import androidx.compose.foundation.lazy.items
+ import androidx.compose.foundation.selection.toggleable
+-import androidx.compose.material3.CircularProgressIndicator
+ import androidx.compose.material3.ExperimentalMaterial3Api
+ import androidx.compose.material3.Icon
+ import androidx.compose.material3.ListItemDefaults
+@@ -50,6 +49,7 @@ import kotlinx.coroutines.flow.map
+ import mozilla.appservices.places.BookmarkRoot
+ import mozilla.components.compose.base.annotation.FlexibleWindowLightDarkPreview
+ import mozilla.components.compose.base.button.IconButton
++import mozilla.components.compose.base.embermine.EmbermineLoadingIndicator
+ import mozilla.components.compose.base.menu.DropdownMenu
+ import mozilla.components.compose.base.menu.MenuItem
+ import mozilla.components.compose.base.text.Text
+@@ -124,7 +124,7 @@ internal fun SelectFolderScreen(
+     ) { paddingValues ->
+         if (state?.isLoading ?: false) {
+             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+-                CircularProgressIndicator()
++                EmbermineLoadingIndicator()
+             }
+             return@Scaffold
+         }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/BaseBrowserFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/BaseBrowserFragment.kt
 index ed334079e8101613de078bc55577be9a48fd07bb..44acf8beee96c2465a3450450db44297fd538838 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/BaseBrowserFragment.kt
@@ -24,6 +169,217 @@ index ed334079e8101613de078bc55577be9a48fd07bb..44acf8beee96c2465a3450450db44297
  
          webchannelIntegration.set(
              feature =
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/lens/LensUploadLoadingScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/lens/LensUploadLoadingScreen.kt
+index 855d843285eeccb241bf42c46c7646c6e0d22d6c..136ac1cca198d0e979c6121116f0c5e0c57eaa00 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/lens/LensUploadLoadingScreen.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/lens/LensUploadLoadingScreen.kt
+@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.size
+ import androidx.compose.foundation.layout.windowInsetsPadding
+ import androidx.compose.foundation.shape.CircleShape
+ import androidx.compose.foundation.shape.RoundedCornerShape
+-import androidx.compose.material3.CircularProgressIndicator
+ import androidx.compose.material3.Text
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.LaunchedEffect
+@@ -59,6 +58,7 @@ import androidx.compose.ui.unit.dp
+ import kotlinx.coroutines.delay
+ import kotlinx.coroutines.launch
+ import mozilla.components.compose.base.button.FilledButton
++import mozilla.components.compose.base.embermine.EmbermineLoadingIndicator
+ import mozilla.components.ui.colors.PhotonColors
+ import org.mozilla.fenix.R
+ import org.mozilla.fenix.theme.FirefoxTheme
+@@ -88,8 +88,7 @@ private val StatusPillHorizontalPadding = 16.dp
+ private val StatusPillVerticalPadding = 10.dp
+ private val StatusPillSpacing = 8.dp
+ private val StatusPillBackgroundColor = Color.Black.copy(alpha = 0.55f)
+-private val SpinnerSize = 16.dp
+-private val SpinnerStrokeWidth = 2.dp
++private val SpinnerSize = 24.dp
+ private val CancelButtonContainerColor = Color.White.copy(alpha = 0.2f)
+ 
+ /**
+@@ -235,11 +234,7 @@ private fun StatusPill(visible: Boolean, modifier: Modifier = Modifier) {
+         horizontalArrangement = Arrangement.spacedBy(StatusPillSpacing),
+         verticalAlignment = Alignment.CenterVertically,
+     ) {
+-        CircularProgressIndicator(
+-            modifier = Modifier.size(SpinnerSize),
+-            color = Color.White,
+-            strokeWidth = SpinnerStrokeWidth,
+-        )
++        EmbermineLoadingIndicator(modifier = Modifier.size(SpinnerSize))
+         Text(
+             text = stringResource(R.string.lens_camera_loading_status),
+             color = Color.White,
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/AddonMenuItem.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/AddonMenuItem.kt
+index a2be8b530215a222209d99865d841539e5898feb..a309fd869a4a4202394dd0f357382f570f79dc17 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/AddonMenuItem.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/AddonMenuItem.kt
+@@ -25,7 +25,6 @@ import androidx.compose.ui.semantics.role
+ import androidx.compose.ui.semantics.semantics
+ import androidx.compose.ui.semantics.stateDescription
+ import androidx.compose.ui.tooling.preview.PreviewLightDark
+-import mozilla.components.compose.base.modifier.animateRotation
+ import mozilla.components.feature.addons.Addon
+ import mozilla.components.feature.addons.ui.displayName
+ import mozilla.components.feature.addons.ui.summary
+@@ -92,13 +91,8 @@ internal fun AddonMenuItem(
+             faviconPainter = BitmapPainter(image = addonIcon.asImageBitmap()),
+             onClick = onClick,
+             showDivider = showDivider,
+-            iconPainter =
+-                if (isInstallAddonInProgress) {
+-                    painterResource(id = iconsR.drawable.mozac_ic_sync_24)
+-                } else {
+-                    iconPainter
+-                },
+-            iconButtonModifier = Modifier.animateRotation(isInstallAddonInProgress),
++            iconPainter = iconPainter,
++            iconLoading = isInstallAddonInProgress,
+             iconDescription =
+                 iconDescription
+                     ?: stringResource(
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/share/SendToDevicesScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/share/SendToDevicesScreen.kt
+index b5f7e996cebd4a900c329b1891420d10dbc5a8fa..87c18e92b72f9e8b897626bc60a5d17aac83725a 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/share/SendToDevicesScreen.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/share/SendToDevicesScreen.kt
+@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.size
+ import androidx.compose.foundation.layout.width
+ import androidx.compose.foundation.rememberScrollState
+ import androidx.compose.foundation.verticalScroll
+-import androidx.compose.material3.CircularProgressIndicator
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Surface
+ import androidx.compose.material3.Text
+@@ -34,6 +33,7 @@ import androidx.compose.ui.unit.dp
+ import mozilla.components.compose.base.BottomSheetHandle
+ import mozilla.components.compose.base.button.FilledButton
+ import mozilla.components.compose.base.button.TextButton
++import mozilla.components.compose.base.embermine.EmbermineLoadingIndicator
+ import mozilla.components.concept.sync.Device
+ import mozilla.components.concept.sync.DeviceType
+ import mozilla.components.ui.icons.R as IconsR
+@@ -199,7 +199,7 @@ private fun DeviceList(
+ @Composable
+ private fun LoadingScreen() {
+     Column(modifier = Modifier.fillMaxWidth().padding(bottom = FirefoxTheme.layout.space.static400)) {
+-        CircularProgressIndicator(
++        EmbermineLoadingIndicator(
+             modifier =
+                 Modifier.align(Alignment.CenterHorizontally).padding(vertical = FirefoxTheme.layout.space.static500)
+         )
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/list/ListItem.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/list/ListItem.kt
+index 1699bc1b94ba93b54912f0cc29bff8cf4f2731a3..8bcd414a14fe96d3d696621fa8c88400359c9326 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/list/ListItem.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/list/ListItem.kt
+@@ -67,6 +67,7 @@ import mozilla.components.compose.base.badge.BADGE_SIZE_SMALL
+ import mozilla.components.compose.base.badge.BadgedIcon
+ import mozilla.components.compose.base.button.IconButton
+ import mozilla.components.compose.base.button.RadioButton
++import mozilla.components.compose.base.embermine.EmbermineLoadingIndicator
+ import mozilla.components.compose.base.embermine.EmbermineShape
+ import mozilla.components.compose.base.embermine.ShapedIconBackground
+ import mozilla.components.compose.base.modifier.thenConditional
+@@ -170,6 +171,7 @@ fun TextListItem(
+  * @param onLongClick Called when the user long clicks on the item.
+  * @param showDivider Whether or not to display a vertical divider line before the [IconButton] at the end.
+  * @param iconPainter [Painter] used to display an [IconButton] after the list item.
++ * @param iconLoading Whether the [IconButton] shows a loading indicator instead of [iconPainter].
+  * @param iconButtonModifier [Modifier] to be applied to the icon button.
+  * @param iconDescription Content description of the icon.
+  * @param onIconClick Called when the user clicks on the icon.
+@@ -188,6 +190,7 @@ fun FaviconListItem(
+     onLongClick: (() -> Unit)? = null,
+     showDivider: Boolean = false,
+     iconPainter: Painter? = null,
++    iconLoading: Boolean = false,
+     iconButtonModifier: Modifier = Modifier,
+     iconDescription: String? = null,
+     onIconClick: (() -> Unit)? = null,
+@@ -216,7 +219,7 @@ fun FaviconListItem(
+             }
+         },
+         afterListItemAction = {
+-            if (iconPainter == null || onIconClick == null) {
++            if ((iconPainter == null && !iconLoading) || onIconClick == null) {
+                 return@ListItem
+             }
+ 
+@@ -229,10 +232,14 @@ fun FaviconListItem(
+                 contentDescription = iconDescription,
+                 modifier = iconButtonModifier.then(Modifier.size(ICON_SIZE)),
+             ) {
+-                Icon(
+-                    painter = iconPainter,
+-                    contentDescription = null,
+-                )
++                if (iconLoading) {
++                    EmbermineLoadingIndicator(modifier = Modifier.size(ICON_SIZE))
++                } else if (iconPainter != null) {
++                    Icon(
++                        painter = iconPainter,
++                        contentDescription = null,
++                    )
++                }
+             }
+         },
+     )
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineLoadingIndicatorView.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineLoadingIndicatorView.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..6cb964d5103a4e218b4cdf59cbede33660ba797b
+--- /dev/null
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineLoadingIndicatorView.kt
+@@ -0,0 +1,49 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine
++
++import android.content.Context
++import android.util.AttributeSet
++import android.view.Gravity
++import android.view.View
++import android.widget.FrameLayout
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.setValue
++import androidx.compose.ui.platform.ComposeView
++import mozilla.components.compose.base.embermine.EmbermineLoadingIndicator
++import org.mozilla.fenix.theme.FirefoxTheme
++
++class EmbermineLoadingIndicatorView @JvmOverloads constructor(
++    context: Context,
++    attrs: AttributeSet? = null,
++) : FrameLayout(context, attrs) {
++
++    private var showContent by mutableStateOf(visibility == View.VISIBLE)
++
++    init {
++        addView(
++            ComposeView(context).apply {
++                setContent {
++                    FirefoxTheme {
++                        if (showContent) {
++                            EmbermineLoadingIndicator()
++                        }
++                    }
++                }
++            },
++            FrameLayout.LayoutParams(
++                FrameLayout.LayoutParams.WRAP_CONTENT,
++                FrameLayout.LayoutParams.WRAP_CONTENT,
++                Gravity.CENTER,
++            ),
++        )
++    }
++
++    override fun setVisibility(visibility: Int) {
++        super.setVisibility(visibility)
++        showContent = visibility == View.VISIBLE
++    }
++}
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineRefreshIndicator.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineRefreshIndicator.kt
 new file mode 100644
 index 0000000000000000000000000000000000000000..ff4e1d662aea1898aa565ba976b33e6e859f3018
@@ -140,6 +496,426 @@ index a7dad8b3cd89e3ba6786a095d5bb63728090700a..e9348c7cff0a9bd5498d170185a89b7e
  
          binding.swipeRefresh.setOnRefreshListener {
              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/perf/ProfilerReusableComposable.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/perf/ProfilerReusableComposable.kt
+index c89c361b9c42c3b1dc4d308dda3e949e4844b4ca..b17fc05139152ddeaabf065104b0d42d23a0173d 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/perf/ProfilerReusableComposable.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/perf/ProfilerReusableComposable.kt
+@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.layout.width
+ import androidx.compose.material3.Card
+ import androidx.compose.material3.CardDefaults
+-import androidx.compose.material3.CircularProgressIndicator
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Text
+ import androidx.compose.runtime.Composable
+@@ -31,6 +30,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
+ import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
+ import mozilla.components.compose.base.button.TextButton
++import mozilla.components.compose.base.embermine.EmbermineLoadingIndicator
+ import mozilla.components.compose.base.theme.PreviewThemeProvider
+ import mozilla.components.compose.base.theme.Theme
+ import org.mozilla.fenix.compose.list.RadioButtonListItem
+@@ -98,7 +98,7 @@ fun WaitForProfilerDialog(@StringRes message: Int) {
+ 
+             Spacer(modifier = Modifier.height(2.dp))
+ 
+-            CircularProgressIndicator()
++            EmbermineLoadingIndicator()
+         }
+     }
+ }
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt
+index c580868a2bf41bc3e5e49ea75c6736c65e4da3f4..0cd63fdd858f76f889465cb093f4ab1d7db549c3 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt
+@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.size
+ import androidx.compose.foundation.layout.width
+ import androidx.compose.foundation.rememberScrollState
+ import androidx.compose.foundation.verticalScroll
+-import androidx.compose.material3.CircularProgressIndicator
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Surface
+ import androidx.compose.material3.Text
+@@ -52,6 +51,7 @@ import androidx.compose.ui.text.style.TextDecoration
+ import androidx.compose.ui.tooling.preview.PreviewParameter
+ import androidx.core.graphics.createBitmap
+ import mozilla.components.compose.base.annotation.FlexibleWindowPreview
++import mozilla.components.compose.base.embermine.EmbermineLoadingIndicator
+ import mozilla.components.compose.base.modifier.debouncedClickable
+ import mozilla.components.compose.base.modifier.thenConditional
+ import mozilla.components.compose.base.theme.PreviewThemeProvider
+@@ -342,9 +342,8 @@ private fun WallpaperThumbnailContent(
+             modifier = Modifier.fillMaxSize(),
+             contentAlignment = Alignment.Center,
+         ) {
+-            CircularProgressIndicator(
++            EmbermineLoadingIndicator(
+                 modifier = Modifier.size(FirefoxTheme.layout.size.circularIndicatorDiameter),
+-                color = MaterialTheme.colorScheme.primary,
+             )
+         }
+     }
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/startupCrash/StartupCrashScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/startupCrash/StartupCrashScreen.kt
+index 07cf5413c8e39fd0a8096ca568562036aabb085f..54cd4e1ada44a6e6e521cf7d85caa5d684244d0a 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/startupCrash/StartupCrashScreen.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/startupCrash/StartupCrashScreen.kt
+@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.size
+ import androidx.compose.foundation.layout.width
+ import androidx.compose.foundation.rememberScrollState
+ import androidx.compose.foundation.verticalScroll
+-import androidx.compose.material3.CircularProgressIndicator
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Surface
+ import androidx.compose.material3.Text
+@@ -34,6 +33,7 @@ import androidx.compose.ui.unit.dp
+ import mozilla.components.compose.base.annotation.FlexibleWindowLightDarkPreview
+ import mozilla.components.compose.base.button.FilledButton
+ import mozilla.components.compose.base.button.OutlinedButton
++import mozilla.components.compose.base.embermine.EmbermineLoadingIndicator
+ import mozilla.components.lib.state.ext.observeAsComposableState
+ import mozilla.components.ui.icons.R as iconsR
+ import org.mozilla.fenix.R
+@@ -119,12 +119,7 @@ private fun CircularLoadButton() {
+         modifier = Modifier.fillMaxWidth(),
+         enabled = false,
+     ) {
+-        CircularProgressIndicator(
+-            modifier = Modifier.size(18.dp),
+-            color = MaterialTheme.colorScheme.inverseOnSurface,
+-            strokeWidth = 2.dp,
+-            trackColor = MaterialTheme.colorScheme.primary,
+-        )
++        EmbermineLoadingIndicator(modifier = Modifier.size(24.dp))
+     }
+ }
+ 
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/fab/TabManagerFloatingToolbar.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/fab/TabManagerFloatingToolbar.kt
+index 38dc9a0112993a7e0be1490e72ff2fa9aec8fa08..2649f849b63f0dccd52b61692c8a1b4b60c3b6a6 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/fab/TabManagerFloatingToolbar.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/fab/TabManagerFloatingToolbar.kt
+@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
+ import androidx.compose.foundation.layout.Spacer
+ import androidx.compose.foundation.layout.height
+ import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.layout.size
+ import androidx.compose.foundation.layout.width
+ import androidx.compose.foundation.shape.CircleShape
+ import androidx.compose.material3.AlertDialog
+@@ -44,10 +45,10 @@ import mozilla.components.compose.base.button.FloatingActionButton
+ import mozilla.components.compose.base.button.FloatingActionButtonDefaults
+ import mozilla.components.compose.base.button.IconButton
+ import mozilla.components.compose.base.button.TextButton
++import mozilla.components.compose.base.embermine.EmbermineLoadingIndicator
+ import mozilla.components.compose.base.embermine.EmbermineShape
+ import mozilla.components.compose.base.menu.DropdownMenu
+ import mozilla.components.compose.base.menu.MenuItem
+-import mozilla.components.compose.base.modifier.animateRotation
+ import mozilla.components.compose.base.text.Text
+ import mozilla.components.ui.icons.R as iconsR
+ import org.mozilla.fenix.R
+@@ -263,7 +264,7 @@ internal fun FloatingToolbarFAB(
+     var colors = FloatingActionButtonDefaults.colorsPrimary()
+     var elevation = M3FloatingActionButtonDefaults.elevation()
+     val onClick: () -> Unit
+-    var iconModifier: Modifier = Modifier
++    var isLoading = false
+ 
+     when (state.selectedPage) {
+         Page.NormalTabs -> {
+@@ -302,18 +303,24 @@ internal fun FloatingToolbarFAB(
+                         hoveredElevation = 0.dp,
+                     )
+             }
+-            iconModifier = Modifier.animateRotation(animate = state.sync.isSyncing)
++            isLoading = state.sync.isSyncing
+         }
+     }
+ 
+     FloatingActionButton(
+         modifier = Modifier.testTag(TabsTrayTestTag.FAB),
+         icon = {
+-            Icon(
+-                painter = painterResource(id = icon),
+-                contentDescription = contentDescription,
+-                modifier = iconModifier,
+-            )
++            if (isLoading) {
++                EmbermineLoadingIndicator(
++                    modifier = Modifier.size(24.dp),
++                    color = colors.contentColor,
++                )
++            } else {
++                Icon(
++                    painter = painterResource(id = icon),
++                    contentDescription = contentDescription,
++                )
++            }
+         },
+         colors = colors,
+         elevation = elevation,
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/DownloadIndicator.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/DownloadIndicator.kt
+index 6cd774609c8275206512c54fd04a4b27e672d675..2c106fd41ae3154dc8220b01b814b588c8ab6307 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/DownloadIndicator.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/DownloadIndicator.kt
+@@ -5,61 +5,53 @@
+ package org.mozilla.fenix.translations
+ 
+ import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.Spacer
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.layout.size
++import androidx.compose.foundation.layout.width
+ import androidx.compose.foundation.layout.wrapContentSize
+-import androidx.compose.material3.ButtonDefaults
+-import androidx.compose.material3.CircularProgressIndicator
++import androidx.compose.material3.CircularWavyProgressIndicator
+ import androidx.compose.material3.Icon
++import androidx.compose.material3.LocalContentColor
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Surface
++import androidx.compose.material3.Text
+ import androidx.compose.runtime.Composable
++import androidx.compose.runtime.remember
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.graphics.StrokeCap
++import androidx.compose.ui.graphics.drawscope.Stroke
+ import androidx.compose.ui.graphics.painter.Painter
++import androidx.compose.ui.platform.LocalDensity
+ import androidx.compose.ui.res.painterResource
+ import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.semantics.Role
+ import androidx.compose.ui.semantics.clearAndSetSemantics
+ import androidx.compose.ui.semantics.contentDescription
+ import androidx.compose.ui.semantics.role
++import androidx.compose.ui.text.style.TextAlign
+ import androidx.compose.ui.tooling.preview.Preview
+ import androidx.compose.ui.tooling.preview.PreviewParameter
+ import androidx.compose.ui.unit.dp
+ import mozilla.components.compose.base.button.FilledButton
+-import mozilla.components.compose.base.modifier.animateRotation
++import mozilla.components.compose.base.embermine.EmbermineLoadingIndicator
++import mozilla.components.compose.base.theme.AcornTheme
+ import mozilla.components.compose.base.theme.PreviewThemeProvider
+ import mozilla.components.compose.base.theme.Theme
+ import mozilla.components.ui.icons.R as iconsR
+ import org.mozilla.fenix.R
+ import org.mozilla.fenix.theme.FirefoxTheme
+ 
+-/** Animation duration in milliseconds. If it is set to a low number, the speed of the rotation will be higher. */
+-private const val ANIMATION_DURATION_MS = 2000
+-
+ /**
+- * Icon for Download indicator.
++ * Loading indicator for a language model that is being deleted.
+  *
+- * @param icon [Painter] used to be displayed.
+- * @param modifier [Modifier] to be applied to the icon layout.
+- * @param tint Tint [Color] to be applied to the icon.
+- * @param contentDescription Optional content description for the icon.
++ * @param modifier [Modifier] to be applied to the indicator layout.
+  */
+ @Composable
+-fun DownloadIconIndicator(
+-    icon: Painter,
+-    modifier: Modifier = Modifier,
+-    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+-    contentDescription: String? = null,
+-) {
+-    Icon(
+-        painter = icon,
+-        modifier = modifier.then(Modifier.animateRotation(animate = true, durationMillis = ANIMATION_DURATION_MS)),
+-        contentDescription = contentDescription,
+-        tint = tint,
+-    )
++fun DownloadIconIndicator(modifier: Modifier = Modifier) {
++    EmbermineLoadingIndicator(modifier = modifier.size(24.dp))
+ }
+ 
+ /**
+@@ -77,6 +69,8 @@ fun DownloadInProgressIndicator(
+     tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+     contentDescription: String? = null,
+ ) {
++    val density = LocalDensity.current
++    val stroke = remember(density) { Stroke(width = with(density) { 2.dp.toPx() }, cap = StrokeCap.Butt) }
+     Box(contentAlignment = Alignment.Center) {
+         Icon(
+             modifier = modifier.size(8.dp),
+@@ -84,11 +78,11 @@ fun DownloadInProgressIndicator(
+             contentDescription = contentDescription,
+             tint = tint,
+         )
+-        CircularProgressIndicator(
++        CircularWavyProgressIndicator(
+             modifier = modifier.size(30.dp),
+-            strokeWidth = 2.dp,
++            stroke = stroke,
++            trackStroke = stroke,
+             trackColor = MaterialTheme.colorScheme.secondaryContainer,
+-            strokeCap = StrokeCap.Butt,
+         )
+     }
+ }
+@@ -99,17 +93,15 @@ fun DownloadInProgressIndicator(
+  * @param text The button text to be displayed.
+  * @param modifier [Modifier] to be applied to the layout.
+  * @param contentDescription Content description to be applied to the button.
+- * @param icon Optional [Painter] used to display an [Icon] before the button text.
+  */
+ @Composable
+ fun DownloadIndicator(
+     text: String,
+     modifier: Modifier = Modifier,
+     contentDescription: String? = null,
+-    icon: Painter? = null,
+ ) {
+     FilledButton(
+-        text = text,
++        onClick = {},
+         modifier =
+             modifier.then(
+                 Modifier.clearAndSetSemantics {
+@@ -118,12 +110,19 @@ fun DownloadIndicator(
+                     }
+                     .wrapContentSize()
+             ),
+-        icon = icon,
+-        iconModifier =
+-            Modifier.animateRotation(animate = true, durationMillis = ANIMATION_DURATION_MS)
+-                .size(ButtonDefaults.IconSize),
+-        onClick = {},
+-    )
++        containerColor = MaterialTheme.colorScheme.tertiary,
++    ) {
++        EmbermineLoadingIndicator(
++            modifier = Modifier.size(24.dp),
++            color = LocalContentColor.current,
++        )
++        Spacer(modifier = Modifier.width(AcornTheme.layout.space.static100))
++        Text(
++            text = text,
++            textAlign = TextAlign.Center,
++            style = AcornTheme.typography.button,
++        )
++    }
+ }
+ 
+ @Preview
+@@ -131,10 +130,7 @@ fun DownloadIndicator(
+ private fun DownloadIconIndicatorPreview(@PreviewParameter(PreviewThemeProvider::class) theme: Theme) {
+     FirefoxTheme(theme) {
+         Surface {
+-            DownloadIconIndicator(
+-                icon = painterResource(id = iconsR.drawable.mozac_ic_sync_24),
+-                contentDescription = stringResource(id = R.string.translations_bottom_sheet_translating_in_progress),
+-            )
++            DownloadIconIndicator()
+         }
+     }
+ }
+@@ -161,7 +157,6 @@ private fun DownloadIndicatorPreview(@PreviewParameter(PreviewThemeProvider::cla
+                 text = stringResource(id = R.string.translations_bottom_sheet_translating_in_progress),
+                 contentDescription =
+                     stringResource(id = R.string.translations_bottom_sheet_translating_in_progress_content_description),
+-                icon = painterResource(id = iconsR.drawable.mozac_ic_sync_24),
+             )
+         }
+     }
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/TranslationsDialogBottomSheet.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/TranslationsDialogBottomSheet.kt
+index 0d7145b10ce8ac4f93eb54b242b2d9f8ff073274..338184aeead6557574bf17a7748c491b612881c2 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/TranslationsDialogBottomSheet.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/TranslationsDialogBottomSheet.kt
+@@ -635,7 +635,6 @@ private fun TranslationsDialogActionButtons(
+                         stringResource(
+                             id = R.string.translations_bottom_sheet_translating_in_progress_content_description
+                         ),
+-                    icon = painterResource(id = iconsR.drawable.mozac_ic_sync_24),
+                 )
+             }
+ 
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/preferences/downloadlanguages/DownloadLanguagesPreference.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/preferences/downloadlanguages/DownloadLanguagesPreference.kt
+index dc0859b853e9cd80fcda7c8ce35720db2742a3db..176e605d4f2308c9699a609652fb013c4ee2b800 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/preferences/downloadlanguages/DownloadLanguagesPreference.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/preferences/downloadlanguages/DownloadLanguagesPreference.kt
+@@ -435,7 +435,7 @@ private fun IconDownloadLanguageItemPreference(item: DownloadLanguageItemPrefere
+         }
+ 
+         ModelState.DELETION_IN_PROGRESS -> {
+-            DownloadIconIndicator(icon = painterResource(id = iconsR.drawable.mozac_ic_sync_24))
++            DownloadIconIndicator()
+         }
+     }
+ }
+diff --git a/mobile/android/fenix/app/src/main/res/layout/activity_lens_search.xml b/mobile/android/fenix/app/src/main/res/layout/activity_lens_search.xml
+index f9f9d0ad1603c13bfe40bae7cebf369d41409b6b..f80a7c6b8dbe975a9fe31755498cc03dec67a2d5 100644
+--- a/mobile/android/fenix/app/src/main/res/layout/activity_lens_search.xml
++++ b/mobile/android/fenix/app/src/main/res/layout/activity_lens_search.xml
+@@ -4,7 +4,7 @@
+    - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+ <merge xmlns:android="http://schemas.android.com/apk/res/android">
+ 
+-    <ProgressBar
++    <org.mozilla.fenix.embermine.EmbermineLoadingIndicatorView
+         android:id="@+id/lens_search_progress"
+         android:layout_width="wrap_content"
+         android:layout_height="wrap_content"
+diff --git a/mobile/android/fenix/app/src/main/res/layout/fragment_add_ons_management.xml b/mobile/android/fenix/app/src/main/res/layout/fragment_add_ons_management.xml
+index f9f51423e26f5aa9a58d575dbbb94dd40836d300..ae8b0bc96ddc7a2103e9d0e6e055f3b45a000bdf 100644
+--- a/mobile/android/fenix/app/src/main/res/layout/fragment_add_ons_management.xml
++++ b/mobile/android/fenix/app/src/main/res/layout/fragment_add_ons_management.xml
+@@ -23,7 +23,7 @@
+         android:layout_gravity="bottom"
+         android:visibility="gone" />
+ 
+-    <ProgressBar
++    <org.mozilla.fenix.embermine.EmbermineLoadingIndicatorView
+         android:id="@+id/add_ons_progress_bar"
+         android:layout_width="wrap_content"
+         android:layout_height="wrap_content"
+diff --git a/mobile/android/fenix/app/src/main/res/layout/fragment_installed_add_on_details.xml b/mobile/android/fenix/app/src/main/res/layout/fragment_installed_add_on_details.xml
+index 33579b2b86ea3c3f856d187b2027eae38b043c91..de700cf5d80745a9e61a519be226a1cbb0c56885 100644
+--- a/mobile/android/fenix/app/src/main/res/layout/fragment_installed_add_on_details.xml
++++ b/mobile/android/fenix/app/src/main/res/layout/fragment_installed_add_on_details.xml
+@@ -120,7 +120,7 @@
+         </RelativeLayout>
+     </ScrollView>
+ 
+-    <ProgressBar
++    <org.mozilla.fenix.embermine.EmbermineLoadingIndicatorView
+         android:id="@+id/add_on_progress_bar"
+         android:layout_width="wrap_content"
+         android:layout_height="wrap_content"
+diff --git a/mobile/android/fenix/app/src/main/res/layout/fragment_save_search_engine.xml b/mobile/android/fenix/app/src/main/res/layout/fragment_save_search_engine.xml
+index afd80073724a9f3567cb582c832ef8b233a97ded..3a381e2722c8934f13353e97d8b055778317ed43 100644
+--- a/mobile/android/fenix/app/src/main/res/layout/fragment_save_search_engine.xml
++++ b/mobile/android/fenix/app/src/main/res/layout/fragment_save_search_engine.xml
+@@ -160,9 +160,8 @@
+             style="@style/PositiveButton"
+             android:text="@string/search_custom_engine_save_button" />
+ 
+-        <ProgressBar
++        <org.mozilla.fenix.embermine.EmbermineLoadingIndicatorView
+             android:id="@+id/progress"
+-            style="@style/Widget.AppCompat.ProgressBar"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:layout_gravity="center_horizontal"
+diff --git a/mobile/android/fenix/app/src/main/res/layout/share_to_apps.xml b/mobile/android/fenix/app/src/main/res/layout/share_to_apps.xml
+index 54d257d2b177fb8b55fdc572cf5c66f32ad8725b..106cf971771a2c55307c27a9467dd262715dfdf6 100644
+--- a/mobile/android/fenix/app/src/main/res/layout/share_to_apps.xml
++++ b/mobile/android/fenix/app/src/main/res/layout/share_to_apps.xml
+@@ -13,7 +13,7 @@
+         android:layout_width="wrap_content"
+         android:layout_height="wrap_content">
+ 
+-        <ProgressBar
++        <org.mozilla.fenix.embermine.EmbermineLoadingIndicatorView
+             android:id="@+id/progressBar"
+             android:layout_width="76dp"
+             android:layout_height="37dp"
 diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineRefreshIndicatorTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineRefreshIndicatorTest.kt
 new file mode 100644
 index 0000000000000000000000000000000000000000..8c05343cb0802e0b8195b289d6528d445b999db0

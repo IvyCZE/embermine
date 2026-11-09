@@ -3,7 +3,7 @@ import time
 import unittest
 from types import SimpleNamespace
 
-from scripts.emulator import flows_settings, run, uidump
+from scripts.emulator import flows_settings, flows_wallpaper, run, uidump
 from scripts.emulator.device import StepError
 from scripts.emulator.naming import ScreenIndex
 from scripts.tests.emulator_fakes import hierarchy, node
@@ -60,9 +60,10 @@ class WallpaperColorsToggleFlowTests(unittest.TestCase):
     def test_toggle_captures_have_a_switch_state_for_every_expected_stem(self) -> None:
         flow = self.toggle_flow()
         stems = [stem for stem, _, _ in flow.expected]
-        self.assertEqual(stems, [stem for stem, _, _ in flows_settings.WALLPAPER_COLORS_CAPTURES])
-        self.assertEqual(flow.states, {stem: on for stem, on, _ in flows_settings.WALLPAPER_COLORS_CAPTURES})
-        self.assertEqual(sorted(flow.states.values()), [False, False, True, True])
+        self.assertEqual(stems, [stem for stem, _, _ in flows_wallpaper.TOGGLE_CAPTURES])
+        self.assertEqual(flow.states, {stem: on for stem, on, _ in flows_wallpaper.TOGGLE_CAPTURES})
+        customize = {stem: flow.states[stem] for stem, _, _ in flows_settings.WALLPAPER_COLORS_CAPTURES}
+        self.assertEqual(sorted(customize.values()), [False, False, True, True])
 
     def test_missing_toggle_captures_are_named_by_their_own_switch_state(self) -> None:
         def fail(_: object) -> None:

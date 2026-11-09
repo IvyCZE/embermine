@@ -1,0 +1,883 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: IvyCZE <me@ivy.yt>
+Date: Mon, 9 Nov 2026 06:54:08 +0000
+Subject: [PATCH] Embermine: 0009-embermine-wallpapers
+
+Add the Embermine wallpaper collection (bloom, grow, pattern, rise, triangle) above Classic Firefox. The wallpapers are drawn on the device from EmbermineWallpaperData in the current palette: Material You tones when the switch is on, the Nova violet ramp when it is off, and an ember palette below Android 12. Each wallpaper is center-cropped into the portrait, landscape and thumbnail files and re-drawn when its palette fingerprint changes, on startup and on resume. Bloom is the default on new installs. Homepage card text uses the lightest palette tone, and cards use a translucent dark tone.
+
+Co-authored-by: factory-droid[bot] <138933559+factory-droid[bot]@users.noreply.github.com>
+
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
+index cd1fb285a4fa0b4d21b0dfd8239188f3b4881dcc..b5df81d71e68c01e8a65f595ee634e47b0473d8b 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
+@@ -842,6 +842,10 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, Crash
+             }
+         }
+ 
++        lifecycleScope.launch(IO) {
++            components.useCases.wallpaperUseCases.refreshEmbermineWallpapers()
++        }
++
+         lifecycleScope.launch(IO) {
+             if (components.settings.checkIfFenixIsDefaultBrowserOnAppResume()) {
+                 if (components.appStore.state.wasNativeDefaultBrowserPromptShown) {
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/UseCases.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/UseCases.kt
+index 54d7a3475e22e7744ec198e1c810033e4c1a0e34..8c0d666a49d05b212003a31606b8952aa359e04b 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/UseCases.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/UseCases.kt
+@@ -42,6 +42,7 @@ import org.mozilla.fenix.components.share.DefaultShareSheetLauncher
+ import org.mozilla.fenix.components.share.ShareSheetLauncher
+ import org.mozilla.fenix.components.usecases.FenixBrowserUseCases
+ import org.mozilla.fenix.components.usecases.ShareUseCases
++import org.mozilla.fenix.embermine.wallpapers.EmbermineWallpaperPalette
+ import org.mozilla.fenix.ext.components
+ import org.mozilla.fenix.home.mars.MARSUseCases
+ import org.mozilla.fenix.pbmlock.PrivateBrowsingLockUseCases
+@@ -145,6 +146,12 @@ class UseCases(
+             rootStorageDirectory,
+             currentLocale,
+             getDisplaySize = { displaySize(context) },
++            getEmberminePalette = {
++                EmbermineWallpaperPalette.current(
++                    context,
++                    context.components.settings.isEmbermineWallpaperColorsEnabled,
++                )
++            },
+         )
+     }
+ 
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperPalette.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperPalette.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..b163a0844553f83f5e7a289763fbe6bfed9decb3
+--- /dev/null
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperPalette.kt
+@@ -0,0 +1,99 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine.wallpapers
++
++import android.content.Context
++import android.os.Build
++import androidx.compose.ui.graphics.toArgb
++import androidx.core.content.ContextCompat
++import mozilla.components.ui.colors.NovaColors
++
++/** Where the six tones of a wallpaper palette come from. */
++enum class EmbermineWallpaperPaletteSource {
++    Ember,
++    System,
++    Nova,
++}
++
++/**
++ * Six ARGB tones for the wallpaper roles, from the darkest background (role 0) to the lightest (role 5).
++ *
++ * @property tones The tone of each role, in role order.
++ */
++class EmbermineWallpaperPalette(
++    val tones: List<Int>,
++) {
++    init {
++        require(tones.size == ROLE_COUNT) { "A wallpaper palette needs $ROLE_COUNT tones" }
++    }
++
++    /** Color for text drawn on a wallpaper: the lightest tone. */
++    val textColor: Long
++        get() = tones.last().toLong() and OPAQUE_MASK
++
++    /** Color for cards laid over a wallpaper: a translucent dark tone, so the wallpaper shows through. */
++    val cardColor: Long
++        get() = (CARD_ALPHA shl ALPHA_SHIFT) or (tones[CARD_ROLE].toLong() and RGB_MASK)
++
++    /** Identifies a rendering of this palette at the given pixel size. */
++    fun fingerprint(width: Int, height: Int): String =
++        "$RENDER_VERSION:${tones.joinToString(",") { Integer.toHexString(it) }}@${width}x$height"
++
++    companion object {
++        private const val ROLE_COUNT = 6
++        private const val CARD_ROLE = 1
++        private const val CARD_ALPHA = 0xC0L
++        private const val ALPHA_SHIFT = 24
++        private const val RGB_MASK = 0xFFFFFFL
++        private const val OPAQUE_MASK = 0xFFFFFFFFL
++        private const val RENDER_VERSION = "v1"
++
++        /** Picks the palette source: Ember below Android 12, the system accent when the switch is on, else Nova. */
++        fun source(sdkInt: Int, switchOn: Boolean): EmbermineWallpaperPaletteSource =
++            when {
++                sdkInt < Build.VERSION_CODES.S -> EmbermineWallpaperPaletteSource.Ember
++                switchOn -> EmbermineWallpaperPaletteSource.System
++                else -> EmbermineWallpaperPaletteSource.Nova
++            }
++
++        /** The palette that applies to the device right now. */
++        fun current(context: Context, switchOn: Boolean): EmbermineWallpaperPalette =
++            when (source(Build.VERSION.SDK_INT, switchOn)) {
++                EmbermineWallpaperPaletteSource.Ember -> ember()
++                EmbermineWallpaperPaletteSource.System -> system(context)
++                EmbermineWallpaperPaletteSource.Nova -> nova()
++            }
++
++        fun ember(): EmbermineWallpaperPalette =
++            argb(0xFF120A08, 0xFF3A1410, 0xFF7A2414, 0xFFC2410C, 0xFFF97316, 0xFFFDBA74)
++
++        fun nova(): EmbermineWallpaperPalette =
++            EmbermineWallpaperPalette(
++                listOf(
++                    NovaColors.Violet90,
++                    NovaColors.Violet70,
++                    NovaColors.Violet60,
++                    NovaColors.Violet50,
++                    NovaColors.Violet30,
++                    NovaColors.Violet10,
++                ).map { it.toArgb() },
++            )
++
++        private fun system(context: Context): EmbermineWallpaperPalette =
++            EmbermineWallpaperPalette(
++                listOf(
++                    android.R.color.system_accent1_900,
++                    android.R.color.system_accent1_800,
++                    android.R.color.system_accent1_600,
++                    android.R.color.system_accent1_500,
++                    android.R.color.system_accent1_300,
++                    android.R.color.system_accent1_100,
++                ).map { ContextCompat.getColor(context, it) },
++            )
++
++        private fun argb(vararg colors: Long): EmbermineWallpaperPalette =
++            EmbermineWallpaperPalette(colors.map { it.toInt() })
++    }
++}
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperRenderer.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperRenderer.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..1e803f0c1171e023105c5575e1dfb84e1ff599b8
+--- /dev/null
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperRenderer.kt
+@@ -0,0 +1,68 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine.wallpapers
++
++import android.graphics.Bitmap
++import android.graphics.Canvas
++import android.graphics.Paint
++import android.graphics.Path
++import androidx.core.graphics.PathParser
++import androidx.core.graphics.createBitmap
++
++/**
++ * The scale and offset that place a view box on a target.
++ *
++ * @property scale The factor each view box unit is drawn at.
++ * @property dx The horizontal offset of the view box origin, in target pixels.
++ * @property dy The vertical offset of the view box origin, in target pixels.
++ */
++internal data class CenterCrop(
++    val scale: Float,
++    val dx: Float,
++    val dy: Float,
++)
++
++/**
++ * Returns the transform that fills a target with a source while keeping its proportions. The source is scaled to
++ * cover the target and centered, so equal amounts are cut from opposite edges and no bars are drawn.
++ */
++internal fun centerCrop(targetWidth: Int, targetHeight: Int, sourceWidth: Float, sourceHeight: Float): CenterCrop {
++    val scale = maxOf(targetWidth / sourceWidth, targetHeight / sourceHeight)
++    return CenterCrop(
++        scale = scale,
++        dx = (targetWidth - sourceWidth * scale) / 2f,
++        dy = (targetHeight - sourceHeight * scale) / 2f,
++    )
++}
++
++internal object EmbermineWallpaperRenderer {
++
++    /**
++     * Draws [art] in [palette] onto a new bitmap of the given size, center-cropped from the artwork's view box.
++     */
++    fun render(art: EmbermineWallpaperArt, palette: EmbermineWallpaperPalette, width: Int, height: Int): Bitmap {
++        val bitmap = createBitmap(width, height)
++        val canvas = Canvas(bitmap)
++        canvas.drawColor(palette.tones.first())
++
++        val crop = centerCrop(
++            targetWidth = width,
++            targetHeight = height,
++            sourceWidth = EmbermineWallpaperData.VIEWBOX_WIDTH,
++            sourceHeight = EmbermineWallpaperData.VIEWBOX_HEIGHT,
++        )
++        canvas.translate(crop.dx, crop.dy)
++        canvas.scale(crop.scale, crop.scale)
++
++        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
++        art.shapes.forEach { shape ->
++            val path = PathParser.createPathFromPathData(shape.path)
++            path.fillType = if (shape.evenOdd) Path.FillType.EVEN_ODD else Path.FillType.WINDING
++            paint.color = palette.tones[shape.role]
++            canvas.drawPath(path, paint)
++        }
++        return bitmap
++    }
++}
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpapers.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpapers.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..0ed3029cebf2768d655f3698320480fa5d56b212
+--- /dev/null
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpapers.kt
+@@ -0,0 +1,139 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine.wallpapers
++
++import android.graphics.Bitmap
++import android.util.Size
++import java.io.File
++import java.io.IOException
++import kotlin.math.max
++import kotlin.math.min
++import kotlin.math.roundToInt
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.sync.Mutex
++import kotlinx.coroutines.sync.withLock
++import kotlinx.coroutines.withContext
++import mozilla.components.support.base.log.logger.Logger
++import org.mozilla.fenix.settings.wallpaper.WALLPAPER_THUMBNAIL_ASPECT_RATIO
++import org.mozilla.fenix.wallpapers.Wallpaper
++
++/**
++ * The built-in Embermine collection. Its wallpapers are drawn on the device from [EmbermineWallpaperData] in the
++ * current palette and cached in the Fenix wallpaper folders. A cache is reused only while its palette and display
++ * size match.
++ *
++ * @param storageRootDirectory The top level app-local storage directory.
++ * @param getDisplaySize Returns the display size, in pixels, that full screen wallpapers are drawn at.
++ * @param getPalette Returns the palette the wallpapers should be drawn in right now.
++ */
++class EmbermineWallpapers(
++    private val storageRootDirectory: File,
++    private val getDisplaySize: () -> Size,
++    private val getPalette: () -> EmbermineWallpaperPalette,
++) {
++    private val artwork = EmbermineWallpaperData.wallpapers
++    private val mutex = Mutex()
++
++    /**
++     * Draws any wallpaper whose cache does not match the current palette and display size, then returns the
++     * collection in that palette.
++     */
++    suspend fun refresh(): List<Wallpaper> =
++        mutex.withLock {
++            withContext(Dispatchers.IO) {
++                val palette = getPalette()
++                val displaySize = getDisplaySize()
++                val fingerprint = palette.fingerprint(displaySize.width, displaySize.height)
++                artwork.forEach { art ->
++                    if (!isRendered(art.name, fingerprint)) {
++                        try {
++                            render(art, palette, displaySize, fingerprint)
++                        } catch (e: IOException) {
++                            Logger.error("Failed to render Embermine wallpaper ${art.name}", e)
++                        }
++                    }
++                }
++                wallpapers(palette)
++            }
++        }
++
++    internal fun wallpapers(palette: EmbermineWallpaperPalette): List<Wallpaper> =
++        artwork.map { art ->
++            Wallpaper(
++                name = art.name,
++                collection = collection,
++                textColor = palette.textColor,
++                cardColorLight = palette.cardColor,
++                cardColorDark = palette.cardColor,
++                thumbnailFileState = Wallpaper.ImageFileState.Downloaded,
++                assetsFileState = Wallpaper.ImageFileState.Downloaded,
++            )
++        }
++
++    private fun isRendered(name: String, fingerprint: String): Boolean {
++        val fingerprintFile = File(directory(name), FINGERPRINT_FILE)
++        return fingerprintFile.exists() &&
++            fingerprintFile.readText() == fingerprint &&
++            Wallpaper.ImageType.entries.all { File(storageRootDirectory, Wallpaper.getLocalPath(name, it)).exists() }
++    }
++
++    private fun render(
++        art: EmbermineWallpaperArt,
++        palette: EmbermineWallpaperPalette,
++        displaySize: Size,
++        fingerprint: String,
++    ) {
++        val longEdge = max(displaySize.width, displaySize.height)
++        val shortEdge = min(displaySize.width, displaySize.height)
++        val thumbnailHeight = (THUMBNAIL_WIDTH / WALLPAPER_THUMBNAIL_ASPECT_RATIO).roundToInt()
++        val sizes = mapOf(
++            Wallpaper.ImageType.Portrait to (shortEdge to longEdge),
++            Wallpaper.ImageType.Landscape to (longEdge to shortEdge),
++            Wallpaper.ImageType.Thumbnail to (THUMBNAIL_WIDTH to thumbnailHeight),
++        )
++        sizes.forEach { (type, size) ->
++            val bitmap = EmbermineWallpaperRenderer.render(art, palette, size.first, size.second)
++            writePng(bitmap, File(storageRootDirectory, Wallpaper.getLocalPath(art.name, type)))
++            bitmap.recycle()
++        }
++        File(directory(art.name), FINGERPRINT_FILE).writeText(fingerprint)
++    }
++
++    private fun writePng(bitmap: Bitmap, target: File) {
++        val temporary = File(target.parentFile, "${target.name}.tmp")
++        temporary.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, it) }
++        if (!temporary.renameTo(target)) {
++            throw IOException("Could not move ${temporary.name} into place")
++        }
++    }
++
++    private fun directory(name: String): File = File(storageRootDirectory, "wallpapers/$name")
++
++    companion object {
++        const val COLLECTION_NAME = "embermine"
++        const val DEFAULT_NAME = "bloom"
++
++        val collection =
++            Wallpaper.Collection(
++                name = COLLECTION_NAME,
++                heading = null,
++                description = null,
++                learnMoreUrl = null,
++                availableLocales = null,
++                startDate = null,
++                endDate = null,
++            )
++
++        val names: List<String>
++            get() = EmbermineWallpaperData.wallpapers.map { it.name }
++
++        /** Whether [wallpaper] belongs to the Embermine collection, which is bundled and never downloaded. */
++        fun isEmbermine(wallpaper: Wallpaper): Boolean = wallpaper.collection.name == COLLECTION_NAME
++
++        private const val FINGERPRINT_FILE = "palette.txt"
++        private const val THUMBNAIL_WIDTH = 540
++        private const val PNG_QUALITY = 100
++    }
++}
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/HomepageCard.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/HomepageCard.kt
+index 0c721d2eabc04e98565bf8b74f00bc000659f5e8..d0073217f1f08cd4708671fec10e8c66e447fb2a 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/HomepageCard.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/HomepageCard.kt
+@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.graphics.Shape
+ import androidx.compose.ui.unit.dp
++import org.mozilla.fenix.wallpapers.WallpaperTheme
+ 
+ private val cardElevation = 6.dp
+ 
+@@ -50,7 +51,7 @@ internal fun HomepageCard(
+         colors =
+             CardDefaults.cardColors(
+                 containerColor = backgroundColor,
+-                contentColor = MaterialTheme.colorScheme.onSurface,
++                contentColor = WallpaperTheme.cardContentColor,
+             ),
+         elevation = elevation,
+         border = border,
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/ui/WallpaperBackground.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/ui/WallpaperBackground.kt
+index 663da26892208a3f9d07964b24532cebf220ca48..e09bbc5d240af8f5b7572a2153fc3e570da108c9 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/ui/WallpaperBackground.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/ui/WallpaperBackground.kt
+@@ -36,7 +36,7 @@ fun WallpaperBackground(
+     val orientation = LocalConfiguration.current.orientation
+     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
+ 
+-    LaunchedEffect(wallpaper.name, orientation) {
++    LaunchedEffect(wallpaper, orientation) {
+         bitmap =
+             if (Wallpaper.isLocalWallpaper(wallpaper.name)) {
+                 null
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt
+index 0cd63fdd858f76f889465cb093f4ab1d7db549c3..560d6f3a803351e95bff3f13962fec8abe107ca1 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt
+@@ -58,6 +58,7 @@ import mozilla.components.compose.base.theme.PreviewThemeProvider
+ import mozilla.components.compose.base.theme.Theme
+ import org.mozilla.fenix.R
+ import org.mozilla.fenix.compose.ClickableSubstringLink
++import org.mozilla.fenix.embermine.wallpapers.EmbermineWallpapers
+ import org.mozilla.fenix.theme.FirefoxTheme
+ import org.mozilla.fenix.wallpapers.Wallpaper
+ 
+@@ -123,7 +124,13 @@ private fun WallpaperGroupHeading(
+     // and descriptions so they could be localized.
+     // In the future, we may want to either use the dynamic wallpaper properties with localized fallbacks
+     // or invest in a method of localizing the remote strings themselves.
+-    if (collection.name == Wallpaper.CLASSIC_FIREFOX_COLLECTION) {
++    if (collection.name == EmbermineWallpapers.COLLECTION_NAME) {
++        Text(
++            text = stringResource(R.string.embermine_wallpaper_collection_title),
++            color = MaterialTheme.colorScheme.onSurface,
++            style = FirefoxTheme.typography.subtitle2,
++        )
++    } else if (collection.name == Wallpaper.CLASSIC_FIREFOX_COLLECTION) {
+         Text(
+             text =
+                 stringResource(
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
+index d57c8223c22b811e56063eb46e07794277f08da3..445ef844d3d4644379308c470c102c12026081a5 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
+@@ -56,6 +56,7 @@ import org.mozilla.fenix.components.toolbar.ToolbarPosition
+ import org.mozilla.fenix.crashes.crashReportOption
+ import org.mozilla.fenix.debugsettings.addresses.EmptyAddressesDebugRegionRepository
+ import org.mozilla.fenix.debugsettings.addresses.SharedPrefsAddressesDebugRegionRepository
++import org.mozilla.fenix.embermine.wallpapers.EmbermineWallpapers
+ import org.mozilla.fenix.ext.TALL_SCREEN_HEIGHT_DP
+ import org.mozilla.fenix.ext.WIDE_SCREEN_WIDTH_DP
+ import org.mozilla.fenix.ext.components
+@@ -75,7 +76,6 @@ import org.mozilla.fenix.settings.sitepermissions.AUTOPLAY_BLOCK_AUDIBLE
+ import org.mozilla.fenix.tabstray.DefaultTabManagementFeatureHelper
+ import org.mozilla.fenix.termsofuse.TOU_VERSION
+ import org.mozilla.fenix.utils.Settings.Companion.LONGFOX_PEEK_ANIMATION_MAX_SHOWS
+-import org.mozilla.fenix.wallpapers.Wallpaper
+ 
+ private const val AUTOPLAY_USER_SETTING = "AUTOPLAY_USER_SETTING"
+ private const val MAX_ANIMATION_FOREGROUND = 5
+@@ -582,12 +582,7 @@ class Settings(
+     var currentWallpaperName by
+         stringPreference(
+             appContext.getPreferenceKey(R.string.pref_key_current_wallpaper),
+-            default =
+-                if (enableHomepageEdgeToEdgeBackgroundFeature) {
+-                    Wallpaper.EdgeToEdge.name
+-                } else {
+-                    Wallpaper.Default.name
+-                },
++            default = EmbermineWallpapers.DEFAULT_NAME,
+         )
+ 
+     /**
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpaperState.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpaperState.kt
+index 16b4065434bdbec368b58441964868cbe6f33516..9fe495cd266a7661f064c44e8a475e38956a47f7 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpaperState.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpaperState.kt
+@@ -49,6 +49,19 @@ data class WallpaperState(
+                 else -> MaterialTheme.colorScheme.surfaceBright
+             }
+ 
++    /**
++     * [Color] to use for text on a card laid over the current wallpaper. Follows [cardBackgroundColor]: the wallpaper's
++     * text color when its card colors are available, otherwise the surface's on color.
++     */
++    val cardContentColor: Color
++        @Composable
++        get() =
++            if (currentWallpaper.cardColorLight != null && currentWallpaper.cardColorDark != null) {
++                textColor
++            } else {
++                MaterialTheme.colorScheme.onSurface
++            }
++
+     /** [Color] to use for a button background color on the current wallpaper. */
+     val buttonBackgroundColor: Color
+         @Composable
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpaperTheme.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpaperTheme.kt
+index 1c8e716ccc98305de370ca54aa1f5affada0b3ae..7b35dce05aa382c649e53345e991a54ce2d6ebcf 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpaperTheme.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpaperTheme.kt
+@@ -33,6 +33,10 @@ object WallpaperTheme {
+     val cardBackgroundColor: Color
+         @Composable @ReadOnlyComposable get() = LocalWallpaperState.current.cardBackgroundColor
+ 
++    /** Content color for text on cards laid over the wallpaper. */
++    val cardContentColor: Color
++        @Composable get() = LocalWallpaperState.current.cardContentColor
++
+     /** Background color for buttons drawn over the wallpaper. */
+     val buttonBackgroundColor: Color
+         @Composable get() = LocalWallpaperState.current.buttonBackgroundColor
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpapersUseCases.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpapersUseCases.kt
+index 05d84c3d2f1fa87d1047ea5915e15f22ec7a7fa0..08be2dad3d9165904ad6ef088ec6fd362855a4b2 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpapersUseCases.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpapersUseCases.kt
+@@ -17,6 +17,8 @@ import mozilla.components.concept.fetch.Client
+ import mozilla.components.support.ktx.android.graphics.toSampledBitmap
+ import org.mozilla.fenix.components.AppStore
+ import org.mozilla.fenix.components.appstate.AppAction
++import org.mozilla.fenix.embermine.wallpapers.EmbermineWallpaperPalette
++import org.mozilla.fenix.embermine.wallpapers.EmbermineWallpapers
+ import org.mozilla.fenix.utils.Settings
+ 
+ /**
+@@ -29,6 +31,7 @@ import org.mozilla.fenix.utils.Settings
+  * @param storageRootDirectory The top level app-local storage directory.
+  * @param currentLocale The locale currently being used on the device.
+  * @param getDisplaySize Returns the current size of the display, in pixels, that a full screen wallpaper has to cover.
++ * @param getEmberminePalette Returns the palette the built-in Embermine wallpapers are drawn in.
+  */
+ class WallpapersUseCases(
+     settings: Settings,
+@@ -38,9 +41,11 @@ class WallpapersUseCases(
+     storageRootDirectory: File,
+     currentLocale: String,
+     private val getDisplaySize: () -> Size,
++    getEmberminePalette: () -> EmbermineWallpaperPalette = { EmbermineWallpaperPalette.nova() },
+ ) {
+     private val downloader = WallpaperDownloader(storageRootDirectory, client)
+     private val fileManager = WallpaperFileManager(storageRootDirectory)
++    private val embermineWallpapers = EmbermineWallpapers(storageRootDirectory, getDisplaySize, getEmberminePalette)
+ 
+     val fetchCurrentWallpaperUseCase: FetchCurrentWallpaperUseCase by lazy {
+         DefaultFetchCurrentWallpaperUseCase(settings, appStore)
+@@ -64,9 +69,15 @@ class WallpapersUseCases(
+             migrationHelper = migrationHelper,
+             settings = settings,
+             currentLocale = currentLocale,
++            refreshEmbermineWallpapers = { embermineWallpapers.refresh() },
+         )
+     }
+ 
++    // Use case for re-drawing the Embermine wallpapers when the palette has changed since they were last drawn.
++    val refreshEmbermineWallpapers: RefreshEmbermineWallpapersUseCase by lazy {
++        DefaultRefreshEmbermineWallpapersUseCase(appStore, embermineWallpapers)
++    }
++
+     // Use case for loading specific wallpaper bitmaps.
+     val loadBitmap: LoadBitmapUseCase by lazy {
+         DefaultLoadBitmapUseCase(getFilesDir = { filesDir }, getDisplaySize = getDisplaySize)
+@@ -98,6 +109,36 @@ class WallpapersUseCases(
+         }
+     }
+ 
++    /** Contract for usecases that re-draw the Embermine wallpapers for the current palette. */
++    interface RefreshEmbermineWallpapersUseCase {
++        /** Re-draw the Embermine wallpapers if needed, then update the store with their current colors. */
++        suspend operator fun invoke()
++    }
++
++    internal class DefaultRefreshEmbermineWallpapersUseCase(
++        private val appStore: AppStore,
++        private val embermineWallpapers: EmbermineWallpapers,
++    ) : RefreshEmbermineWallpapersUseCase {
++        override suspend fun invoke() {
++            val refreshed = embermineWallpapers.refresh()
++            val wallpaperState = appStore.state.wallpaperState
++
++            val current = wallpaperState.currentWallpaper
++            val updatedCurrent = refreshed.find { it.name == current.name }
++            if (updatedCurrent != null && updatedCurrent != current) {
++                appStore.dispatch(AppAction.WallpaperAction.UpdateCurrentWallpaper(updatedCurrent))
++            }
++
++            val available = wallpaperState.availableWallpapers
++            val updatedAvailable = available.map { wallpaper ->
++                refreshed.find { it.name == wallpaper.name } ?: wallpaper
++            }
++            if (updatedAvailable != available) {
++                appStore.dispatch(AppAction.WallpaperAction.UpdateAvailableWallpapers(updatedAvailable))
++            }
++        }
++    }
++
+     /** Contract for usecases that initialize the wallpaper feature. */
+     interface InitializeWallpapersUseCase {
+         /**
+@@ -116,6 +157,7 @@ class WallpapersUseCases(
+         private val migrationHelper: LegacyWallpaperMigration,
+         private val settings: Settings,
+         private val currentLocale: String,
++        private val refreshEmbermineWallpapers: suspend () -> List<Wallpaper> = { emptyList() },
+     ) : InitializeWallpapersUseCase {
+         override suspend fun invoke() {
+             val currentWallpaperName =
+@@ -132,10 +174,12 @@ class WallpapersUseCases(
+                 migrationHelper.migrateExpiredWallpaperCardColors()
+             }
+ 
+-            val possibleWallpapers =
++            val embermineWallpapers = refreshEmbermineWallpapers()
++            val remoteWallpapers =
+                 metadataFetcher.downloadWallpaperList().filter {
+                     !it.isExpired() && it.isAvailableInLocale()
+                 }
++            val possibleWallpapers = embermineWallpapers + remoteWallpapers
+             val currentWallpaper =
+                 possibleWallpapers.find { it.name == currentWallpaperName }
+                     ?: fileManager.lookupExpiredWallpaper(settings)
+@@ -151,12 +195,12 @@ class WallpapersUseCases(
+                 possibleWallpapers,
+             )
+ 
+-            val wallpapersWithUpdatedThumbnailState = possibleWallpapers.map { wallpaper ->
++            val wallpapersWithUpdatedThumbnailState = remoteWallpapers.map { wallpaper ->
+                 val result = downloader.downloadThumbnail(wallpaper)
+                 wallpaper.copy(thumbnailFileState = result)
+             }
+ 
+-            val defaultIncluded = defaultWallpapers + wallpapersWithUpdatedThumbnailState
++            val defaultIncluded = embermineWallpapers + defaultWallpapers + wallpapersWithUpdatedThumbnailState
+             appStore.dispatch(AppAction.WallpaperAction.UpdateAvailableWallpapers(defaultIncluded))
+         }
+ 
+@@ -301,7 +345,9 @@ class WallpapersUseCases(
+          */
+         override suspend fun invoke(wallpaper: Wallpaper): Wallpaper.ImageFileState {
+             return if (
+-                wallpaper.collection == Wallpaper.DefaultCollection || fileManager.wallpaperImagesExist(wallpaper)
++                wallpaper.collection == Wallpaper.DefaultCollection ||
++                    EmbermineWallpapers.isEmbermine(wallpaper) ||
++                    fileManager.wallpaperImagesExist(wallpaper)
+             ) {
+                 selectWallpaper(wallpaper)
+                 dispatchDownloadState(wallpaper, Wallpaper.ImageFileState.Downloaded)
+diff --git a/mobile/android/fenix/app/src/main/res/values/embermine_strings.xml b/mobile/android/fenix/app/src/main/res/values/embermine_strings.xml
+index 84bea931e6c19df1954fbbdebb1de28643c29518..d20918356b03eb48d8b878d4b101c0ea3bf03d09 100644
+--- a/mobile/android/fenix/app/src/main/res/values/embermine_strings.xml
++++ b/mobile/android/fenix/app/src/main/res/values/embermine_strings.xml
+@@ -5,6 +5,7 @@
+ <resources>
+     <!-- The Mozilla product name, for text that names Firefox itself rather than the app. -->
+     <string name="embermine_mozilla_product_firefox" translatable="false">Firefox</string>
++    <string name="embermine_wallpaper_collection_title" translatable="false">Embermine</string>
+     <string name="embermine_about_main_line" translatable="false">Embermine is a modified build of Firefox, made by <a href="https://ivy.yt">https://ivy.yt</a></string>
+     <string name="embermine_android_components_abbreviation" translatable="false">AC</string>
+     <string name="embermine_onboarding_tou_body_line_3" translatable="false">Embermine does not send diagnostic or interaction data to Mozilla unless you turn it on. %1$s</string>
+diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperPaletteTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperPaletteTest.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..4c183d0d971319e20a589b8d6126858787b7f00b
+--- /dev/null
++++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperPaletteTest.kt
+@@ -0,0 +1,62 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine.wallpapers
++
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertNotEquals
++import org.junit.Test
++
++class EmbermineWallpaperPaletteTest {
++
++    @Test
++    fun paletteSourceIsEmberBelowAndroid12() {
++        assertEquals(EmbermineWallpaperPaletteSource.Ember, EmbermineWallpaperPalette.source(30, switchOn = true))
++        assertEquals(EmbermineWallpaperPaletteSource.Ember, EmbermineWallpaperPalette.source(30, switchOn = false))
++        assertEquals(EmbermineWallpaperPaletteSource.Ember, EmbermineWallpaperPalette.source(26, switchOn = true))
++    }
++
++    @Test
++    fun paletteSourceFollowsSwitchFromAndroid12() {
++        assertEquals(EmbermineWallpaperPaletteSource.System, EmbermineWallpaperPalette.source(31, switchOn = true))
++        assertEquals(EmbermineWallpaperPaletteSource.System, EmbermineWallpaperPalette.source(34, switchOn = true))
++        assertEquals(EmbermineWallpaperPaletteSource.Nova, EmbermineWallpaperPalette.source(31, switchOn = false))
++        assertEquals(EmbermineWallpaperPaletteSource.Nova, EmbermineWallpaperPalette.source(34, switchOn = false))
++    }
++
++    @Test
++    fun emberPaletteUsesCharcoalToAmberRoles() {
++        assertEquals(
++            listOf(0xFF120A08, 0xFF3A1410, 0xFF7A2414, 0xFFC2410C, 0xFFF97316, 0xFFFDBA74).map { it.toInt() },
++            EmbermineWallpaperPalette.ember().tones,
++        )
++    }
++
++    @Test
++    fun textIsTheLightestTone() {
++        assertEquals(0xFFFDBA74L, EmbermineWallpaperPalette.ember().textColor)
++    }
++
++    @Test
++    fun cardIsTranslucentDarkTone() {
++        assertEquals(0xC03A1410L, EmbermineWallpaperPalette.ember().cardColor)
++    }
++
++    @Test
++    fun fingerprintChangesWithTonesAndSize() {
++        val ember = EmbermineWallpaperPalette.ember()
++        val shifted = EmbermineWallpaperPalette(
++            ember.tones.mapIndexed { index, tone -> if (index == 0) tone + 1 else tone },
++        )
++
++        assertEquals(ember.fingerprint(1080, 2400), EmbermineWallpaperPalette.ember().fingerprint(1080, 2400))
++        assertNotEquals(ember.fingerprint(1080, 2400), shifted.fingerprint(1080, 2400))
++        assertNotEquals(ember.fingerprint(1080, 2400), ember.fingerprint(2400, 1080))
++    }
++
++    @Test(expected = IllegalArgumentException::class)
++    fun paletteNeedsSixTones() {
++        EmbermineWallpaperPalette(listOf(0xFF000000.toInt(), 0xFFFFFFFF.toInt()))
++    }
++}
+diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperRendererTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperRendererTest.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..74956bb7270737fc48eaecd13a047cbd9c35aab4
+--- /dev/null
++++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperRendererTest.kt
+@@ -0,0 +1,55 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine.wallpapers
++
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertTrue
++import org.junit.Test
++
++class EmbermineWallpaperRendererTest {
++
++    private val sourceWidth = 542.16f
++    private val sourceHeight = 920.73f
++
++    @Test
++    fun portraitTargetIsFilledAndCutEvenlyOnTheSides() {
++        val crop = centerCrop(1080, 2400, sourceWidth, sourceHeight)
++
++        assertCentered(crop, 1080, 2400)
++        assertEquals(0f, crop.dy, DELTA)
++        assertEquals(2400f / sourceHeight, crop.scale, DELTA)
++    }
++
++    @Test
++    fun landscapeTargetIsFilledAndCutEvenlyOnTheTopAndBottom() {
++        val crop = centerCrop(2400, 1080, sourceWidth, sourceHeight)
++
++        assertCentered(crop, 2400, 1080)
++        assertEquals(0f, crop.dx, DELTA)
++        assertEquals(2400f / sourceWidth, crop.scale, DELTA)
++    }
++
++    @Test
++    fun thumbnailTargetKeepsProportionsAndIsCentered() {
++        val crop = centerCrop(540, 491, sourceWidth, sourceHeight)
++
++        assertCentered(crop, 540, 491)
++        assertEquals(540f / sourceWidth, crop.scale, DELTA)
++    }
++
++    private fun assertCentered(crop: CenterCrop, targetWidth: Int, targetHeight: Int) {
++        val drawnWidth = sourceWidth * crop.scale
++        val drawnHeight = sourceHeight * crop.scale
++
++        assertTrue(drawnWidth >= targetWidth - DELTA)
++        assertTrue(drawnHeight >= targetHeight - DELTA)
++        assertEquals(targetWidth.toFloat(), 2 * crop.dx + drawnWidth, DELTA)
++        assertEquals(targetHeight.toFloat(), 2 * crop.dy + drawnHeight, DELTA)
++    }
++
++    private companion object {
++        const val DELTA = 0.01f
++    }
++}
+diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpapersTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpapersTest.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..104c48d8bbc7d53aa29fc5dabed002fc18c42bb7
+--- /dev/null
++++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpapersTest.kt
+@@ -0,0 +1,47 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++package org.mozilla.fenix.embermine.wallpapers
++
++import android.util.Size
++import java.io.File
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertFalse
++import org.junit.Assert.assertTrue
++import org.junit.Test
++import org.mozilla.fenix.wallpapers.Wallpaper
++
++class EmbermineWallpapersTest {
++
++    private val palette = EmbermineWallpaperPalette.ember()
++    private val wallpapers = EmbermineWallpapers(File("unused"), { Size(1080, 2400) }, { palette })
++
++    @Test
++    fun collectionListsBundledWallpapersInOrder() {
++        assertEquals(listOf("bloom", "grow", "pattern", "rise", "triangle"), EmbermineWallpapers.names)
++        assertTrue(EmbermineWallpapers.DEFAULT_NAME in EmbermineWallpapers.names)
++    }
++
++    @Test
++    fun wallpapersUseThePaletteColorsAndCollection() {
++        val list = wallpapers.wallpapers(palette)
++
++        assertEquals(EmbermineWallpapers.names, list.map { it.name })
++        list.forEach { wallpaper ->
++            assertEquals(EmbermineWallpapers.collection, wallpaper.collection)
++            assertEquals(palette.textColor, wallpaper.textColor)
++            assertEquals(palette.cardColor, wallpaper.cardColorLight)
++            assertEquals(palette.cardColor, wallpaper.cardColorDark)
++            assertEquals(Wallpaper.ImageFileState.Downloaded, wallpaper.thumbnailFileState)
++            assertEquals(Wallpaper.ImageFileState.Downloaded, wallpaper.assetsFileState)
++        }
++    }
++
++    @Test
++    fun onlyBundledWallpapersAreEmbermine() {
++        wallpapers.wallpapers(palette).forEach { assertTrue(EmbermineWallpapers.isEmbermine(it)) }
++        assertFalse(EmbermineWallpapers.isEmbermine(Wallpaper.Default))
++        assertFalse(EmbermineWallpapers.isEmbermine(Wallpaper.EdgeToEdge))
++    }
++}
+diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/utils/SettingsTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/utils/SettingsTest.kt
+index 80a16738d925e4fadc95efa5575f301932fca2d5..0b3c5627765dd473bd95080fd175b8513d4d6272 100644
+--- a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/utils/SettingsTest.kt
++++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/utils/SettingsTest.kt
+@@ -30,6 +30,7 @@ import org.junit.Test
+ import org.junit.runner.RunWith
+ import org.mozilla.fenix.browser.browsingmode.BrowsingMode
+ import org.mozilla.fenix.components.toolbar.ToolbarPosition
++import org.mozilla.fenix.embermine.wallpapers.EmbermineWallpapers
+ import org.mozilla.fenix.nimbus.DefaultBrowserPrompt
+ import org.mozilla.fenix.nimbus.FakeNimbusEventStore
+ import org.mozilla.fenix.nimbus.FxNimbus
+@@ -37,7 +38,6 @@ import org.mozilla.fenix.nimbus.HomescreenEdgeToEdgeBackground
+ import org.mozilla.fenix.settings.PhoneFeature
+ import org.mozilla.fenix.settings.ShortcutType
+ import org.mozilla.fenix.settings.deletebrowsingdata.DeleteBrowsingDataOnQuitType
+-import org.mozilla.fenix.wallpapers.Wallpaper
+ import org.robolectric.RobolectricTestRunner
+ import org.robolectric.Shadows.shadowOf
+ 
+@@ -153,23 +153,23 @@ class SettingsTest {
+     }
+ 
+     @Test
+-    fun defaultWallpaperIsEdgeToEdgeWhenEdgeToEdgeFeatureEnabled() {
++    fun defaultWallpaperIsBloomWhenEdgeToEdgeFeatureEnabled() {
+         FxNimbus.features.homescreenEdgeToEdgeBackground.withCachedValue(HomescreenEdgeToEdgeBackground(enabled = true))
+         val settings = Settings(testContext)
+ 
+         // Then
+-        assertEquals(Wallpaper.EdgeToEdge.name, settings.currentWallpaperName)
++        assertEquals(EmbermineWallpapers.DEFAULT_NAME, settings.currentWallpaperName)
+     }
+ 
+     @Test
+-    fun defaultWallpaperIsDefaultWhenEdgeToEdgeDisabled() {
++    fun defaultWallpaperIsBloomWhenEdgeToEdgeDisabled() {
+         FxNimbus.features.homescreenEdgeToEdgeBackground.withCachedValue(
+             HomescreenEdgeToEdgeBackground(enabled = false)
+         )
+         val settings = Settings(testContext)
+ 
+         // Then
+-        assertEquals(Wallpaper.Default.name, settings.currentWallpaperName)
++        assertEquals(EmbermineWallpapers.DEFAULT_NAME, settings.currentWallpaperName)
+     }
+ 
+     @Test

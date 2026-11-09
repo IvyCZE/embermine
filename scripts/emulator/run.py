@@ -27,6 +27,7 @@ from scripts.emulator import (
     flows_secret,
     flows_settings,
     flows_tabs,
+    flows_wallpaper,
     launcher,
     logcat_scan,
 )
@@ -36,7 +37,7 @@ from scripts.emulator.session import LaunchError, Session
 from scripts.emulator.testserver import WalkServer
 
 SERVER_PORT = 8765
-FLOW_BUDGET_SECONDS = 38 * 60
+FLOW_BUDGET_SECONDS = 48 * 60
 Expected = tuple[str, str, bool]  # file stem, index label, private
 
 
@@ -105,7 +106,7 @@ def legacy_flow_list() -> list[Flow]:
 def flow_list(variant: str = "light", accent: str = "on") -> list[Flow]:
     if variant == "legacy":
         return legacy_flow_list()
-    f_browse, f_set, f_motion = flows_browse, flows_settings, flows_motion
+    f_browse, f_set, f_motion, f_wall = flows_browse, flows_settings, flows_motion, flows_wallpaper
 
     def motion(s: Session, position: str) -> None:
         f_motion.page_load(s, position)
@@ -157,14 +158,15 @@ def flow_list(variant: str = "light", accent: str = "on") -> list[Flow]:
         Flow("motion", lambda s: f_motion.both_positions(s, motion), motion_expected),
         Flow("secret settings", flows_secret.secret_settings, SECRET_STEMS),
         Flow("about pages", f_set.about_pages, [(stem, label, False) for stem, _, _, label in f_set.ABOUT_PAGES]),
+        Flow("wallpaper selection", f_wall.select_picked_wallpaper, [(stem, label, False) for stem, label in f_wall.PICKED_CAPTURES]),
     ]
     if accent == "on":
         flows.append(
             Flow(
                 "wallpaper colors toggle",
-                f_set.wallpaper_colors_toggle,
-                [(stem, label, False) for stem, _, label in f_set.WALLPAPER_COLORS_CAPTURES],
-                states={stem: on for stem, on, _ in f_set.WALLPAPER_COLORS_CAPTURES},
+                f_wall.wallpaper_colors_toggle,
+                [(stem, label, False) for stem, _, label in f_wall.TOGGLE_CAPTURES],
+                states={stem: on for stem, on, _ in f_wall.TOGGLE_CAPTURES},
             )
         )
     return flows

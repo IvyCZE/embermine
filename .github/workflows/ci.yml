@@ -27,7 +27,7 @@ jobs:
   emulator:
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
@@ -258,6 +258,9 @@ jobs:
             --require-class org.mozilla.fenix.embermine.EmbermineAccentSchemeTest \
             --require-class org.mozilla.fenix.embermine.EmbermineWavyProgressTest \
             --require-class mozilla.components.compose.base.embermine.EmbermineShapeTest \
+            --require-class org.mozilla.fenix.embermine.wallpapers.EmbermineWallpaperPaletteTest \
+            --require-class org.mozilla.fenix.embermine.wallpapers.EmbermineWallpaperRendererTest \
+            --require-class org.mozilla.fenix.embermine.wallpapers.EmbermineWallpapersTest \
             --require-class mozilla.components.compose.base.embermine.EmberminePageProgressTest
 
       - name: Upload unit test results

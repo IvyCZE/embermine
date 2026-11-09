@@ -66,6 +66,11 @@ class CiWorkflowTests(unittest.TestCase):
             self.assertIn(needle, ci)
         self.assertIn("org.mozilla.fenix.embermine.EmbermineVersionTest", ci)
 
+    def test_unit_tests_require_the_wallpaper_test_classes(self) -> None:
+        ci = text("ci.yml")
+        for name in ("EmbermineWallpaperPaletteTest", "EmbermineWallpaperRendererTest", "EmbermineWallpapersTest"):
+            self.assertIn(f"--require-class org.mozilla.fenix.embermine.wallpapers.{name}", ci)
+
     def test_signing_secrets_are_only_exposed_to_the_signing_step(self) -> None:
         build = text("build.yml")
         occurrences = [m.start() for m in re.finditer(r"secrets\.KEYSTORE_PASSWORD", build)]

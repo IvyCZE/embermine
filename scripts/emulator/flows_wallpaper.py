@@ -1,0 +1,129 @@
+"""Embermine wallpapers: a picked wallpaper, the homepage and picker after each switch change, and a system palette change."""
+from __future__ import annotations
+
+import re
+
+from scripts.emulator import devsetup, flows_settings
+from scripts.emulator.device import StepError
+from scripts.emulator.flows_browse import go_home
+from scripts.emulator.session import Session
+from scripts.emulator.uidump import Selector
+
+PICKED_WALLPAPER = "triangle"
+# A lime green seed: the palette check still requires green, and the wallpapers recolor visibly against the default seed.
+CHANGED_PALETTE_SEED = "7BC043"
+PICKER_ROW = Selector(label=r"Wallpapers?")
+ANY_THUMBNAIL = Selector(desc=r"Wallpaper Item: .*")
+
+# (file stem, label) of the captures of the picked wallpaper flow, in the order the flow takes them
+PICKED_PICKER = ("wallpaper-select-triangle", "wallpaper picker, triangle selected")
+PICKED_HOMEPAGE = ("homepage-wallpaper-triangle", "homepage with the triangle wallpaper")
+PICKED_RESTART = ("04-homepage-after-restart", "homepage after a force stop and relaunch, triangle kept")
+PICKED_CAPTURES = (PICKED_PICKER, PICKED_HOMEPAGE, PICKED_RESTART)
+
+# (file stem, switch state in the capture, label) of the captures taken right after each switch change
+TOGGLE_OFF_HOMEPAGE = ("homepage-after-toggle-off", False, "homepage, switch turned off")
+TOGGLE_OFF_PICKER = ("wallpaper-picker-after-toggle-off", False, "wallpaper picker, switch turned off")
+TOGGLE_ON_HOMEPAGE = ("homepage-after-toggle-on", True, "homepage, switch turned on again")
+TOGGLE_ON_PICKER = ("wallpaper-picker-after-toggle-on", True, "wallpaper picker, switch turned on again")
+RESTART_OFF_HOMEPAGE = ("homepage-after-restart-off", False, "homepage, switch off after a restart")
+RESTART_ON_HOMEPAGE = ("homepage-after-restart-on", True, "homepage, switch on after a restart")
+PALETTE_HOMEPAGE = ("04-homepage-after-palette-change", True, "homepage after the system palette changed mid-session")
+TOGGLE_HOMEPAGES = (TOGGLE_OFF_HOMEPAGE, TOGGLE_ON_HOMEPAGE, RESTART_OFF_HOMEPAGE, RESTART_ON_HOMEPAGE)
+TOGGLE_PICKERS = (TOGGLE_OFF_PICKER, TOGGLE_ON_PICKER)
+TOGGLE_CAPTURES = flows_settings.WALLPAPER_COLORS_CAPTURES + TOGGLE_HOMEPAGES + TOGGLE_PICKERS + (PALETTE_HOMEPAGE,)
+
+
+def thumbnail(name: str) -> Selector:
+    return Selector(desc=rf"Wallpaper Item: {re.escape(name)}")
+
+
+def open_picker(s: Session) -> None:
+    flows_settings.open_settings(s)
+    flows_settings.open_row(s, r"Homepage")
+    s.dev.tap(PICKER_ROW, timeout=8, settle=2.5)
+    if s.dev.wait_for(ANY_THUMBNAIL, timeout=10) is None:
+        raise StepError("wallpaper picker thumbnails did not appear")
+
+
+def select_picked_wallpaper(s: Session) -> None:
+    """Picks the triangle wallpaper, then checks the homepage before and after a force stop and relaunch."""
+    with s.capture(PICKED_PICKER[0], label=PICKED_PICKER[1]) as shot:
+        open_picker(s)
+        s.dev.tap(thumbnail(PICKED_WALLPAPER), timeout=10, settle=2.0)
+        shot.take(settle=2.0)
+    with s.capture(PICKED_HOMEPAGE[0], label=PICKED_HOMEPAGE[1]) as shot:
+        go_home(s)
+        shot.take(settle=2.5)
+    with s.capture(PICKED_RESTART[0], label=PICKED_RESTART[1]) as shot:
+        s.force_stop()
+        s.launch_from_launcher()
+        go_home(s)
+        shot.take(settle=2.5)
+
+
+def homepage_capture(s: Session, capture: tuple[str, bool, str]) -> None:
+    stem, on, label = capture
+    s.dynamic = on
+    with s.capture(stem, label=label) as shot:
+        go_home(s)
+        shot.take(settle=2.5)
+
+
+def picker_capture(s: Session, capture: tuple[str, bool, str]) -> None:
+    stem, on, label = capture
+    s.dynamic = on
+    with s.capture(stem, label=label) as shot:
+        open_picker(s)
+        shot.take(settle=2.0)
+
+
+def palette_change(s: Session) -> None:
+    """Changes the system palette mid-session. The app takes it up after a relaunch, then the forced green palette
+    is put back so the palette check at the end of the walk still sees green."""
+    stem, on, label = PALETTE_HOMEPAGE
+    s.dynamic = on
+    try:
+        with s.capture(stem, label=label) as shot:
+            devsetup.force_palette(s.dev.adb, s.log, s.dev.sleep, seed=CHANGED_PALETTE_SEED)
+            s.force_stop()
+            s.launch_from_launcher()
+            go_home(s)
+            shot.take(settle=2.5, note=f"system palette changed to seed #{CHANGED_PALETTE_SEED}, then restored to green")
+    finally:
+        devsetup.force_palette(s.dev.adb, s.log, s.dev.sleep)
+
+
+def wallpaper_colors_toggle(s: Session) -> None:
+    """Dynamic-on pass, after the walk: starts from the default (on). Captures the Customize screen, the homepage and
+    the picker right after each switch change and the homepage after each restart, then changes the system palette."""
+    try:
+        s.dynamic = True
+        flows_settings.open_customize(s)
+        flows_settings.require_wallpaper_colors(s, True)
+        flows_settings.set_wallpaper_colors(s, False)
+        flows_settings.toggle_capture(s, "customize-after-toggle-off", on=False)
+        homepage_capture(s, TOGGLE_OFF_HOMEPAGE)
+        picker_capture(s, TOGGLE_OFF_PICKER)
+        flows_settings.open_customize(s)
+        flows_settings.set_wallpaper_colors(s, True)
+        flows_settings.toggle_capture(s, "customize-after-toggle-on", on=True)
+        homepage_capture(s, TOGGLE_ON_HOMEPAGE)
+        picker_capture(s, TOGGLE_ON_PICKER)
+        flows_settings.open_customize(s)
+        flows_settings.set_wallpaper_colors(s, False)
+        s.force_stop()
+        s.launch_from_launcher()
+        flows_settings.open_customize(s)
+        flows_settings.toggle_capture(s, "customize-after-restart-off", on=False)
+        homepage_capture(s, RESTART_OFF_HOMEPAGE)
+        flows_settings.open_customize(s)
+        flows_settings.set_wallpaper_colors(s, True)
+        s.force_stop()
+        s.launch_from_launcher()
+        flows_settings.open_customize(s)
+        flows_settings.toggle_capture(s, "customize-after-restart-on", on=True)
+        homepage_capture(s, RESTART_ON_HOMEPAGE)
+        palette_change(s)
+    finally:
+        s.dynamic = True

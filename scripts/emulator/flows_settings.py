@@ -295,37 +295,13 @@ def turn_wallpaper_colors_off(s: Session) -> None:
     s.deep_link("home")
 
 
-def _toggle_capture(s: Session, stem: str, on: bool) -> None:
+def toggle_capture(s: Session, stem: str, on: bool) -> None:
+    """Customize capture right after a switch change. The session's dynamic flag is set first so the file name has the state."""
     label = next(name for key, _, name in WALLPAPER_COLORS_CAPTURES if key == stem)
     s.dynamic = on
     with s.capture(stem, label=label) as shot:
         require_wallpaper_colors(s, on)
         shot.take(settle=1.5)
-
-
-def wallpaper_colors_toggle(s: Session) -> None:
-    """Dynamic-on pass, after the walk: starts from the default (on), captures right after each toggle and after
-    a restart in each state. The session's dynamic flag is set before each capture so its file name has the state."""
-    try:
-        s.dynamic = True
-        open_customize(s)
-        require_wallpaper_colors(s, True)
-        set_wallpaper_colors(s, False)
-        _toggle_capture(s, "customize-after-toggle-off", on=False)
-        set_wallpaper_colors(s, True)
-        _toggle_capture(s, "customize-after-toggle-on", on=True)
-        set_wallpaper_colors(s, False)
-        s.force_stop()
-        s.launch_from_launcher()
-        open_customize(s)
-        _toggle_capture(s, "customize-after-restart-off", on=False)
-        set_wallpaper_colors(s, True)
-        s.force_stop()
-        s.launch_from_launcher()
-        open_customize(s)
-        _toggle_capture(s, "customize-after-restart-on", on=True)
-    finally:
-        s.dynamic = True
 
 
 def allow_private_screenshots(s: Session) -> None:

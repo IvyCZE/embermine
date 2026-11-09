@@ -73,6 +73,8 @@ def secret_settings(s: Session) -> None:
         s.dev.back()
     with s.capture("secret-settings-after-restart", label="Settings list end, after force-stop and relaunch") as shot:
         s.force_stop()
+        # The app starts from its launcher icon like every other relaunch (adb wait and focus retry), then Settings opens.
+        s.launch_from_launcher()
         s.deep_link("settings")
         if s.dev.wait_for(Selector(label=r"Settings"), timeout=30) is None:
             raise StepError("Settings did not open after the relaunch")

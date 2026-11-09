@@ -1,6 +1,6 @@
-"""Read the SVG subset that assets/icon/icon.svg uses, as flat shapes in canvas coordinates.
+"""Read the SVG subset that assets/icon/icon.svg and the wallpapers use, as flat shapes in canvas coordinates.
 
-Supported: nested ``g`` elements with transforms, ``path``, ``ellipse`` and ``line`` shapes,
+Supported: nested ``g`` elements with transforms, ``path``, ``rect``, ``ellipse`` and ``line`` shapes,
 and ``clip-path`` references to a clipPath that holds one rect. Anything else raises, so an
 artwork change that the generator does not understand fails the build instead of shipping
 wrong art.
@@ -25,6 +25,7 @@ from .geometry import (
     parse_path,
     parse_transform,
     polygon_subpath,
+    rect,
     scale_factor,
     transform_subpath,
 )
@@ -33,7 +34,7 @@ from .regions import clip_convex, inside_convex
 _CLIP_REF = re.compile(r"url\(#([^)]+)\)")
 _HEX_COLOR = re.compile(r"#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})")
 _STRUCTURAL = frozenset({"defs", "clipPath", "title", "desc", "metadata"})
-_SHAPES = frozenset({"path", "ellipse", "line"})
+_SHAPES = frozenset({"path", "rect", "ellipse", "line"})
 
 
 @dataclass
@@ -161,6 +162,10 @@ def _color(value: str | None) -> str | None:
 def _geometry(el: ET.Element, tag: str) -> list[Subpath]:
     if tag == "path":
         return parse_path(el.get("d", ""))
+    if tag == "rect":
+        if _num(el, "rx") or _num(el, "ry"):
+            raise ValueError("rounded rect corners (rx, ry) are not supported")
+        return [rect(_num(el, "x"), _num(el, "y"), _num(el, "width"), _num(el, "height"))]
     if tag == "ellipse":
         return [ellipse(_num(el, "cx"), _num(el, "cy"), _num(el, "rx"), _num(el, "ry"))]
     return [Subpath((_num(el, "x1"), _num(el, "y1")), [Line(_num(el, "x2"), _num(el, "y2"))])]

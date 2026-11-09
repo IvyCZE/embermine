@@ -150,6 +150,24 @@ class SvgDocumentTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             parse_document(text)
 
+    def test_reads_a_rect_as_a_closed_rectangle(self):
+        text = (
+            '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 10 10">'
+            '<rect x="1" y="2" width="3" height="4" fill="#000000"/></svg>'
+        )
+        shapes = parse_document(text).shapes
+        self.assertEqual(len(shapes), 1)
+        self.assertTrue(shapes[0].subpaths[0].closed)
+        self.assertEqual(path_data(shapes[0].subpaths), "M1,2L4,2L4,6L1,6L1,2Z")
+
+    def test_rejects_rounded_rect_corners(self):
+        text = (
+            '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 10 10">'
+            '<rect x="1" y="2" width="3" height="4" rx="1" fill="#000000"/></svg>'
+        )
+        with self.assertRaises(ValueError):
+            parse_document(text)
+
 
 class LottieTest(unittest.TestCase):
     def test_animation_is_json_with_the_requested_frame_size(self):

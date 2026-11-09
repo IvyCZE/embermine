@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 
-from scripts.emulator import devsetup, flows_settings
+from scripts.emulator import devsetup, flows_cross, flows_settings
 from scripts.emulator.device import StepError
 from scripts.emulator.flows_browse import go_home
 from scripts.emulator.session import Session
@@ -28,10 +28,17 @@ TOGGLE_ON_HOMEPAGE = ("homepage-after-toggle-on", True, "homepage, switch turned
 TOGGLE_ON_PICKER = ("wallpaper-picker-after-toggle-on", True, "wallpaper picker, switch turned on again")
 RESTART_OFF_HOMEPAGE = ("homepage-after-restart-off", False, "homepage, switch off after a restart")
 RESTART_ON_HOMEPAGE = ("homepage-after-restart-on", True, "homepage, switch on after a restart")
+RESTART_OFF_PICKER = ("wallpaper-picker-after-restart-off", False, "wallpaper picker, switch off after a restart")
+RESTART_ON_PICKER = ("wallpaper-picker-after-restart-on", True, "wallpaper picker, switch on after a restart")
 PALETTE_HOMEPAGE = ("04-homepage-after-palette-change", True, "homepage after the system palette changed mid-session")
 TOGGLE_HOMEPAGES = (TOGGLE_OFF_HOMEPAGE, TOGGLE_ON_HOMEPAGE, RESTART_OFF_HOMEPAGE, RESTART_ON_HOMEPAGE)
-TOGGLE_PICKERS = (TOGGLE_OFF_PICKER, TOGGLE_ON_PICKER)
-TOGGLE_CAPTURES = flows_settings.WALLPAPER_COLORS_CAPTURES + TOGGLE_HOMEPAGES + TOGGLE_PICKERS + (PALETTE_HOMEPAGE,)
+TOGGLE_PICKERS = (TOGGLE_OFF_PICKER, TOGGLE_ON_PICKER, RESTART_OFF_PICKER, RESTART_ON_PICKER)
+# The Customize, homepage and picker captures above, the cross-area groups of flows_cross (each in its own switch
+# state), then the palette change. TOGGLE_PRIVATE_CAPTURES is the private set of the switch-off state.
+TOGGLE_CAPTURES = (
+    flows_settings.WALLPAPER_COLORS_CAPTURES + TOGGLE_HOMEPAGES + TOGGLE_PICKERS + flows_cross.NORMAL_CAPTURES + (PALETTE_HOMEPAGE,)
+)
+TOGGLE_PRIVATE_CAPTURES = flows_cross.PRIVATE_CAPTURES
 
 
 def thumbnail(name: str) -> Selector:
@@ -95,8 +102,9 @@ def palette_change(s: Session) -> None:
 
 
 def wallpaper_colors_toggle(s: Session) -> None:
-    """Dynamic-on pass, after the walk: starts from the default (on). Captures the Customize screen, the homepage and
-    the picker right after each switch change and the homepage after each restart, then changes the system palette."""
+    """Dynamic-on pass, after the walk: starts from the default (on). After each switch change and each restart it
+    captures the Customize screen, the homepage, the picker and the cross-area group of that switch state
+    (flows_cross); the switch-off state also gets the private set. Then it changes the system palette."""
     try:
         s.dynamic = True
         flows_settings.open_customize(s)
@@ -105,11 +113,14 @@ def wallpaper_colors_toggle(s: Session) -> None:
         flows_settings.toggle_capture(s, "customize-after-toggle-off", on=False)
         homepage_capture(s, TOGGLE_OFF_HOMEPAGE)
         picker_capture(s, TOGGLE_OFF_PICKER)
+        flows_cross.screen_group(s, flows_cross.TOGGLE_OFF)
+        flows_cross.private_group(s, flows_cross.TOGGLE_OFF)
         flows_settings.open_customize(s)
         flows_settings.set_wallpaper_colors(s, True)
         flows_settings.toggle_capture(s, "customize-after-toggle-on", on=True)
         homepage_capture(s, TOGGLE_ON_HOMEPAGE)
         picker_capture(s, TOGGLE_ON_PICKER)
+        flows_cross.screen_group(s, flows_cross.TOGGLE_ON)
         flows_settings.open_customize(s)
         flows_settings.set_wallpaper_colors(s, False)
         s.force_stop()
@@ -117,6 +128,8 @@ def wallpaper_colors_toggle(s: Session) -> None:
         flows_settings.open_customize(s)
         flows_settings.toggle_capture(s, "customize-after-restart-off", on=False)
         homepage_capture(s, RESTART_OFF_HOMEPAGE)
+        picker_capture(s, RESTART_OFF_PICKER)
+        flows_cross.screen_group(s, flows_cross.RESTART_OFF)
         flows_settings.open_customize(s)
         flows_settings.set_wallpaper_colors(s, True)
         s.force_stop()
@@ -124,6 +137,8 @@ def wallpaper_colors_toggle(s: Session) -> None:
         flows_settings.open_customize(s)
         flows_settings.toggle_capture(s, "customize-after-restart-on", on=True)
         homepage_capture(s, RESTART_ON_HOMEPAGE)
+        picker_capture(s, RESTART_ON_PICKER)
+        flows_cross.screen_group(s, flows_cross.RESTART_ON)
         palette_change(s)
     finally:
         s.dynamic = True

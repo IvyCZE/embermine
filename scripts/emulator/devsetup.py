@@ -216,6 +216,20 @@ def disable_wifi(adb: Adb, log: Callable[[str], None], sleep: Callable[[float], 
     return line
 
 
+def prepare_fresh_install(adb: Adb, package: str, log: Callable[[str], None]) -> str:
+    """The walk starts with a fresh install: an earlier install of the app on this device loses its data first.
+
+    The emulator is created for each job, so this normally finds nothing. Returns the note for screens-index.md."""
+    installed = adb.shell(f"pm path {package}").strip().startswith("package:")
+    if installed:
+        cleared = adb.shell(f"pm clear {package}").strip()
+        note = f"an earlier install was found, its app data was cleared ({cleared or 'ok'})"
+    else:
+        note = "the app was not installed before this run, so the first launch shows onboarding"
+    log(f"fresh install check: {note}")
+    return note
+
+
 def install_apk(adb: Adb, apk: Path, log: Callable[[str], None]) -> None:
     if not apk.is_file():
         raise LaunchError(f"APK not found: {apk}")

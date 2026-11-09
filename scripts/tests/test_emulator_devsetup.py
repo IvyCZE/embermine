@@ -159,3 +159,15 @@ class ApkTests(unittest.TestCase):
     def test_missing_apk_fails_the_install_step(self) -> None:
         with self.assertRaises(LaunchError):
             devsetup.install_apk(FakeAdb({}), Path("/nonexistent.apk"), lambda _: None)  # type: ignore[arg-type]
+
+    def test_a_fresh_install_check_finds_no_earlier_install_and_clears_nothing(self) -> None:
+        adb = FakeAdb({})
+        note = devsetup.prepare_fresh_install(adb, "yt.ivy.embermine", lambda _: None)  # type: ignore[arg-type]
+        self.assertIn("not installed before this run", note)
+        self.assertEqual(adb.commands, ["pm path yt.ivy.embermine"])
+
+    def test_an_earlier_install_has_its_app_data_cleared_before_the_install(self) -> None:
+        adb = FakeAdb({"pm path": "package:/data/app/yt.ivy.embermine/base.apk", "pm clear": "Success"})
+        note = devsetup.prepare_fresh_install(adb, "yt.ivy.embermine", lambda _: None)  # type: ignore[arg-type]
+        self.assertIn("app data was cleared (Success)", note)
+        self.assertEqual(adb.commands, ["pm path yt.ivy.embermine", "pm clear yt.ivy.embermine"])

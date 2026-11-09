@@ -8,7 +8,7 @@ from __future__ import annotations
 from scripts.emulator import targets as t
 from scripts.emulator import uidump
 from scripts.emulator.device import StepError
-from scripts.emulator.flows_browse import load_page
+from scripts.emulator.flows_browse import go_home, load_page
 from scripts.emulator.session import Session
 from scripts.emulator.uidump import Node, Selector
 
@@ -217,6 +217,16 @@ def new_tab_from_fab(s: Session) -> None:
         if s.dev.wait_for(t.HOMEPAGE_VIEW, t.HOMEPAGE_BAR, timeout=6, label="new-tab-homepage") is None:
             raise StepError("no new tab homepage after tapping the New tab button")
         shot.take(settle=1.0)
+
+
+def tab_tray_header(s: Session) -> None:
+    """The tab tray header alone, for the API 30 pass: the tray opened from the homepage tab counter."""
+    with s.capture("12-tab-tray-header", label="tab tray header (normal tabs)") as shot:
+        go_home(s)
+        open_tray(s)
+        ensure_tray(s, BANNER_NORMAL, "normal tabs")
+        shot.take(settle=1.0)
+    close_tray(s)
 
 
 def private_tab_tray(s: Session) -> None:

@@ -38,14 +38,18 @@ PULL_RELEASE_FRACTION = 0.50
 PULL_STEPS = 6
 
 
-def page_load(s: Session, position: str) -> None:
-    """The page-load line while a page is still loading and after it finished."""
-    with s.capture(f"page-load-{position}-loading", label=f"page load, {position} toolbar, mid-load") as shot:
+def page_load(s: Session, position: str, *, suffix: str = "", label: str = "", after_load: bool = True) -> None:
+    """The page-load line while a page is still loading and, unless `after_load` is off, after it finished.
+
+    `suffix` (file name) and `label` (index text) tell the captures of one switch state apart from the others."""
+    with s.capture(f"page-load-{position}-loading{suffix}", label=f"page load, {position} toolbar, mid-load{label}") as shot:
         go_home(s)
         s.open_url(f"{s.server}/slow?pos={position}")
         s.dev.sleep(4.0)
         shot.take(settle=0.5)
-    with s.capture(f"page-load-{position}-loaded", label=f"page load, {position} toolbar, after load") as shot:
+    if not after_load:
+        return
+    with s.capture(f"page-load-{position}-loaded{suffix}", label=f"page load, {position} toolbar, after load{label}") as shot:
         s.open_url(f"{s.server}/page?pos={position}")
         s.wait_page("10.0.2.2", timeout=30)
         s.dev.sleep(5.0)
@@ -62,9 +66,11 @@ def _drag_to(s: Session, x: int, y_from: int, y_to: int) -> None:
         s.dev.sleep(0.15)
 
 
-def pull_to_refresh(s: Session, position: str) -> None:
-    """Hold the page part way down and photograph the pull, then release past the trigger so the reload starts."""
-    with s.capture(f"pull-to-refresh-{position}-pulling", label=f"pull-to-refresh, {position} toolbar, during pull") as pulling:
+def pull_to_refresh(s: Session, position: str, *, suffix: str = "", label: str = "", reloading: bool = True) -> None:
+    """Hold the page part way down and photograph the pull, then release past the trigger so the reload starts.
+
+    `suffix`, `label` and `reloading` work as in `page_load`; `reloading` off skips the capture taken during the reload."""
+    with s.capture(f"pull-to-refresh-{position}-pulling{suffix}", label=f"pull-to-refresh, {position} toolbar, during pull{label}") as pulling:
         s.open_url(f"{s.server}/reset?pos={position}")
         s.dev.sleep(1.0)
         s.open_url(f"{s.server}/refresh?pos={position}")
@@ -81,9 +87,11 @@ def pull_to_refresh(s: Session, position: str) -> None:
             _drag_to(s, x, pause, release)
         finally:
             _touch(s, "UP", x, release)
-    with s.capture(f"pull-to-refresh-{position}-reloading", label=f"pull-to-refresh, {position} toolbar, while reloading") as reloading:
+    if not reloading:
+        return
+    with s.capture(f"pull-to-refresh-{position}-reloading{suffix}", label=f"pull-to-refresh, {position} toolbar, while reloading{label}") as shot:
         s.dev.sleep(0.8)
-        reloading.take(settle=0.0)
+        shot.take(settle=0.0)
 
 
 def both_positions(s: Session, step: Callable[[Session, str], None]) -> None:

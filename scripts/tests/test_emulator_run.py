@@ -1,6 +1,9 @@
+import re
 import unittest
 
 from scripts.emulator import flows_browse, flows_motion, flows_settings, run
+from scripts.emulator.naming import capture_name
+from scripts.tests.helpers import REPO_ROOT
 
 
 class FlowWiringTests(unittest.TestCase):
@@ -44,14 +47,52 @@ class FlowWiringTests(unittest.TestCase):
                 self.assertNotIn((stem, private), seen, stem)
                 seen.add((stem, private))
 
-    def test_legacy_flow_list_has_homepage_customize_wallpaper_picker_and_the_opt_in(self) -> None:
+    def test_legacy_flow_list_has_homepage_menu_tray_customize_wallpaper_picker_and_the_opt_in(self) -> None:
         stems = {stem for f in run.flow_list("legacy") for stem, _, _ in f.expected}
         self.assertEqual(
             stems,
-            {"04-homepage", "customize", "settings-homepage", "settings-homepage-sponsored", "wallpaper-picker", "settings-data-collection-opt-in"},
+            {
+                "04-homepage",
+                "14-main-menu",
+                "12-tab-tray-header",
+                "customize",
+                "settings-homepage",
+                "settings-homepage-sponsored",
+                "wallpaper-picker",
+                "settings-data-collection-opt-in",
+            },
         )
         for flow in run.flow_list("legacy"):
             self.assertTrue(callable(flow.run), flow.name)
+
+    def test_legacy_customize_is_labelled_as_the_android_11_screen_without_the_switch(self) -> None:
+        customize = next(label for f in run.legacy_flow_list() for stem, label, _ in f.expected if stem == "customize")
+        self.assertIn("Android 11", customize)
+        self.assertNotIn("first run", customize)
+
+    def test_first_run_customize_is_the_second_flow_and_only_runs_with_the_switch_on(self) -> None:
+        on = run.flow_list("light", "on")
+        self.assertEqual(on[1].name, "first run customize")
+        self.assertEqual(on[1].states, {"customize-first-run": True})
+        self.assertNotIn("first run customize", {f.name for f in run.flow_list("dark", "off")})
+
+    def test_every_capture_of_a_walk_has_its_own_file_name(self) -> None:
+        for accent in ("on", "off"):
+            with self.subTest(accent=accent):
+                names: list[str] = []
+                for flow in run.flow_list("light", accent):
+                    for stem, _, private in flow.expected:
+                        dynamic = flow.states.get(stem, accent == "on")
+                        names.append(capture_name(stem, theme="light", dynamic=dynamic, private=private))
+                duplicates = sorted({name for name in names if names.count(name) > 1})
+                self.assertEqual(duplicates, [])
+
+    def test_flow_budget_leaves_room_in_the_emulator_job_limit(self) -> None:
+        ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+        job = ci[ci.index("  emulator:") : ci.index("  emulator-legacy:")]
+        limit = int(re.search(r"timeout-minutes: (\d+)", job)[1])
+        # the boot, the install, the network report and the upload take about 25 minutes around the walk
+        self.assertLessEqual(run.FLOW_BUDGET_SECONDS / 60 + 25, limit)
 
     def test_data_collection_opt_in_runs_only_in_the_legacy_pass_without_packet_capture(self) -> None:
         main = {stem for f in run.flow_list() for stem, _, _ in f.expected}

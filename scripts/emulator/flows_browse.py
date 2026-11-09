@@ -9,15 +9,32 @@ from scripts.emulator.uidump import Selector
 
 HTTPS_URL = "https://example.com/"
 TERMS_PAGE = Selector(label=r".*(Terms of Use|Privacy Notice).*")
+# The onboarding view is drawn when one of its buttons or its Terms text is in the UI dump.
+ONBOARDING_READY = (*t.ONBOARDING_BUTTONS, TERMS_PAGE)
+ONBOARDING_VIEW_SECONDS = 120
+FRAME_ATTEMPTS = 3
+FRAME_WAIT_SECONDS = 3.0
 
 
 def onboarding_first_screen(s: Session) -> None:
-    """The very first screen of a fresh install, before anything was tapped."""
+    """The very first screen of a fresh install, before anything was tapped.
+
+    The capture waits for the onboarding view itself, not just for any text: right after launch the app can
+    still draw an empty window, and that blank frame must not become the first screen. A frame the screenshot
+    reports as blank is taken again a few seconds later.
+    """
     with s.capture("onboarding", label="onboarding (first screen of a fresh install)") as shot:
-        # Compose screens need a moment before the dump contains their text.
-        if s.dev.wait_for(Selector(text=r".+", clickable=True), Selector(label=r".{3,}"), timeout=40) is None:
-            raise StepError("no UI nodes appeared after launch")
-        shot.take(settle=3.0)
+        if s.dev.wait_for(*ONBOARDING_READY, timeout=ONBOARDING_VIEW_SECONDS, label="onboarding-view") is None:
+            raise StepError(f"the onboarding view did not render within {ONBOARDING_VIEW_SECONDS} s")
+        for attempt in range(1, FRAME_ATTEMPTS + 1):
+            try:
+                shot.take(settle=FRAME_WAIT_SECONDS)
+                return
+            except StepError as exc:
+                if attempt == FRAME_ATTEMPTS:
+                    raise
+                s.log(f"onboarding frame {attempt} of {FRAME_ATTEMPTS} was not usable ({exc}); waiting for the next frame")
+                s.dev.sleep(FRAME_WAIT_SECONDS)
 
 
 def complete_onboarding(s: Session, max_steps: int = 14) -> None:
@@ -72,6 +89,17 @@ def homepage(s: Session, *, private: bool = False) -> None:
     with s.capture("04-homepage", private=private, label="homepage") as shot:
         go_home(s, private=private)
         shot.take(settle=2.5)
+
+
+def homepage_main_menu(s: Session) -> None:
+    """The main menu opened from the homepage. The API 30 pass uses it, as it has no loaded page to open the menu from."""
+    with s.capture("14-main-menu", label="main menu, opened from the homepage") as shot:
+        go_home(s)
+        s.dev.tap(t.MENU_BUTTON)
+        if s.dev.wait_for(t.MENU_SETTINGS, timeout=10) is None:
+            raise StepError("main menu did not open")
+        shot.take(settle=1.5)
+        close_overlay(s)
 
 
 def search_bar_and_selector(s: Session) -> None:

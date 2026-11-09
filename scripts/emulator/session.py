@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+import subprocess
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -13,6 +14,10 @@ from scripts.emulator.targets import ADDRESS_BAR, HOMEPAGE_BAR, HOMEPAGE_VIEW, P
 from scripts.emulator.device import Device, StepError
 from scripts.emulator.naming import ScreenIndex, capture_name
 from scripts.emulator.uidump import Node, Selector
+
+DEVICE_TIMEOUT_SECONDS = 120
+LAUNCH_ATTEMPTS = 2
+FOCUS_TIMEOUT_SECONDS = 60
 
 
 class LaunchError(RuntimeError):
@@ -119,17 +124,32 @@ class Session:
 
     def wait_focus(self, timeout: float = 60) -> bool:
         """The app owns the focused window (the splash screen counts, it is the app's own window)."""
-        deadline = time.monotonic() + timeout
-        while time.monotonic() < deadline:
+        deadline = self.dev.clock() + timeout
+        while self.dev.clock() < deadline:
             if self.package in self.focus_lines():
                 return True
             self.dev.sleep(1.0)
         return False
 
+    def wait_for_device(self, timeout: float = DEVICE_TIMEOUT_SECONDS) -> None:
+        """adb can drop for a moment after a force-stop; the next command must not run against a missing device."""
+        try:
+            proc = self.dev.adb.run("wait-for-device", timeout=timeout)
+        except subprocess.TimeoutExpired as exc:
+            raise LaunchError(f"adb did not see the device within {timeout:.0f} s") from exc
+        if proc.returncode != 0:
+            raise LaunchError(f"adb wait-for-device failed with exit code {proc.returncode}")
+
     def launch_from_launcher(self) -> None:
-        self.dev.adb.shell(f"monkey -p {self.package} -c android.intent.category.LAUNCHER 1")
-        if not self.wait_focus():
-            raise LaunchError(f"{self.package} never got window focus (focus: {self.focus_lines()!r})")
+        """Start the app as a tap on its launcher icon would. A launch that gets no window focus is repeated
+        once (LAUNCH_ATTEMPTS in total), so a late relaunch that the emulator dropped does not end the walk."""
+        self.wait_for_device()
+        for attempt in range(1, LAUNCH_ATTEMPTS + 1):
+            self.dev.adb.shell(f"monkey -p {self.package} -c android.intent.category.LAUNCHER 1")
+            if self.wait_focus(FOCUS_TIMEOUT_SECONDS):
+                return
+            self.log(f"{self.package} got no window focus after launch {attempt} of {LAUNCH_ATTEMPTS} (focus: {self.focus_lines()!r})")
+        raise LaunchError(f"{self.package} never got window focus after {LAUNCH_ATTEMPTS} launches (focus: {self.focus_lines()!r})")
 
     def force_stop(self) -> None:
         self.dev.adb.shell(f"am force-stop {self.package}")

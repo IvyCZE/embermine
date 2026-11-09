@@ -55,15 +55,21 @@ class WallpaperColorsToggleFlowTests(unittest.TestCase):
     def test_toggle_flow_only_runs_in_the_accent_on_pass(self) -> None:
         on = {f.name for f in run.flow_list("light", "on")}
         off = {f.name for f in run.flow_list("light", "off")}
-        self.assertEqual(on - off, {"wallpaper colors toggle"})
+        self.assertEqual(on - off, {"wallpaper colors toggle", "first run customize"})
 
     def test_toggle_captures_have_a_switch_state_for_every_expected_stem(self) -> None:
         flow = self.toggle_flow()
-        stems = [stem for stem, _, _ in flow.expected]
-        self.assertEqual(stems, [stem for stem, _, _ in flows_wallpaper.TOGGLE_CAPTURES])
-        self.assertEqual(flow.states, {stem: on for stem, on, _ in flows_wallpaper.TOGGLE_CAPTURES})
+        captures = (*flows_wallpaper.TOGGLE_CAPTURES, *flows_wallpaper.TOGGLE_PRIVATE_CAPTURES)
+        self.assertEqual([stem for stem, _, _ in flow.expected], [stem for stem, _, _ in captures])
+        self.assertEqual(flow.states, {stem: on for stem, on, _ in captures})
         customize = {stem: flow.states[stem] for stem, _, _ in flows_settings.WALLPAPER_COLORS_CAPTURES}
         self.assertEqual(sorted(customize.values()), [False, False, True, True])
+
+    def test_toggle_private_captures_are_marked_private_and_taken_with_the_switch_off(self) -> None:
+        flow = self.toggle_flow()
+        private = [(stem, label) for stem, label, is_private in flow.expected if is_private]
+        self.assertEqual([stem for stem, _ in private], [stem for stem, _, _ in flows_wallpaper.TOGGLE_PRIVATE_CAPTURES])
+        self.assertTrue(all(flow.states[stem] is False for stem, _ in private))
 
     def test_missing_toggle_captures_are_named_by_their_own_switch_state(self) -> None:
         def fail(_: object) -> None:
@@ -85,6 +91,9 @@ class WallpaperColorsToggleFlowTests(unittest.TestCase):
         self.assertEqual(files["customize-after-toggle-on_dynamic-on_light.png"], "MISSING")
         self.assertEqual(files["customize-after-restart-off_dynamic-off_light.png"], "MISSING")
         self.assertEqual(files["customize-after-restart-on_dynamic-on_light.png"], "MISSING")
+        self.assertEqual(files["10-toolbar-after-toggle-off_dynamic-off_light.png"], "MISSING")
+        self.assertEqual(files["10-toolbar-after-restart-on_dynamic-on_light.png"], "MISSING")
+        self.assertEqual(files["04-homepage-after-toggle-off_dynamic-off_light_private.png"], "MISSING")
 
 
 if __name__ == "__main__":

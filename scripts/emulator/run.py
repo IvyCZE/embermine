@@ -37,7 +37,10 @@ from scripts.emulator.session import LaunchError, Session
 from scripts.emulator.testserver import WalkServer
 
 SERVER_PORT = 8765
-FLOW_BUDGET_SECONDS = 48 * 60
+# Flows that start after this many seconds of walk are recorded MISSING. The accent-on walk was about 38 min before
+# the switch-state groups were added (estimated +7 min for them); the emulator job has a 90 min limit that also
+# covers the boot, the install and the upload.
+FLOW_BUDGET_SECONDS = 60 * 60
 Expected = tuple[str, str, bool]  # file stem, index label, private
 
 
@@ -78,18 +81,21 @@ SECRET_STEMS = [
 
 
 def legacy_flow_list() -> list[Flow]:
-    """API 30: the homepage with its default wallpaper, Customize, the wallpaper picker and one data collection opt-in.
+    """API 30: the homepage with its default wallpaper, the main menu and tab tray header (shapes without Material You),
+    Customize without the wallpaper colors switch, the wallpaper picker and one data collection opt-in.
 
     This job has no packet capture, so the opt-in cannot show up in network-hosts.txt of the main walk.
     """
     f_browse, f_set = flows_browse, flows_settings
     return [
         Flow("homepage", f_browse.homepage, [("04-homepage", "homepage", False)]),
+        Flow("main menu", f_browse.homepage_main_menu, [("14-main-menu", "main menu, opened from the homepage", False)]),
+        Flow("tab tray", flows_tabs.tab_tray_header, [("12-tab-tray-header", "tab tray header (normal tabs)", False)]),
         Flow(
             "settings",
             f_set.legacy_pages,
             [
-                ("customize", "customize screen", False),
+                ("customize", "customize screen (Android 11: no wallpaper colors switch)", False),
                 ("settings-homepage", "homepage settings page", False),
                 ("settings-homepage-sponsored", "homepage settings page, Stories and Sponsored stories toggles", False),
                 ("wallpaper-picker", "wallpaper picker", False),
@@ -161,12 +167,24 @@ def flow_list(variant: str = "light", accent: str = "on") -> list[Flow]:
         Flow("wallpaper selection", f_wall.select_picked_wallpaper, [(stem, label, False) for stem, label in f_wall.PICKED_CAPTURES]),
     ]
     if accent == "on":
+        # Only the accent-on pass has the switch on at the start: nothing has tapped it when this first flow runs.
+        flows.insert(
+            1,
+            Flow(
+                "first run customize",
+                f_set.first_run_customize,
+                [("customize-first-run", "customize screen on the first run (switch on by default, nothing tapped)", False)],
+                states={"customize-first-run": True},
+            ),
+        )
+        toggle = [*f_wall.TOGGLE_CAPTURES, *f_wall.TOGGLE_PRIVATE_CAPTURES]
         flows.append(
             Flow(
                 "wallpaper colors toggle",
                 f_wall.wallpaper_colors_toggle,
-                [(stem, label, False) for stem, _, label in f_wall.TOGGLE_CAPTURES],
-                states={stem: on for stem, on, _ in f_wall.TOGGLE_CAPTURES},
+                [(stem, label, False) for stem, _, label in f_wall.TOGGLE_CAPTURES]
+                + [(stem, label, True) for stem, _, label in f_wall.TOGGLE_PRIVATE_CAPTURES],
+                states={stem: on for stem, on, _ in toggle},
             )
         )
     return flows
@@ -293,6 +311,7 @@ def main(argv: list[str] | None = None) -> int:
                 index.header += ["Palette: " + line for line in exc.evidence]
                 raise
             index.header += ["Palette: " + line for line in palette]
+        index.header.append("First launch: " + devsetup.prepare_fresh_install(adb, package, log))
         devsetup.install_apk(adb, apk, log)
         if not legacy:
             devsetup.confirm_palette(adb, log, time.sleep)

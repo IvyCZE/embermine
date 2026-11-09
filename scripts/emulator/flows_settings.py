@@ -147,9 +147,33 @@ def settings_pages(s: Session) -> None:
 def legacy_pages(s: Session) -> None:
     """The settings captures of the API 30 job: Customize, the Homepage page and the wallpaper picker."""
     open_settings(s)
-    subpage(s, "customize", r"Customize", "customize screen")
+    legacy_customize(s)
     ensure_settings_list(s)
     homepage_settings(s)
+
+
+def legacy_customize(s: Session) -> None:
+    """Customize on Android 11, where Material You does not exist: the 'Use wallpaper colors' row must be absent.
+
+    The capture is not refused when the row is there. The index note says what the screen showed, so the defect
+    is visible in screens-index.md next to the screenshot."""
+    with s.capture("customize", label="customize screen (Android 11: no wallpaper colors switch)") as shot:
+        open_row(s, r"Customize")
+        present = s.dev.visible(WALLPAPER_COLORS_ROW)
+        note = "'Use wallpaper colors' row is on screen, which Android 11 must not show" if present else "no 'Use wallpaper colors' row on screen"
+        shot.take(settle=1.5, note=note)
+        tap_toolbar_back(s)
+
+
+def first_run_customize(s: Session) -> None:
+    """Customize on the first run of a fresh install. The switch must already be on, because nothing has tapped it."""
+    s.dynamic = True
+    label = "customize screen on the first run (switch on by default, nothing tapped)"
+    with s.capture("customize-first-run", label=label) as shot:
+        open_customize(s)
+        require_wallpaper_colors(s, True)
+        shot.take(settle=1.5, note="switch on before any tap in the walk")
+    s.deep_link("home")
 
 
 def homepage_settings(s: Session) -> None:

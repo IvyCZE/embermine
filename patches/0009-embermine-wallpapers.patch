@@ -228,10 +228,10 @@ index 0000000000000000000000000000000000000000..1e803f0c1171e023105c5575e1dfb84e
 +}
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpapers.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpapers.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..0ed3029cebf2768d655f3698320480fa5d56b212
+index 0000000000000000000000000000000000000000..1549bf3759236eafb0b034d81d284e01508ba651
 --- /dev/null
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpapers.kt
-@@ -0,0 +1,139 @@
+@@ -0,0 +1,140 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -319,6 +319,7 @@ index 0000000000000000000000000000000000000000..0ed3029cebf2768d655f3698320480fa
 +        displaySize: Size,
 +        fingerprint: String,
 +    ) {
++        directory(art.name).mkdirs()
 +        val longEdge = max(displaySize.width, displaySize.height)
 +        val shortEdge = min(displaySize.width, displaySize.height)
 +        val thumbnailHeight = (THUMBNAIL_WIDTH / WALLPAPER_THUMBNAIL_ASPECT_RATIO).roundToInt()

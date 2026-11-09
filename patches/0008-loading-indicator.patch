@@ -31,34 +31,44 @@ index 0000000000000000000000000000000000000000..85283d8955855ab31114b8e049aff447
 +) {
 +    LoadingIndicator(modifier = modifier, color = color)
 +}
+diff --git a/mobile/android/android-components/components/feature/importer/build.gradle b/mobile/android/android-components/components/feature/importer/build.gradle
+index e31709b7bd833779dddcbdb72f9c360e6ce4c514..b4a68d694885096f8f9656740fe6c6811a396ad1 100644
+--- a/mobile/android/android-components/components/feature/importer/build.gradle
++++ b/mobile/android/android-components/components/feature/importer/build.gradle
+@@ -28,6 +28,7 @@ dependencies {
+     implementation libs.androidx.lifecycle.viewmodel
+     implementation libs.androidx.lifecycle.viewmodel.compose
+     implementation libs.kotlinx.coroutines
++    implementation project(':components:compose-base')
+ 
+     testImplementation platform(libs.junit.bom)
+     testImplementation libs.junit4
 diff --git a/mobile/android/android-components/components/feature/importer/src/main/java/mozilla/components/feature/importer/ImporterDialog.kt b/mobile/android/android-components/components/feature/importer/src/main/java/mozilla/components/feature/importer/ImporterDialog.kt
-index 58d768060c4181f25f264cba37b8f234f1bc0b6e..f4c65787cc5cac430e648aa84138eab230605ddd 100644
+index 58d768060c4181f25f264cba37b8f234f1bc0b6e..785f2aeb6f2294e88c1b67f46c8b046d02cdd914 100644
 --- a/mobile/android/android-components/components/feature/importer/src/main/java/mozilla/components/feature/importer/ImporterDialog.kt
 +++ b/mobile/android/android-components/components/feature/importer/src/main/java/mozilla/components/feature/importer/ImporterDialog.kt
-@@ -6,7 +6,8 @@ package mozilla.components.feature.importer
+@@ -6,7 +6,6 @@ package mozilla.components.feature.importer
  
  import androidx.compose.foundation.layout.size
  import androidx.compose.material3.AlertDialog
 -import androidx.compose.material3.CircularProgressIndicator
-+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-+import androidx.compose.material3.LoadingIndicator
  import androidx.compose.material3.MaterialTheme
  import androidx.compose.material3.Text
  import androidx.compose.material3.TextButton
-@@ -27,6 +28,7 @@ import androidx.compose.ui.window.DialogProperties
-  * The caller is responsible for hiding this dialog by observing the importer state and only composing it while the
-  * import is in progress.
-  */
-+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
- @Composable
- internal fun ImporterDialog(
-     onImportStarted: () -> Unit,
-@@ -44,7 +46,7 @@ internal fun ImporterDialog(
+@@ -16,6 +15,7 @@ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.window.DialogProperties
++import mozilla.components.compose.base.embermine.EmbermineLoadingIndicator
+ 
+ /**
+  * A loading dialog for an in-progress import flow. Displays a spinner with fixed title/description while the importer
+@@ -44,7 +44,7 @@ internal fun ImporterDialog(
              ),
          onDismissRequest = {},
          icon = {
 -            CircularProgressIndicator(modifier = Modifier.size(24.dp))
-+            LoadingIndicator(modifier = Modifier.size(24.dp))
++            EmbermineLoadingIndicator(modifier = Modifier.size(24.dp))
          },
          title = {
              Text(
@@ -120,6 +130,67 @@ index 8b89f9131590bf42d8271e7b1be907b26efc82ee..b8c14d6c97dd8bb86d7acb0822ff38b7
                  }
              }
              emptyListState != null -> {
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bookmarks/ImportBookmarksDialogFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bookmarks/ImportBookmarksDialogFragment.kt
+index 311d2e70432c084824fabac0a572f76e65662b0d..27b08ed22c406987f08447494ad8e0e158e97513 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bookmarks/ImportBookmarksDialogFragment.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bookmarks/ImportBookmarksDialogFragment.kt
+@@ -27,6 +27,7 @@ import org.mozilla.fenix.bookmarks.importer.FenixBookmarkImporterError
+ import org.mozilla.fenix.bookmarks.importer.FenixImporterEvent
+ import org.mozilla.fenix.bookmarks.importer.toFenixError
+ import org.mozilla.fenix.ext.requireComponents
++import org.mozilla.fenix.theme.FirefoxTheme
+ 
+ internal class ImportBookmarksDialogFragment : DialogFragment() {
+     override fun onCreateView(
+@@ -34,26 +35,28 @@ internal class ImportBookmarksDialogFragment : DialogFragment() {
+         container: ViewGroup?,
+         savedInstanceState: Bundle?,
+     ): View = content {
+-        BookmarkImporter(
+-            importer =
+-                BookmarksFileImporter.htmlImporter(
+-                    context = requireContext(),
+-                    parentGuid = BookmarkRoot.Mobile.id,
+-                    parser =
+-                        BookmarksFileParser.jsoupParser(
+-                            rootFolderName =
+-                                requireContext().getString(R.string.bookmark_import_destination_default_name)
+-                        ),
+-                    inserter = requireComponents.core.bookmarksStorage,
+-                ),
+-            onEventReceived = { event ->
+-                parentFragmentManager.setFragmentResult(
+-                    REQUEST_KEY,
+-                    event.resultBundle(),
+-                )
+-                dismissWhenFinished(event, lifecycle) { dismiss() }
+-            },
+-        )
++        FirefoxTheme {
++            BookmarkImporter(
++                importer =
++                    BookmarksFileImporter.htmlImporter(
++                        context = requireContext(),
++                        parentGuid = BookmarkRoot.Mobile.id,
++                        parser =
++                            BookmarksFileParser.jsoupParser(
++                                rootFolderName =
++                                    requireContext().getString(R.string.bookmark_import_destination_default_name)
++                            ),
++                        inserter = requireComponents.core.bookmarksStorage,
++                    ),
++                onEventReceived = { event ->
++                    parentFragmentManager.setFragmentResult(
++                        REQUEST_KEY,
++                        event.resultBundle(),
++                    )
++                    dismissWhenFinished(event, lifecycle) { dismiss() }
++                },
++            )
++        }
+     }
+ 
+     companion object {
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bookmarks/ui/SelectFolderScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bookmarks/ui/SelectFolderScreen.kt
 index 2abebcabaf8f06fc0b8db810c3bdeb4dbc3ffe67..9ea1c86fd29188bca7214ee9d6a22aab720b164d 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bookmarks/ui/SelectFolderScreen.kt
@@ -382,10 +453,10 @@ index 0000000000000000000000000000000000000000..6cb964d5103a4e218b4cdf59cbede336
 +}
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineRefreshIndicator.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineRefreshIndicator.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..ff4e1d662aea1898aa565ba976b33e6e859f3018
+index 0000000000000000000000000000000000000000..2f437e13ed0617ee3689529c20b621d3fd2b2884
 --- /dev/null
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineRefreshIndicator.kt
-@@ -0,0 +1,90 @@
+@@ -0,0 +1,141 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -393,7 +464,9 @@ index 0000000000000000000000000000000000000000..ff4e1d662aea1898aa565ba976b33e6e
 +package org.mozilla.fenix.embermine
 +
 +import android.graphics.Color
++import android.view.View
 +import android.view.ViewGroup
++import android.view.ViewTreeObserver
 +import android.widget.ImageView
 +import androidx.compose.material3.ContainedLoadingIndicator
 +import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -409,6 +482,8 @@ index 0000000000000000000000000000000000000000..ff4e1d662aea1898aa565ba976b33e6e
 +import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 +import org.mozilla.fenix.theme.FirefoxTheme
 +
++private const val REFRESH_INDICATOR_TAG = "embermine_refresh_indicator"
++
 +private class RefreshIndicatorState {
 +    var refreshing by mutableStateOf(false)
 +    var progress by mutableFloatStateOf(0f)
@@ -417,10 +492,13 @@ index 0000000000000000000000000000000000000000..ff4e1d662aea1898aa565ba976b33e6e
 +/**
 + * Hides the circle of this [SwipeRefreshLayout] and draws a contained morphing indicator in its place.
 + * The gesture handling is unchanged: the indicator mirrors the circle's position, scale, alpha and visibility.
++ * The pre-draw listener is bound to the window only while this layout is attached to it.
 + */
 +fun SwipeRefreshLayout.installEmbermineRefreshIndicator() {
++    if (tag == REFRESH_INDICATOR_TAG) return
 +    val parentGroup = parent as? ViewGroup ?: return
 +    val circle = children.filterIsInstance<ImageView>().firstOrNull() ?: return
++    tag = REFRESH_INDICATOR_TAG
 +    circle.setImageDrawable(null)
 +    circle.setBackgroundColor(Color.TRANSPARENT)
 +    circle.elevation = 0f
@@ -439,7 +517,7 @@ index 0000000000000000000000000000000000000000..ff4e1d662aea1898aa565ba976b33e6e
 +        ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT),
 +    )
 +
-+    viewTreeObserver.addOnPreDrawListener {
++    val preDrawListener = ViewTreeObserver.OnPreDrawListener {
 +        state.refreshing = isRefreshing
 +        state.progress = embermineRefreshProgress(circle.top, progressViewStartOffset, progressViewEndOffset)
 +        overlay.isVisible = circle.isVisible
@@ -450,6 +528,24 @@ index 0000000000000000000000000000000000000000..ff4e1d662aea1898aa565ba976b33e6e
 +        overlay.alpha = circle.alpha
 +        true
 +    }
++    val binding = PreDrawListenerBinding<ViewTreeObserver>(
++        currentObserver = { viewTreeObserver },
++        isAlive = { it.isAlive },
++        register = { it.addOnPreDrawListener(preDrawListener) },
++        unregister = { it.removeOnPreDrawListener(preDrawListener) },
++    )
++    addOnAttachStateChangeListener(
++        object : View.OnAttachStateChangeListener {
++            override fun onViewAttachedToWindow(view: View) {
++                binding.attach()
++            }
++
++            override fun onViewDetachedFromWindow(view: View) {
++                binding.detach()
++            }
++        },
++    )
++    if (isAttachedToWindow) binding.attach()
 +}
 +
 +@OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -475,6 +571,32 @@ index 0000000000000000000000000000000000000000..ff4e1d662aea1898aa565ba976b33e6e
 +internal fun embermineRefreshProgress(top: Int, startTop: Int, triggerDistance: Int): Float {
 +    if (triggerDistance <= 0) return 0f
 +    return ((top - startTop).toFloat() / triggerDistance).coerceIn(0f, 1f)
++}
++
++/**
++ * Adds [observer] as a pre-draw listener when attached and removes it again on detach. Re-attaching registers on
++ * whichever observer is current then, and a listener is never registered twice without a detach in between.
++ */
++internal class PreDrawListenerBinding<O : Any>(
++    private val currentObserver: () -> O,
++    private val isAlive: (O) -> Boolean,
++    private val register: (O) -> Unit,
++    private val unregister: (O) -> Unit,
++) {
++    private var attachedObserver: O? = null
++
++    fun attach() {
++        if (attachedObserver != null) return
++        val observer = currentObserver()
++        register(observer)
++        attachedObserver = observer
++    }
++
++    fun detach() {
++        val observer = attachedObserver ?: return
++        attachedObserver = null
++        if (isAlive(observer)) unregister(observer)
++    }
 +}
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/history/HistoryView.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/history/HistoryView.kt
 index a7dad8b3cd89e3ba6786a095d5bb63728090700a..e9348c7cff0a9bd5498d170185a89b7e2ae347a6 100644
@@ -525,6 +647,49 @@ index c89c361b9c42c3b1dc4d308dda3e949e4844b4ca..b17fc05139152ddeaabf065104b0d42d
          }
      }
  }
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/logins/ImportPasswordsDialogFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/logins/ImportPasswordsDialogFragment.kt
+index 1e9a306d0af581a350f5361464da70044a2250b9..f0a10f4df02a6f57c58adc81072b1f2cd0d3424f 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/logins/ImportPasswordsDialogFragment.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/logins/ImportPasswordsDialogFragment.kt
+@@ -20,6 +20,7 @@ import mozilla.components.feature.password.importer.PasswordsImporter
+ import mozilla.components.feature.password.importer.PasswordsImporterResult
+ import mozilla.components.lib.passwords.file.csvImporter
+ import org.mozilla.fenix.ext.requireComponents
++import org.mozilla.fenix.theme.FirefoxTheme
+ 
+ internal class ImportPasswordsDialogFragment : DialogFragment() {
+     override fun onCreateView(
+@@ -27,17 +28,19 @@ internal class ImportPasswordsDialogFragment : DialogFragment() {
+         container: ViewGroup?,
+         savedInstanceState: Bundle?,
+     ): View = content {
+-        PasswordsImporter(
+-            importer =
+-                PasswordsFileImporter.csvImporter(
+-                    context = requireContext(),
+-                    loginsStorage = requireComponents.core.passwordsStorage,
+-                ),
+-            onFinished = { result ->
+-                parentFragmentManager.setFragmentResult(REQUEST_KEY, encodeResult(result))
+-                dismissWhenStarted(lifecycle) { dismiss() }
+-            },
+-        )
++        FirefoxTheme {
++            PasswordsImporter(
++                importer =
++                    PasswordsFileImporter.csvImporter(
++                        context = requireContext(),
++                        loginsStorage = requireComponents.core.passwordsStorage,
++                    ),
++                onFinished = { result ->
++                    parentFragmentManager.setFragmentResult(REQUEST_KEY, encodeResult(result))
++                    dismissWhenStarted(lifecycle) { dismiss() }
++                },
++            )
++        }
+     }
+ 
+     companion object {
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt
 index c580868a2bf41bc3e5e49ea75c6736c65e4da3f4..0cd63fdd858f76f889465cb093f4ab1d7db549c3 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt
@@ -591,7 +756,7 @@ index 07cf5413c8e39fd0a8096ca568562036aabb085f..54cd4e1ada44a6e6e521cf7d85caa5d6
  }
  
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/fab/TabManagerFloatingToolbar.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/fab/TabManagerFloatingToolbar.kt
-index 38dc9a0112993a7e0be1490e72ff2fa9aec8fa08..2649f849b63f0dccd52b61692c8a1b4b60c3b6a6 100644
+index 38dc9a0112993a7e0be1490e72ff2fa9aec8fa08..85dadfb13f90df5ee050cf8d952dfb3f0d85c90e 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/fab/TabManagerFloatingToolbar.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/fab/TabManagerFloatingToolbar.kt
 @@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
@@ -602,7 +767,16 @@ index 38dc9a0112993a7e0be1490e72ff2fa9aec8fa08..2649f849b63f0dccd52b61692c8a1b4b
  import androidx.compose.foundation.layout.width
  import androidx.compose.foundation.shape.CircleShape
  import androidx.compose.material3.AlertDialog
-@@ -44,10 +45,10 @@ import mozilla.components.compose.base.button.FloatingActionButton
+@@ -36,6 +37,8 @@ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.platform.testTag
+ import androidx.compose.ui.res.painterResource
+ import androidx.compose.ui.res.stringResource
++import androidx.compose.ui.semantics.contentDescription
++import androidx.compose.ui.semantics.semantics
+ import androidx.compose.ui.tooling.preview.PreviewLightDark
+ import androidx.compose.ui.tooling.preview.PreviewParameter
+ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
+@@ -44,10 +47,10 @@ import mozilla.components.compose.base.button.FloatingActionButton
  import mozilla.components.compose.base.button.FloatingActionButtonDefaults
  import mozilla.components.compose.base.button.IconButton
  import mozilla.components.compose.base.button.TextButton
@@ -614,7 +788,7 @@ index 38dc9a0112993a7e0be1490e72ff2fa9aec8fa08..2649f849b63f0dccd52b61692c8a1b4b
  import mozilla.components.compose.base.text.Text
  import mozilla.components.ui.icons.R as iconsR
  import org.mozilla.fenix.R
-@@ -263,7 +264,7 @@ internal fun FloatingToolbarFAB(
+@@ -263,7 +266,7 @@ internal fun FloatingToolbarFAB(
      var colors = FloatingActionButtonDefaults.colorsPrimary()
      var elevation = M3FloatingActionButtonDefaults.elevation()
      val onClick: () -> Unit
@@ -623,7 +797,7 @@ index 38dc9a0112993a7e0be1490e72ff2fa9aec8fa08..2649f849b63f0dccd52b61692c8a1b4b
  
      when (state.selectedPage) {
          Page.NormalTabs -> {
-@@ -302,18 +303,24 @@ internal fun FloatingToolbarFAB(
+@@ -302,18 +305,24 @@ internal fun FloatingToolbarFAB(
                          hoveredElevation = 0.dp,
                      )
              }
@@ -642,7 +816,7 @@ index 38dc9a0112993a7e0be1490e72ff2fa9aec8fa08..2649f849b63f0dccd52b61692c8a1b4b
 -            )
 +            if (isLoading) {
 +                EmbermineLoadingIndicator(
-+                    modifier = Modifier.size(24.dp),
++                    modifier = Modifier.size(24.dp).semantics { this.contentDescription = contentDescription },
 +                    color = colors.contentColor,
 +                )
 +            } else {
@@ -918,10 +1092,10 @@ index 54d257d2b177fb8b55fdc572cf5c66f32ad8725b..106cf971771a2c55307c27a9467dd262
              android:layout_height="37dp"
 diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineRefreshIndicatorTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineRefreshIndicatorTest.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..8c05343cb0802e0b8195b289d6528d445b999db0
+index 0000000000000000000000000000000000000000..92753cd43f60b04a04b60015d8faa6c51c92253a
 --- /dev/null
 +++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineRefreshIndicatorTest.kt
-@@ -0,0 +1,33 @@
+@@ -0,0 +1,120 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -953,5 +1127,92 @@ index 0000000000000000000000000000000000000000..8c05343cb0802e0b8195b289d6528d44
 +    @Test
 +    fun `progress is zero without a trigger distance`() {
 +        assertEquals(0f, embermineRefreshProgress(top = 10, startTop = -105, triggerDistance = 0), 0f)
++    }
++
++    private class FakeObserver(var alive: Boolean = true) {
++        var registrations = 0
++    }
++
++    private fun bindingFor(current: () -> FakeObserver) = PreDrawListenerBinding<FakeObserver>(
++        currentObserver = current,
++        isAlive = { it.alive },
++        register = { it.registrations += 1 },
++        unregister = { it.registrations -= 1 },
++    )
++
++    @Test
++    fun `attach registers the pre-draw listener once`() {
++        val observer = FakeObserver()
++        val binding = bindingFor { observer }
++
++        binding.attach()
++        binding.attach()
++
++        assertEquals(1, observer.registrations)
++    }
++
++    @Test
++    fun `detach removes the listener from the observer it was registered on`() {
++        val first = FakeObserver()
++        val second = FakeObserver()
++        var current = first
++        val binding = bindingFor { current }
++
++        binding.attach()
++        current = second
++        binding.detach()
++
++        assertEquals(0, first.registrations)
++        assertEquals(0, second.registrations)
++    }
++
++    @Test
++    fun `detach does not touch an observer that is no longer alive`() {
++        val observer = FakeObserver()
++        val binding = bindingFor { observer }
++
++        binding.attach()
++        observer.alive = false
++        binding.detach()
++
++        assertEquals(1, observer.registrations)
++    }
++
++    @Test
++    fun `reattaching registers again on the observer current at reattach`() {
++        val first = FakeObserver()
++        val second = FakeObserver()
++        var current = first
++        val binding = bindingFor { current }
++
++        binding.attach()
++        binding.detach()
++        current = second
++        binding.attach()
++
++        assertEquals(0, first.registrations)
++        assertEquals(1, second.registrations)
++    }
++
++    @Test
++    fun `detach without a prior attach is a no-op`() {
++        val observer = FakeObserver()
++        val binding = bindingFor { observer }
++
++        binding.detach()
++
++        assertEquals(0, observer.registrations)
++    }
++
++    @Test
++    fun `repeated detach removes the listener only once`() {
++        val observer = FakeObserver()
++        val binding = bindingFor { observer }
++
++        binding.attach()
++        binding.detach()
++        binding.detach()
++
++        assertEquals(0, observer.registrations)
 +    }
 +}

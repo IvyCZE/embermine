@@ -1,7 +1,12 @@
+import contextlib
 import re
 import unittest
+from collections.abc import Iterator
+from types import SimpleNamespace
+from unittest import mock
 
-from scripts.emulator import devsetup, flows_wallpaper, run
+from scripts.emulator import devsetup, flows_settings, flows_wallpaper, run
+from scripts.emulator.device import StepError
 
 EMBERMINE_WALLPAPERS = ("bloom", "grow", "pattern", "rise", "triangle")
 
@@ -18,6 +23,24 @@ class WallpaperFlowWiringTests(unittest.TestCase):
     def test_picked_wallpaper_captures_show_the_pick_and_the_restart(self) -> None:
         stems = [stem for stem, _, _ in self.flow("wallpaper selection").expected]
         self.assertEqual(stems, ["wallpaper-select-triangle", "homepage-wallpaper-triangle", "04-homepage-after-restart"])
+
+    def test_recent_tab_card_flow_runs_in_both_accent_passes_and_not_in_legacy(self) -> None:
+        for accent in ("on", "off"):
+            with self.subTest(accent=accent):
+                stems = [stem for stem, _, _ in self.flow("recent tab card", accent=accent).expected]
+                self.assertEqual(stems, ["homepage-recent-tab"])
+        self.assertNotIn("recent tab card", {f.name for f in run.legacy_flow_list()})
+
+    def test_recent_tab_card_capture_is_labelled_as_the_jump_back_in_card(self) -> None:
+        stem, label = flows_wallpaper.RECENT_TAB_CAPTURE
+        self.assertEqual(stem, "homepage-recent-tab")
+        self.assertIn("Jump back in", label)
+        expected = self.flow("recent tab card").expected
+        self.assertEqual([(stem, label, False)], expected)
+
+    def test_recent_tab_card_flow_comes_before_the_switch_toggle_flow(self) -> None:
+        names = [f.name for f in run.flow_list()]
+        self.assertLess(names.index("recent tab card"), names.index("wallpaper colors toggle"))
 
     def test_picked_wallpaper_is_one_of_the_embermine_wallpapers(self) -> None:
         self.assertIn(flows_wallpaper.PICKED_WALLPAPER, EMBERMINE_WALLPAPERS)
@@ -48,6 +71,48 @@ class WallpaperFlowWiringTests(unittest.TestCase):
         pattern = flows_wallpaper.thumbnail("triangle").desc
         self.assertIsNotNone(re.fullmatch(pattern, "Wallpaper Item: triangle", re.IGNORECASE))
         self.assertIsNone(re.fullmatch(pattern, "Wallpaper Item: bloom", re.IGNORECASE))
+
+
+class RecentTabCardFlowTests(unittest.TestCase):
+    def session(self, cards: list[object], calls: list[str]) -> SimpleNamespace:
+        @contextlib.contextmanager
+        def capture(stem: str, label: str | None = None) -> Iterator[SimpleNamespace]:
+            yield SimpleNamespace(take=lambda settle=1.5, note="": None)
+
+        def scroll_to(*args: object, **kwargs: object) -> object:
+            if not cards:
+                raise StepError("not found after scrolling")
+            return cards.pop(0)
+
+        return SimpleNamespace(
+            capture=capture,
+            dev=SimpleNamespace(sleep=lambda _: None, scroll_to=scroll_to),
+            log=lambda _: None,
+            force_stop=lambda: calls.append("force-stop"),
+            launch_from_launcher=lambda: calls.append("relaunch"),
+        )
+
+    def test_the_section_is_turned_on_and_the_card_is_photographed(self) -> None:
+        calls: list[str] = []
+        s = self.session([object()], calls)
+        with (
+            mock.patch.object(flows_wallpaper, "go_home"),
+            mock.patch.object(flows_settings, "set_homepage_recent_tabs") as enable,
+        ):
+            flows_wallpaper.recent_tab_homepage(s)
+        enable.assert_called_once_with(s, True)
+        self.assertEqual(calls, [])
+
+    def test_a_missing_card_gets_one_relaunch_and_is_then_refused(self) -> None:
+        calls: list[str] = []
+        s = self.session([], calls)
+        with (
+            mock.patch.object(flows_wallpaper, "go_home"),
+            mock.patch.object(flows_settings, "set_homepage_recent_tabs"),
+        ):
+            with self.assertRaisesRegex(StepError, "Jump back in card"):
+                flows_wallpaper.recent_tab_homepage(s)
+        self.assertEqual(calls, ["force-stop", "relaunch"])
 
 
 if __name__ == "__main__":

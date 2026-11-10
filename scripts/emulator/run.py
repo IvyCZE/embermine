@@ -119,6 +119,7 @@ def flow_list(variant: str = "light", accent: str = "on") -> list[Flow]:
         f_motion.pull_to_refresh(s, position)
 
     page_stems = ["10-toolbar", "14-main-menu", "13-site-protection-panel", "13-site-protection-panel-http"]
+    recent_tab_stem, recent_tab_label = f_wall.RECENT_TAB_CAPTURE
     motion_expected = [
         (f"{kind}-{pos}-{state}", f"{kind}, {pos} toolbar, {state}", False)
         for pos in ("top", "bottom")
@@ -165,6 +166,7 @@ def flow_list(variant: str = "light", accent: str = "on") -> list[Flow]:
         Flow("secret settings", flows_secret.secret_settings, SECRET_STEMS),
         Flow("about pages", f_set.about_pages, [(stem, label, False) for stem, _, _, label in f_set.ABOUT_PAGES]),
         Flow("wallpaper selection", f_wall.select_picked_wallpaper, [(stem, label, False) for stem, label in f_wall.PICKED_CAPTURES]),
+        Flow("recent tab card", f_wall.recent_tab_homepage, [(recent_tab_stem, recent_tab_label, False)]),
     ]
     if accent == "on":
         # Only the accent-on pass has the switch on at the start: nothing has tapped it when this first flow runs.

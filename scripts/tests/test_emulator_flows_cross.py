@@ -46,6 +46,7 @@ def recorded_helpers() -> Iterator[dict[str, mock.Mock]]:
         "ensure_tray": (flows_tabs, "ensure_tray"),
         "show_page": (flows_tabs, "show_page"),
         "close_tray": (flows_tabs, "close_tray"),
+        "ensure_toolbar_position": (flows_motion, "ensure_toolbar_position"),
         "page_load": (flows_motion, "page_load"),
         "pull_to_refresh": (flows_motion, "pull_to_refresh"),
         "allow_private_screenshots": (flows_settings, "allow_private_screenshots"),
@@ -87,6 +88,17 @@ class CrossGroupTests(unittest.TestCase):
         helpers["pull_to_refresh"].assert_called_once_with(
             s, "top", suffix="-after-restart-on", label=", switch on after a restart", reloading=False
         )
+
+    def test_screen_group_puts_the_toolbar_at_the_top_before_the_top_named_captures(self) -> None:
+        s = RecordingSession()
+        calls: list[str] = []
+        with recorded_helpers() as helpers:
+            helpers["ensure_toolbar_position"].side_effect = lambda *args, **kwargs: calls.append("ensure-toolbar")
+            helpers["page_load"].side_effect = lambda *args, **kwargs: calls.append("page-load")
+            helpers["pull_to_refresh"].side_effect = lambda *args, **kwargs: calls.append("pull-to-refresh")
+            flows_cross.screen_group(s, flows_cross.TOGGLE_ON)
+        self.assertEqual(calls, ["ensure-toolbar", "page-load", "pull-to-refresh"])
+        helpers["ensure_toolbar_position"].assert_called_once_with(s, "top")
 
     def test_every_switch_state_puts_its_switch_value_in_every_file_name(self) -> None:
         for state in SWITCH_STATES:

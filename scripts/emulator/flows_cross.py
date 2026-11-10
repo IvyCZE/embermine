@@ -2,7 +2,8 @@
 
 flows_wallpaper calls these after each switch change and after each restart of the walk, so the groups of one state
 come from the same session as the Customize and homepage captures next to them. Like those, the file names carry
-the state: `10-toolbar-after-toggle-off_dynamic-off_light.png`.
+the state: `10-toolbar-after-toggle-off_dynamic-off_light.png`. The page-load and pull-to-refresh captures are named
+for the top toolbar, so each group puts the toolbar there first and gives its page URLs a query string of its own.
 """
 from __future__ import annotations
 
@@ -70,6 +71,7 @@ def screen_group(s: Session, state: SwitchState) -> None:
     """Toolbar, main menu, tab tray header, page-load line and pull-to-refresh, in the switch state set now."""
     s.dynamic = state.on
     go_home(s)
+    flows_motion.ensure_toolbar_position(s, "top")
     stem, label = _name(state, "10-toolbar")
     with s.capture(stem, label=label) as shot:
         load_page(s, HTTPS_URL, "example.com", private=False)

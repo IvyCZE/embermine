@@ -3,7 +3,7 @@ From: IvyCZE <me@ivy.yt>
 Date: Mon, 9 Nov 2026 06:54:08 +0000
 Subject: [PATCH] Embermine: 0009-embermine-wallpapers
 
-Add the Embermine wallpaper collection (bloom, grow, pattern, rise, triangle) above Classic Firefox. The wallpapers are drawn on the device from EmbermineWallpaperData in the current palette: Material You tones when the switch is on, the Nova violet ramp when it is off, and an ember palette below Android 12. Each wallpaper is center-cropped into the portrait, landscape and thumbnail files and re-drawn when its palette fingerprint changes, on startup and on resume. Bloom is the default on new installs. Homepage card text uses the lightest palette tone, and cards use a translucent dark tone.
+Add the Embermine wallpaper collection (bloom, grow, pattern, rise, triangle) above Classic Firefox. The wallpapers are drawn on the device from EmbermineWallpaperData in the current palette: Material You tones when the switch is on, the Nova violet ramp when it is off, and an ember palette below Android 12. Each wallpaper is center-cropped into the portrait, landscape and thumbnail files and re-drawn when its palette fingerprint changes, on startup and on resume. Bloom is the default on new installs. Homepage card text uses the lightest palette tone, and cards use a translucent dark tone. The recent-tab, recent-synced-tab and story cards paint their own title and detail text with that same content color, so none of them keeps the dark surface color on the dark card.
 
 Co-authored-by: factory-droid[bot] <138933559+factory-droid[bot]@users.noreply.github.com>
 
@@ -372,6 +372,76 @@ index 0000000000000000000000000000000000000000..1549bf3759236eafb0b034d81d284e01
 +        private const val PNG_QUALITY = 100
 +    }
 +}
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/pocket/ui/StoryCard.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/pocket/ui/StoryCard.kt
+index f9c37913a8f9ce733c26e122e14d206a75f6d2c0..18138236d9764a2a873b2263c9048560b67d5fab 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/pocket/ui/StoryCard.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/pocket/ui/StoryCard.kt
+@@ -66,7 +66,11 @@ internal fun StoryCard(
+         modifier = modifier,
+         shape = MaterialTheme.shapes.small,
+         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+-        colors = CardDefaults.cardColors(containerColor = WallpaperTheme.cardBackgroundColor),
++        colors =
++            CardDefaults.cardColors(
++                containerColor = WallpaperTheme.cardBackgroundColor,
++                contentColor = WallpaperTheme.cardContentColor,
++            ),
+     ) {
+         Column(modifier = Modifier.padding(all = defaultCardContentPadding)) {
+             Image(
+@@ -117,7 +121,7 @@ internal fun StoryCard(
+ 
+                         Text(
+                             text = subtitle,
+-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
++                            color = WallpaperTheme.cardContentColor,
+                             overflow = TextOverflow.Ellipsis,
+                             style = FirefoxTheme.typography.subtitle1,
+                         )
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/recentsyncedtabs/view/RecentSyncedTab.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/recentsyncedtabs/view/RecentSyncedTab.kt
+index c0cf74a2aba5010e3ca65463858a294c41b151f2..9f314f469be6c8ad3ddf24d5e3e79a23c4ed821d 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/recentsyncedtabs/view/RecentSyncedTab.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/recentsyncedtabs/view/RecentSyncedTab.kt
+@@ -134,7 +134,7 @@ fun RecentSyncedTab(
+                     } else {
+                         Text(
+                             text = tab.title.trimmed(),
+-                            color = MaterialTheme.colorScheme.onSurface,
++                            color = WallpaperTheme.cardContentColor,
+                             fontSize = 14.sp,
+                             overflow = TextOverflow.Ellipsis,
+                             maxLines = 2,
+@@ -163,7 +163,7 @@ fun RecentSyncedTab(
+                         } else {
+                             Text(
+                                 text = tab.deviceDisplayName,
+-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
++                                color = WallpaperTheme.cardContentColor,
+                                 fontSize = 12.sp,
+                                 overflow = TextOverflow.Ellipsis,
+                                 maxLines = 1,
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/recenttabs/view/RecentTabs.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/recenttabs/view/RecentTabs.kt
+index 7a1e447cefb962acf701dd8da6d598071218a784..8ce067802363765acd0d3aeb9277ea155c030bec 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/recenttabs/view/RecentTabs.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/recenttabs/view/RecentTabs.kt
+@@ -164,7 +164,7 @@ private fun RecentTabItem(
+                             testTagsAsResourceId = true
+                             testTag = "recent.tab.title"
+                         },
+-                    color = MaterialTheme.colorScheme.onSurface,
++                    color = WallpaperTheme.cardContentColor,
+                     fontSize = 14.sp,
+                     maxLines = 2,
+                     overflow = TextOverflow.Ellipsis,
+@@ -187,7 +187,7 @@ private fun RecentTabItem(
+                                 testTagsAsResourceId = true
+                                 testTag = "recent.tab.url"
+                             },
+-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
++                        color = WallpaperTheme.cardContentColor,
+                         fontSize = 12.sp,
+                         overflow = TextOverflow.Ellipsis,
+                         maxLines = 1,
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/HomepageCard.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/HomepageCard.kt
 index 0c721d2eabc04e98565bf8b74f00bc000659f5e8..d0073217f1f08cd4708671fec10e8c66e447fb2a 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/HomepageCard.kt

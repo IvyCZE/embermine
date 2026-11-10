@@ -26,6 +26,8 @@ ABOUT_ROW = r"About (Firefox|Embermine)"
 ABOUT_FIRST_ROW = Selector(label=r"What.s new in Embermine")
 TECHNICAL_DATA_ROW = Selector(label=r"Send technical and interaction data")
 WALLPAPER_COLORS_ROW = Selector(label=r"Use wallpaper colors")
+# Settings > Homepage > Continue, the "Jump back in" section
+CONTINUE_ROW = Selector(label=r"Continue")
 # (file stem, switch state in the capture, label for the index), in the order the toggle flow takes them
 WALLPAPER_COLORS_CAPTURES = (
     ("customize-after-toggle-off", False, "customize screen, switch turned off"),
@@ -279,17 +281,42 @@ def open_customize(s: Session) -> None:
     open_row(s, r"Customize", wait=WALLPAPER_COLORS_ROW)
 
 
-def wallpaper_colors_on(s: Session) -> bool:
-    """State of the 'Use wallpaper colors' switch: the switch nearest to the row's title."""
-    nodes = s.dev.dump("wallpaper-colors-switch")
-    row = uidump.find_first(nodes, WALLPAPER_COLORS_ROW)
-    if row is None:
-        raise StepError("'Use wallpaper colors' row not found")
+def preference_switch(s: Session, row: Selector, label: str) -> bool:
+    """Checked state of the switch on a preferences row: the switch nearest to the row's title."""
+    nodes = s.dev.dump(label)
+    found = uidump.find_first(nodes, row)
+    if found is None:
+        raise StepError(f"{row} row not found")
     switches = uidump.find_all(nodes, Selector(id="switchWidget"))
-    mine = min(switches, key=lambda n: abs(n.center[1] - row.center[1]), default=None)
+    mine = min(switches, key=lambda n: abs(n.center[1] - found.center[1]), default=None)
     if mine is None:
-        raise StepError("no switch next to 'Use wallpaper colors'")
+        raise StepError(f"no switch next to {row}")
     return mine.checked
+
+
+def wallpaper_colors_on(s: Session) -> bool:
+    """State of the 'Use wallpaper colors' switch."""
+    return preference_switch(s, WALLPAPER_COLORS_ROW, "wallpaper-colors-switch")
+
+
+def set_homepage_recent_tabs(s: Session, on: bool) -> None:
+    """Settings > Homepage > Continue: the 'Jump back in' section, which a fresh profile leaves off.
+
+    The row is tapped up to twice, because a tap of a preference row is sometimes swallowed on the emulator; the
+    state is read back after each tap."""
+    open_settings(s)
+    open_row(s, r"Homepage")
+    try:
+        for attempt in range(1, 3):
+            if preference_switch(s, CONTINUE_ROW, f"homepage-continue-{attempt}") == on:
+                s.log(f"'Continue' (Jump back in) section is {'on' if on else 'off'}")
+                return
+            s.dev.tap(CONTINUE_ROW, timeout=10, settle=1.5)
+        if preference_switch(s, CONTINUE_ROW, "homepage-continue-after-taps") != on:
+            raise StepError(f"'Continue' did not turn {'on' if on else 'off'}")
+    finally:
+        s.dev.back()
+        s.dev.back()
 
 
 def require_wallpaper_colors(s: Session, on: bool) -> None:

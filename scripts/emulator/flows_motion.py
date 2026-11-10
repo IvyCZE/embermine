@@ -1,6 +1,7 @@
 """Captures of things that move: the page-load line and pull-to-refresh, for both toolbar positions."""
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 
 from scripts.emulator import targets as t
@@ -9,6 +10,9 @@ from scripts.emulator.flows_browse import go_home
 from scripts.emulator.flows_settings import open_row, open_settings
 from scripts.emulator.session import Session
 from scripts.emulator.uidump import Selector
+
+TOOLBAR_POSITIONS = ("top", "bottom")
+_QUERY_KEY = re.compile(r"[^a-z0-9]+")
 
 
 def toolbar_at_top(s: Session) -> bool:
@@ -32,6 +36,37 @@ def set_toolbar_position(s: Session, position: str) -> None:
     s.dev.sleep(1.0)
 
 
+def ensure_toolbar_position(s: Session, position: str) -> None:
+    """Put the toolbar where the capture names say it is, changing the setting only when it is elsewhere.
+
+    The both-positions flow leaves the toolbar at the bottom, so a later capture named for the top would show the
+    bottom toolbar. Checking the address bar first keeps an unchanged position free of a Settings trip."""
+    if position not in TOOLBAR_POSITIONS:
+        raise ValueError(f"unknown toolbar position {position!r}")
+    go_home(s)
+    if s.toolbar_at_top() == (position == "top"):
+        s.log(f"toolbar already at the {position}")
+        return
+    set_toolbar_position(s, position)
+    go_home(s)
+    if s.toolbar_at_top() != (position == "top"):
+        raise RuntimeError(f"toolbar did not move to the {position} of the screen")
+    s.log(f"toolbar now at the {position}")
+
+
+def state_key(suffix: str) -> str:
+    """Query value that names one switch state: '-after-toggle-off' becomes 'after-toggle-off'.
+
+    The page URLs of the switch-state groups carry it, so every group loads a URL Fenix has not opened yet and
+    starts a new load instead of selecting the finished tab of the previous group."""
+    return _QUERY_KEY.sub("-", suffix.strip().lower()).strip("-")
+
+
+def _state_query(suffix: str) -> str:
+    key = state_key(suffix)
+    return f"&state={key}" if key else ""
+
+
 PULL_START_FRACTION = 0.30
 PULL_PAUSE_FRACTION = 0.37
 PULL_RELEASE_FRACTION = 0.50
@@ -44,13 +79,13 @@ def page_load(s: Session, position: str, *, suffix: str = "", label: str = "", a
     `suffix` (file name) and `label` (index text) tell the captures of one switch state apart from the others."""
     with s.capture(f"page-load-{position}-loading{suffix}", label=f"page load, {position} toolbar, mid-load{label}") as shot:
         go_home(s)
-        s.open_url(f"{s.server}/slow?pos={position}")
+        s.open_url(f"{s.server}/slow?pos={position}{_state_query(suffix)}")
         s.dev.sleep(4.0)
         shot.take(settle=0.5)
     if not after_load:
         return
     with s.capture(f"page-load-{position}-loaded{suffix}", label=f"page load, {position} toolbar, after load{label}") as shot:
-        s.open_url(f"{s.server}/page?pos={position}")
+        s.open_url(f"{s.server}/page?pos={position}{_state_query(suffix)}")
         s.wait_page("10.0.2.2", timeout=30)
         s.dev.sleep(5.0)
         shot.take(settle=0.5)
@@ -71,9 +106,9 @@ def pull_to_refresh(s: Session, position: str, *, suffix: str = "", label: str =
 
     `suffix`, `label` and `reloading` work as in `page_load`; `reloading` off skips the capture taken during the reload."""
     with s.capture(f"pull-to-refresh-{position}-pulling{suffix}", label=f"pull-to-refresh, {position} toolbar, during pull{label}") as pulling:
-        s.open_url(f"{s.server}/reset?pos={position}")
+        s.open_url(f"{s.server}/reset?pos={position}{_state_query(suffix)}")
         s.dev.sleep(1.0)
-        s.open_url(f"{s.server}/refresh?pos={position}")
+        s.open_url(f"{s.server}/refresh?pos={position}{_state_query(suffix)}")
         s.wait_page("10.0.2.2", timeout=30)
         s.dev.sleep(5.0)
         width, height = s.dev.screen_size()

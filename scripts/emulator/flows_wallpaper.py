@@ -7,7 +7,7 @@ from scripts.emulator import devsetup, flows_cross, flows_settings
 from scripts.emulator.device import StepError
 from scripts.emulator.flows_browse import go_home
 from scripts.emulator.session import Session
-from scripts.emulator.uidump import Selector
+from scripts.emulator.uidump import Node, Selector
 
 PICKED_WALLPAPER = "triangle"
 # A lime green seed: the palette check still requires green, and the wallpapers recolor visibly against the default seed.
@@ -31,6 +31,10 @@ RESTART_ON_HOMEPAGE = ("homepage-after-restart-on", True, "homepage, switch on a
 RESTART_OFF_PICKER = ("wallpaper-picker-after-restart-off", False, "wallpaper picker, switch off after a restart")
 RESTART_ON_PICKER = ("wallpaper-picker-after-restart-on", True, "wallpaper picker, switch on after a restart")
 PALETTE_HOMEPAGE = ("04-homepage-after-palette-change", True, "homepage after the system palette changed mid-session")
+# The homepage card whose text has to stay light on the translucent dark palette card of the wallpaper
+RECENT_TAB_CAPTURE = ("homepage-recent-tab", "homepage with a populated Jump back in (recent tab) card over the wallpaper")
+RECENT_TABS = Selector(id="recent.tabs")
+RECENT_TAB_TITLE = Selector(id="recent.tab.title")
 TOGGLE_HOMEPAGES = (TOGGLE_OFF_HOMEPAGE, TOGGLE_ON_HOMEPAGE, RESTART_OFF_HOMEPAGE, RESTART_ON_HOMEPAGE)
 TOGGLE_PICKERS = (TOGGLE_OFF_PICKER, TOGGLE_ON_PICKER, RESTART_OFF_PICKER, RESTART_ON_PICKER)
 # The Customize, homepage and picker captures above, the cross-area groups of flows_cross (each in its own switch
@@ -83,6 +87,36 @@ def picker_capture(s: Session, capture: tuple[str, bool, str]) -> None:
     with s.capture(stem, label=label) as shot:
         open_picker(s)
         shot.take(settle=2.0)
+
+
+def show_recent_tab_card(s: Session) -> Node | None:
+    """Scroll the homepage to the Jump back in card. None when the card is not there."""
+    go_home(s)
+    s.dev.sleep(1.5)
+    try:
+        return s.dev.scroll_to(RECENT_TAB_TITLE, RECENT_TABS, max_swipes=3)
+    except StepError:
+        return None
+
+
+def recent_tab_homepage(s: Session) -> None:
+    """The homepage Jump back in card over the wallpaper, in the switch state and theme of this pass.
+
+    Its title and URL are the text that must stay light on the translucent dark palette card (VAL-WALL-011).
+    The section is off on a fresh profile, because the Nimbus homescreen defaults leave it out, so it is turned
+    on first. A relaunch makes the homepage rebuild with the section enabled."""
+    stem, label = RECENT_TAB_CAPTURE
+    with s.capture(stem, label=label) as shot:
+        flows_settings.set_homepage_recent_tabs(s, True)
+        card = show_recent_tab_card(s)
+        if card is None:
+            s.log("no Jump back in card on the homepage yet; relaunching the app once")
+            s.force_stop()
+            s.launch_from_launcher()
+            card = show_recent_tab_card(s)
+        if card is None:
+            raise StepError("no populated Jump back in card on the homepage")
+        shot.take(settle=1.5, note="recent-tab card over the wallpaper: title and URL must be light on the dark card")
 
 
 def palette_change(s: Session) -> None:

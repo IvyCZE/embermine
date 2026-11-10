@@ -2,6 +2,7 @@ import dataclasses
 import time
 import unittest
 from types import SimpleNamespace
+from unittest import mock
 
 from scripts.emulator import flows_settings, flows_wallpaper, run, uidump
 from scripts.emulator.device import StepError
@@ -26,6 +27,69 @@ def session(nodes: list[uidump.Node]) -> SimpleNamespace:
 
 def row(top: int = 560) -> str:
     return node(text="Use wallpaper colors", bounds=f"[40,{top}][860,{top + 80}]", clickable=True)
+
+
+def continue_row(top: int = 1480) -> str:
+    return node(text="Continue", bounds=f"[40,{top}][860,{top + 80}]", clickable=True)
+
+
+class HomepageContinueSwitchTests(unittest.TestCase):
+    def session(self, *dumps: list[uidump.Node]) -> SimpleNamespace:
+        queue = list(dumps)
+        taps: list[object] = []
+
+        def dump(label: str = "", **_: object) -> list[uidump.Node]:
+            return queue[0] if len(queue) == 1 else queue.pop(0)
+
+        return SimpleNamespace(
+            dev=SimpleNamespace(
+                dump=dump,
+                tap=lambda selector, **_: taps.append(selector),
+                back=lambda **_: None,
+            ),
+            log=lambda _: None,
+            taps=taps,
+        )
+
+    def test_an_off_section_is_switched_on_with_a_single_row_tap(self) -> None:
+        s = self.session(
+            customize(continue_row(), switch(1500, checked=False)),
+            customize(continue_row(), switch(1500, checked=True)),
+        )
+        with (
+            mock.patch.object(flows_settings, "open_settings"),
+            mock.patch.object(flows_settings, "open_row"),
+        ):
+            flows_settings.set_homepage_recent_tabs(s, True)
+        self.assertEqual(s.taps, [flows_settings.CONTINUE_ROW])
+
+    def test_an_already_on_section_is_not_tapped(self) -> None:
+        s = self.session(customize(continue_row(), switch(1500, checked=True)))
+        with (
+            mock.patch.object(flows_settings, "open_settings"),
+            mock.patch.object(flows_settings, "open_row"),
+        ):
+            flows_settings.set_homepage_recent_tabs(s, True)
+        self.assertEqual(s.taps, [])
+
+    def test_a_switch_that_does_not_change_is_a_step_error(self) -> None:
+        off = customize(continue_row(), switch(1500, checked=False))
+        s = self.session(off)
+        with (
+            mock.patch.object(flows_settings, "open_settings"),
+            mock.patch.object(flows_settings, "open_row"),
+        ):
+            with self.assertRaisesRegex(StepError, "did not turn on"):
+                flows_settings.set_homepage_recent_tabs(s, True)
+
+    def test_a_missing_continue_row_is_a_step_error(self) -> None:
+        s = self.session(customize(switch(1500, checked=False)))
+        with (
+            mock.patch.object(flows_settings, "open_settings"),
+            mock.patch.object(flows_settings, "open_row"),
+        ):
+            with self.assertRaises(StepError):
+                flows_settings.set_homepage_recent_tabs(s, True)
 
 
 class WallpaperColorsSwitchTests(unittest.TestCase):

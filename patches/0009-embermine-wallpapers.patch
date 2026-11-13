@@ -8,15 +8,25 @@ Add the Embermine wallpaper collection (bloom, grow, pattern, rise, triangle) ab
 Co-authored-by: factory-droid[bot] <138933559+factory-droid[bot]@users.noreply.github.com>
 
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
-index cd1fb285a4fa0b4d21b0dfd8239188f3b4881dcc..b5df81d71e68c01e8a65f595ee634e47b0473d8b 100644
+index cd1fb285a4fa0b4d21b0dfd8239188f3b4881dcc..3dc62063aee5a9946aeea48987e73c56d217532e 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
-@@ -842,6 +842,10 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, Crash
+@@ -140,6 +140,7 @@ import org.mozilla.fenix.debugsettings.ui.FenixOverlay
+ import org.mozilla.fenix.downloads.DownloadSnackbar
+ import org.mozilla.fenix.e2e.EdgeToEdgeFragmentLifecycleCallbacks
+ import org.mozilla.fenix.embermine.settingsBackNavigationShape
++import org.mozilla.fenix.embermine.wallpapers.EmbermineWallpaperPalette
+ import org.mozilla.fenix.experiments.ResearchSurfaceDialogFragment
+ import org.mozilla.fenix.experiments.UninstallSurveyManager
+ import org.mozilla.fenix.ext.alreadyOnDestination
+@@ -842,6 +843,12 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, Crash
              }
          }
  
++        val emberminePalette =
++            EmbermineWallpaperPalette.current(this, components.settings.isEmbermineWallpaperColorsEnabled)
 +        lifecycleScope.launch(IO) {
-+            components.useCases.wallpaperUseCases.refreshEmbermineWallpapers()
++            components.useCases.wallpaperUseCases.refreshEmbermineWallpapers(emberminePalette)
 +        }
 +
          lifecycleScope.launch(IO) {
@@ -47,6 +57,68 @@ index 54d7a3475e22e7744ec198e1c810033e4c1a0e34..8c0d666a49d05b212003a31606b8952a
          )
      }
  
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/MessageCard.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/MessageCard.kt
+index 63f22c96213d4adfefb2e929574fadc724def0dc..2855024f87e9855d377a3b3d623ac21591a7ae35 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/MessageCard.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/MessageCard.kt
+@@ -143,7 +143,20 @@ data class MessageCardState(
+          */
+         @Composable
+         fun build(message: Message, wallpaperState: WallpaperState): MessageCardState {
+-            val bannerColors = BannerColors.bannerColors(backgroundColor = wallpaperState.cardBackgroundColor)
++            val bannerColors =
++                if (wallpaperState.currentWallpaper.cardColorLight != null &&
++                    wallpaperState.currentWallpaper.cardColorDark != null
++                ) {
++                    BannerColors.bannerColors(
++                        backgroundColor = wallpaperState.cardBackgroundColor,
++                        titleTextColor = wallpaperState.cardContentColor,
++                        messageTextColor = wallpaperState.cardContentColor,
++                        iconColor = wallpaperState.cardContentColor,
++                        buttonTextColor = wallpaperState.cardContentColor,
++                    )
++                } else {
++                    BannerColors.bannerColors(backgroundColor = wallpaperState.cardBackgroundColor)
++                }
+ 
+             return MessageCardState(
+                 messageText = message.text,
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/list/ListItem.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/list/ListItem.kt
+index 8bcd414a14fe96d3d696621fa8c88400359c9326..adb9565974addd5c956c98e301704134aa1d3c6c 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/list/ListItem.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/list/ListItem.kt
+@@ -164,6 +164,7 @@ fun TextListItem(
+  * @param modifier [Modifier] to be applied to the layout.
+  * @param faviconShape The shape used to clip the favicon. Defaults to a slightly rounded rectangle.
+  * @param labelModifier [Modifier] to be applied to the label.
++ * @param colors [ListItemColors] to be applied to the list item.
+  * @param description An optional description text below the label.
+  * @param maxDescriptionLines An optional maximum number of lines for the description text to span.
+  * @param faviconPainter Optional painter to use when fetching a new favicon is unnecessary.
+@@ -183,6 +184,7 @@ fun FaviconListItem(
+     modifier: Modifier = Modifier,
+     faviconShape: Shape = RoundedCornerShape(2.dp),
+     labelModifier: Modifier = Modifier,
++    colors: ListItemColors = ListItemDefaults.colors(),
+     description: String? = null,
+     maxDescriptionLines: Int = 1,
+     faviconPainter: Painter? = null,
+@@ -199,6 +201,7 @@ fun FaviconListItem(
+         label = label,
+         modifier = modifier,
+         labelModifier = labelModifier,
++        colors = colors,
+         description = description,
+         maxDescriptionLines = maxDescriptionLines,
+         onClick = onClick,
+@@ -238,6 +241,7 @@ fun FaviconListItem(
+                     Icon(
+                         painter = iconPainter,
+                         contentDescription = null,
++                        tint = colors.trailingIconColor,
+                     )
+                 }
+             }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperPalette.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperPalette.kt
 new file mode 100644
 index 0000000000000000000000000000000000000000..b163a0844553f83f5e7a289763fbe6bfed9decb3
@@ -228,10 +300,10 @@ index 0000000000000000000000000000000000000000..1e803f0c1171e023105c5575e1dfb84e
 +}
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpapers.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpapers.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..1549bf3759236eafb0b034d81d284e01508ba651
+index 0000000000000000000000000000000000000000..93e27278605897a9ceb7af147826ed22db9b413b
 --- /dev/null
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpapers.kt
-@@ -0,0 +1,140 @@
+@@ -0,0 +1,153 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -251,6 +323,7 @@ index 0000000000000000000000000000000000000000..1549bf3759236eafb0b034d81d284e01
 +import kotlinx.coroutines.withContext
 +import mozilla.components.support.base.log.logger.Logger
 +import org.mozilla.fenix.settings.wallpaper.WALLPAPER_THUMBNAIL_ASPECT_RATIO
++import org.mozilla.fenix.utils.Settings
 +import org.mozilla.fenix.wallpapers.Wallpaper
 +
 +/**
@@ -273,23 +346,25 @@ index 0000000000000000000000000000000000000000..1549bf3759236eafb0b034d81d284e01
 +    /**
 +     * Draws any wallpaper whose cache does not match the current palette and display size, then returns the
 +     * collection in that palette.
++     *
++     * @param palette The palette to draw in. Defaults to the one from [getPalette] when null.
 +     */
-+    suspend fun refresh(): List<Wallpaper> =
++    suspend fun refresh(palette: EmbermineWallpaperPalette? = null): List<Wallpaper> =
 +        mutex.withLock {
 +            withContext(Dispatchers.IO) {
-+                val palette = getPalette()
++                val currentPalette = palette ?: getPalette()
 +                val displaySize = getDisplaySize()
-+                val fingerprint = palette.fingerprint(displaySize.width, displaySize.height)
++                val fingerprint = currentPalette.fingerprint(displaySize.width, displaySize.height)
 +                artwork.forEach { art ->
 +                    if (!isRendered(art.name, fingerprint)) {
 +                        try {
-+                            render(art, palette, displaySize, fingerprint)
++                            render(art, currentPalette, displaySize, fingerprint)
 +                        } catch (e: IOException) {
 +                            Logger.error("Failed to render Embermine wallpaper ${art.name}", e)
 +                        }
 +                    }
 +                }
-+                wallpapers(palette)
++                wallpapers(currentPalette)
 +            }
 +        }
 +
@@ -367,6 +442,16 @@ index 0000000000000000000000000000000000000000..1549bf3759236eafb0b034d81d284e01
 +        /** Whether [wallpaper] belongs to the Embermine collection, which is bundled and never downloaded. */
 +        fun isEmbermine(wallpaper: Wallpaper): Boolean = wallpaper.collection.name == COLLECTION_NAME
 +
++        /**
++         * Stores the colors of [wallpaper] in the settings that cold start reads back. Missing colors are stored as 0,
++         * the value [Wallpaper.getCurrentWallpaperFromSettings] treats as not set.
++         */
++        fun syncCurrentWallpaperColors(settings: Settings, wallpaper: Wallpaper) {
++            settings.currentWallpaperTextColor = wallpaper.textColor ?: 0L
++            settings.currentWallpaperCardColorLight = wallpaper.cardColorLight ?: 0L
++            settings.currentWallpaperCardColorDark = wallpaper.cardColorDark ?: 0L
++        }
++
 +        private const val FINGERPRINT_FILE = "palette.txt"
 +        private const val THUMBNAIL_WIDTH = 540
 +        private const val PNG_QUALITY = 100
@@ -442,6 +527,101 @@ index 7a1e447cefb962acf701dd8da6d598071218a784..8ce067802363765acd0d3aeb9277ea15
                          fontSize = 12.sp,
                          overflow = TextOverflow.Ellipsis,
                          maxLines = 1,
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/recentvisits/view/RecentlyVisited.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/recentvisits/view/RecentlyVisited.kt
+index a9df63d6b47f24cb329b52abf79588c8c9127194..d303030ff722b6c601c0c40fb2d1f6ce86c54f5e 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/recentvisits/view/RecentlyVisited.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/recentvisits/view/RecentlyVisited.kt
+@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.layout.widthIn
+ import androidx.compose.foundation.rememberScrollState
+ import androidx.compose.material3.HorizontalDivider
++import androidx.compose.material3.ListItemDefaults
++import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Surface
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.derivedStateOf
+@@ -47,6 +49,7 @@ import org.mozilla.fenix.home.recentvisits.RecentlyVisitedItem.RecentHistoryGrou
+ import org.mozilla.fenix.home.recentvisits.RecentlyVisitedItem.RecentHistoryHighlight
+ import org.mozilla.fenix.home.topsites.ui.HomepageCard
+ import org.mozilla.fenix.theme.FirefoxTheme
++import org.mozilla.fenix.wallpapers.LocalWallpaperState
+ import org.mozilla.fenix.wallpapers.WallpaperTheme
+ 
+ // Number of recently visited items per column.
+@@ -75,6 +78,14 @@ fun RecentlyVisited(
+     onRecentVisitClick: (RecentlyVisitedItem, pageNumber: Int) -> Unit = { _, _ -> },
+ ) {
+     val isSingleColumn by remember(recentVisits) { derivedStateOf { recentVisits.size <= VISITS_PER_COLUMN } }
++    val wallpaper = LocalWallpaperState.current.currentWallpaper
++    val hasWallpaperCardColors = wallpaper.cardColorLight != null && wallpaper.cardColorDark != null
++    val dividerColor =
++        if (hasWallpaperCardColors) {
++            WallpaperTheme.cardContentColor.copy(alpha = 0.2f)
++        } else {
++            MaterialTheme.colorScheme.outlineVariant
++        }
+ 
+     Row(
+         modifier =
+@@ -134,7 +145,8 @@ fun RecentlyVisited(
+ 
+                         if (showDivider) {
+                             HorizontalDivider(
+-                                modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = contentPadding)
++                                modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = contentPadding),
++                                color = dividerColor,
+                             )
+                         }
+                     }
+@@ -164,6 +176,14 @@ private fun RecentlyVisitedHistoryGroup(
+         } else {
+             R.string.history_search_group_sites_1
+         }
++    val contentColor = WallpaperTheme.cardContentColor
++    val itemColors =
++        ListItemDefaults.colors(
++            headlineColor = contentColor,
++            supportingColor = contentColor,
++            leadingIconColor = contentColor,
++            trailingIconColor = contentColor,
++        )
+ 
+     Box {
+         IconListItem(
+@@ -173,7 +193,10 @@ private fun RecentlyVisitedHistoryGroup(
+                     onClick = { onRecentVisitClick(recentVisit) },
+                     onLongClick = { isMenuExpanded = true },
+                 ),
++            colors = itemColors,
+             beforeIconPainter = painterResource(iconsR.drawable.mozac_ic_tab_tray_24),
++            beforeIconTint = contentColor,
++            afterIconTint = contentColor,
+             description = stringResource(id = captionId, recentVisit.historyMetadata.size),
+         )
+ 
+@@ -207,6 +230,14 @@ private fun RecentlyVisitedHistoryHighlight(
+     onRecentVisitClick: (RecentHistoryHighlight) -> Unit = { _ -> },
+ ) {
+     var isMenuExpanded by remember { mutableStateOf(false) }
++    val contentColor = WallpaperTheme.cardContentColor
++    val itemColors =
++        ListItemDefaults.colors(
++            headlineColor = contentColor,
++            supportingColor = contentColor,
++            leadingIconColor = contentColor,
++            trailingIconColor = contentColor,
++        )
+ 
+     Box {
+         FaviconListItem(
+@@ -217,6 +248,7 @@ private fun RecentlyVisitedHistoryHighlight(
+                     onClick = { onRecentVisitClick(recentVisit) },
+                     onLongClick = { isMenuExpanded = true },
+                 ),
++            colors = itemColors,
+         )
+ 
+         DropdownMenu(
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/HomepageCard.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/HomepageCard.kt
 index 0c721d2eabc04e98565bf8b74f00bc000659f5e8..d0073217f1f08cd4708671fec10e8c66e447fb2a 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/HomepageCard.kt
@@ -477,7 +657,7 @@ index 663da26892208a3f9d07964b24532cebf220ca48..e09bbc5d240af8f5b7572a2153fc3e57
              if (Wallpaper.isLocalWallpaper(wallpaper.name)) {
                  null
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt
-index 0cd63fdd858f76f889465cb093f4ab1d7db549c3..560d6f3a803351e95bff3f13962fec8abe107ca1 100644
+index 0cd63fdd858f76f889465cb093f4ab1d7db549c3..7ceeaacc826fabe677a57540042438bc3f438134 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/wallpaper/WallpaperSettings.kt
 @@ -58,6 +58,7 @@ import mozilla.components.compose.base.theme.PreviewThemeProvider
@@ -503,8 +683,17 @@ index 0cd63fdd858f76f889465cb093f4ab1d7db549c3..560d6f3a803351e95bff3f13962fec8a
          Text(
              text =
                  stringResource(
+@@ -257,7 +264,7 @@ private fun WallpaperThumbnailItem(
+             }
+         }
+     var bitmap: Bitmap? by remember(wallpaper.name) { mutableStateOf(null) }
+-    LaunchedEffect(wallpaper.name, LocalConfiguration.current.orientation, targetSize) {
++    LaunchedEffect(wallpaper, LocalConfiguration.current.orientation, targetSize) {
+         bitmap = loadWallpaperResource(wallpaper, targetSize)
+     }
+     val border =
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
-index d57c8223c22b811e56063eb46e07794277f08da3..445ef844d3d4644379308c470c102c12026081a5 100644
+index d57c8223c22b811e56063eb46e07794277f08da3..9224bf2a0e012323884dab98193846954eac130b 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
 @@ -56,6 +56,7 @@ import org.mozilla.fenix.components.toolbar.ToolbarPosition
@@ -537,6 +726,15 @@ index d57c8223c22b811e56063eb46e07794277f08da3..445ef844d3d4644379308c470c102c12
          )
  
      /**
+@@ -638,7 +633,7 @@ class Settings(
+     var showWallpaperOnboarding by
+         booleanPreference(
+             key = appContext.getPreferenceKey(R.string.pref_key_wallpapers_onboarding),
+-            default = true,
++            default = false,
+         )
+ 
+     var openLinksInAPrivateTab by
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpaperState.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpaperState.kt
 index 16b4065434bdbec368b58441964868cbe6f33516..9fe495cd266a7661f064c44e8a475e38956a47f7 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpaperState.kt
@@ -577,7 +775,7 @@ index 1c8e716ccc98305de370ca54aa1f5affada0b3ae..7b35dce05aa382c649e53345e991a54c
      val buttonBackgroundColor: Color
          @Composable get() = LocalWallpaperState.current.buttonBackgroundColor
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpapersUseCases.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpapersUseCases.kt
-index 05d84c3d2f1fa87d1047ea5915e15f22ec7a7fa0..08be2dad3d9165904ad6ef088ec6fd362855a4b2 100644
+index 05d84c3d2f1fa87d1047ea5915e15f22ec7a7fa0..101dc628e724499a90d57be285ea21a84cb39cfa 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpapersUseCases.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpapersUseCases.kt
 @@ -17,6 +17,8 @@ import mozilla.components.concept.fetch.Client
@@ -619,28 +817,36 @@ index 05d84c3d2f1fa87d1047ea5915e15f22ec7a7fa0..08be2dad3d9165904ad6ef088ec6fd36
  
 +    // Use case for re-drawing the Embermine wallpapers when the palette has changed since they were last drawn.
 +    val refreshEmbermineWallpapers: RefreshEmbermineWallpapersUseCase by lazy {
-+        DefaultRefreshEmbermineWallpapersUseCase(appStore, embermineWallpapers)
++        DefaultRefreshEmbermineWallpapersUseCase(appStore, embermineWallpapers, settings)
 +    }
 +
      // Use case for loading specific wallpaper bitmaps.
      val loadBitmap: LoadBitmapUseCase by lazy {
          DefaultLoadBitmapUseCase(getFilesDir = { filesDir }, getDisplaySize = getDisplaySize)
-@@ -98,6 +109,36 @@ class WallpapersUseCases(
+@@ -98,6 +109,44 @@ class WallpapersUseCases(
          }
      }
  
 +    /** Contract for usecases that re-draw the Embermine wallpapers for the current palette. */
 +    interface RefreshEmbermineWallpapersUseCase {
-+        /** Re-draw the Embermine wallpapers if needed, then update the store with their current colors. */
-+        suspend operator fun invoke()
++        /**
++         * Re-draw the Embermine wallpapers if needed, then update the store and the settings with their current colors.
++         *
++         * @param palette The palette to draw in. Defaults to the one the app resolves when null.
++         */
++        suspend operator fun invoke(palette: EmbermineWallpaperPalette? = null)
 +    }
 +
 +    internal class DefaultRefreshEmbermineWallpapersUseCase(
 +        private val appStore: AppStore,
 +        private val embermineWallpapers: EmbermineWallpapers,
++        private val settings: Settings,
 +    ) : RefreshEmbermineWallpapersUseCase {
-+        override suspend fun invoke() {
-+            val refreshed = embermineWallpapers.refresh()
++        override suspend fun invoke(palette: EmbermineWallpaperPalette?) {
++            val refreshed = embermineWallpapers.refresh(palette)
++            refreshed.find { it.name == settings.currentWallpaperName }
++                ?.takeIf { EmbermineWallpapers.isEmbermine(it) }
++                ?.let { EmbermineWallpapers.syncCurrentWallpaperColors(settings, it) }
 +            val wallpaperState = appStore.state.wallpaperState
 +
 +            val current = wallpaperState.currentWallpaper
@@ -662,7 +868,7 @@ index 05d84c3d2f1fa87d1047ea5915e15f22ec7a7fa0..08be2dad3d9165904ad6ef088ec6fd36
      /** Contract for usecases that initialize the wallpaper feature. */
      interface InitializeWallpapersUseCase {
          /**
-@@ -116,6 +157,7 @@ class WallpapersUseCases(
+@@ -116,6 +165,7 @@ class WallpapersUseCases(
          private val migrationHelper: LegacyWallpaperMigration,
          private val settings: Settings,
          private val currentLocale: String,
@@ -670,7 +876,7 @@ index 05d84c3d2f1fa87d1047ea5915e15f22ec7a7fa0..08be2dad3d9165904ad6ef088ec6fd36
      ) : InitializeWallpapersUseCase {
          override suspend fun invoke() {
              val currentWallpaperName =
-@@ -132,10 +174,12 @@ class WallpapersUseCases(
+@@ -132,16 +182,25 @@ class WallpapersUseCases(
                  migrationHelper.migrateExpiredWallpaperCardColors()
              }
  
@@ -684,7 +890,20 @@ index 05d84c3d2f1fa87d1047ea5915e15f22ec7a7fa0..08be2dad3d9165904ad6ef088ec6fd36
              val currentWallpaper =
                  possibleWallpapers.find { it.name == currentWallpaperName }
                      ?: fileManager.lookupExpiredWallpaper(settings)
-@@ -151,12 +195,12 @@ class WallpapersUseCases(
+                     ?: Wallpaper.getCurrentWallpaperFromSettings(settings)
+                     ?: Wallpaper.Default
+ 
++            if (EmbermineWallpapers.isEmbermine(currentWallpaper)) {
++                if (settings.currentWallpaperName != Wallpaper.DEFAULT) {
++                    settings.currentWallpaperName = currentWallpaper.name
++                }
++                EmbermineWallpapers.syncCurrentWallpaperColors(settings, currentWallpaper)
++            }
++
+             // Dispatching this early will make it accessible to the home screen ASAP. This may have
+             // been dispatched by FetchCurrentWallpaperUseCase, but this could include additional metadata.
+             appStore.dispatch(AppAction.WallpaperAction.UpdateCurrentWallpaper(currentWallpaper))
+@@ -151,12 +210,12 @@ class WallpapersUseCases(
                  possibleWallpapers,
              )
  
@@ -699,7 +918,7 @@ index 05d84c3d2f1fa87d1047ea5915e15f22ec7a7fa0..08be2dad3d9165904ad6ef088ec6fd36
              appStore.dispatch(AppAction.WallpaperAction.UpdateAvailableWallpapers(defaultIncluded))
          }
  
-@@ -301,7 +345,9 @@ class WallpapersUseCases(
+@@ -301,7 +360,9 @@ class WallpapersUseCases(
           */
          override suspend fun invoke(wallpaper: Wallpaper): Wallpaper.ImageFileState {
              return if (
@@ -853,10 +1072,10 @@ index 0000000000000000000000000000000000000000..74956bb7270737fc48eaecd13a047cbd
 +}
 diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpapersTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpapersTest.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..104c48d8bbc7d53aa29fc5dabed002fc18c42bb7
+index 0000000000000000000000000000000000000000..16f60d3ca75194d1d5aed0ab27ae6e676a81abfc
 --- /dev/null
 +++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpapersTest.kt
-@@ -0,0 +1,47 @@
+@@ -0,0 +1,106 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -864,11 +1083,18 @@ index 0000000000000000000000000000000000000000..104c48d8bbc7d53aa29fc5dabed002fc
 +package org.mozilla.fenix.embermine.wallpapers
 +
 +import android.util.Size
++import io.mockk.Runs
++import io.mockk.every
++import io.mockk.just
++import io.mockk.mockk
++import io.mockk.slot
++import io.mockk.verify
 +import java.io.File
 +import org.junit.Assert.assertEquals
 +import org.junit.Assert.assertFalse
 +import org.junit.Assert.assertTrue
 +import org.junit.Test
++import org.mozilla.fenix.utils.Settings
 +import org.mozilla.fenix.wallpapers.Wallpaper
 +
 +class EmbermineWallpapersTest {
@@ -902,6 +1128,58 @@ index 0000000000000000000000000000000000000000..104c48d8bbc7d53aa29fc5dabed002fc
 +        wallpapers.wallpapers(palette).forEach { assertTrue(EmbermineWallpapers.isEmbermine(it)) }
 +        assertFalse(EmbermineWallpapers.isEmbermine(Wallpaper.Default))
 +        assertFalse(EmbermineWallpapers.isEmbermine(Wallpaper.EdgeToEdge))
++    }
++
++    @Test
++    fun syncCurrentWallpaperColorsStoresTheThreeColorPrefs() {
++        val settings = mockk<Settings>(relaxed = true)
++        val wallpaper = wallpapers.wallpapers(palette).first()
++
++        EmbermineWallpapers.syncCurrentWallpaperColors(settings, wallpaper)
++
++        verify {
++            settings.currentWallpaperTextColor = palette.textColor
++            settings.currentWallpaperCardColorLight = palette.cardColor
++            settings.currentWallpaperCardColorDark = palette.cardColor
++        }
++    }
++
++    @Test
++    fun syncCurrentWallpaperColorsStoresZeroForAWallpaperWithoutColors() {
++        val settings = mockk<Settings>(relaxed = true)
++
++        EmbermineWallpapers.syncCurrentWallpaperColors(settings, Wallpaper.Default)
++
++        verify {
++            settings.currentWallpaperTextColor = 0L
++            settings.currentWallpaperCardColorLight = 0L
++            settings.currentWallpaperCardColorDark = 0L
++        }
++    }
++
++    @Test
++    fun coldStartReadsBackTheSyncedEmbermineWallpaper() {
++        val settings = mockk<Settings>(relaxed = true)
++        val textColor = slot<Long>()
++        val cardColorLight = slot<Long>()
++        val cardColorDark = slot<Long>()
++        val wallpaper = wallpapers.wallpapers(palette).first()
++        every { settings.currentWallpaperTextColor = capture(textColor) } just Runs
++        every { settings.currentWallpaperCardColorLight = capture(cardColorLight) } just Runs
++        every { settings.currentWallpaperCardColorDark = capture(cardColorDark) } just Runs
++        EmbermineWallpapers.syncCurrentWallpaperColors(settings, wallpaper)
++
++        every { settings.currentWallpaperName } returns wallpaper.name
++        every { settings.currentWallpaperTextColor } returns textColor.captured
++        every { settings.currentWallpaperCardColorLight } returns cardColorLight.captured
++        every { settings.currentWallpaperCardColorDark } returns cardColorDark.captured
++
++        val restored = Wallpaper.getCurrentWallpaperFromSettings(settings)
++
++        assertEquals(wallpaper.name, restored?.name)
++        assertEquals(wallpaper.textColor, restored?.textColor)
++        assertEquals(wallpaper.cardColorLight, restored?.cardColorLight)
++        assertEquals(wallpaper.cardColorDark, restored?.cardColorDark)
 +    }
 +}
 diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/utils/SettingsTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/utils/SettingsTest.kt

@@ -9,16 +9,18 @@ from scripts.emulator.flows_browse import go_home
 from scripts.emulator.session import Session
 from scripts.emulator.uidump import Node, Selector
 
-PICKED_WALLPAPER = "triangle"
+# rise is the only wallpaper that uses all six gray roles, and its portrait center-crop keeps every role visible on the
+# homepage (VAL-WALL-005). The picked wallpaper is the one the 6-tone capture checks.
+PICKED_WALLPAPER = "rise"
 # A lime green seed: the palette check still requires green, and the wallpapers recolor visibly against the default seed.
 CHANGED_PALETTE_SEED = "7BC043"
 PICKER_ROW = Selector(label=r"Wallpapers?")
 ANY_THUMBNAIL = Selector(desc=r"Wallpaper Item: .*")
 
 # (file stem, label) of the captures of the picked wallpaper flow, in the order the flow takes them
-PICKED_PICKER = ("wallpaper-select-triangle", "wallpaper picker, triangle selected")
-PICKED_HOMEPAGE = ("homepage-wallpaper-triangle", "homepage with the triangle wallpaper")
-PICKED_RESTART = ("04-homepage-after-restart", "homepage after a force stop and relaunch, triangle kept")
+PICKED_PICKER = ("wallpaper-select-rise", "wallpaper picker, rise selected")
+PICKED_HOMEPAGE = ("homepage-wallpaper-rise", "homepage with the rise wallpaper")
+PICKED_RESTART = ("04-homepage-after-restart", "homepage after a force stop and relaunch, rise kept")
 PICKED_CAPTURES = (PICKED_PICKER, PICKED_HOMEPAGE, PICKED_RESTART)
 
 # (file stem, switch state in the capture, label) of the captures taken right after each switch change
@@ -58,7 +60,7 @@ def open_picker(s: Session) -> None:
 
 
 def select_picked_wallpaper(s: Session) -> None:
-    """Picks the triangle wallpaper, then checks the homepage before and after a force stop and relaunch."""
+    """Picks the rise wallpaper, then checks the homepage before and after a force stop and relaunch."""
     with s.capture(PICKED_PICKER[0], label=PICKED_PICKER[1]) as shot:
         open_picker(s)
         s.dev.tap(thumbnail(PICKED_WALLPAPER), timeout=10, settle=2.0)

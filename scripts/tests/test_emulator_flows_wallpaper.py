@@ -22,7 +22,18 @@ class WallpaperFlowWiringTests(unittest.TestCase):
 
     def test_picked_wallpaper_captures_show_the_pick_and_the_restart(self) -> None:
         stems = [stem for stem, _, _ in self.flow("wallpaper selection").expected]
-        self.assertEqual(stems, ["wallpaper-select-triangle", "homepage-wallpaper-triangle", "04-homepage-after-restart"])
+        self.assertEqual(stems, ["wallpaper-select-rise", "homepage-wallpaper-rise", "04-homepage-after-restart"])
+
+    def test_picked_wallpaper_is_rise_the_only_asset_with_all_six_roles(self) -> None:
+        # rise.svg is the only wallpaper that uses all six gray roles, and its portrait center-crop keeps all six
+        # visible on the homepage, so the picked wallpaper is the one the 6-tone capture checks.
+        self.assertEqual(flows_wallpaper.PICKED_WALLPAPER, "rise")
+        self.assertEqual(flows_wallpaper.PICKED_PICKER, ("wallpaper-select-rise", "wallpaper picker, rise selected"))
+        self.assertEqual(flows_wallpaper.PICKED_HOMEPAGE, ("homepage-wallpaper-rise", "homepage with the rise wallpaper"))
+        self.assertEqual(
+            flows_wallpaper.PICKED_RESTART,
+            ("04-homepage-after-restart", "homepage after a force stop and relaunch, rise kept"),
+        )
 
     def test_recent_tab_card_flow_runs_in_both_accent_passes_and_not_in_legacy(self) -> None:
         for accent in ("on", "off"):
@@ -68,8 +79,9 @@ class WallpaperFlowWiringTests(unittest.TestCase):
         self.assertTrue(devsetup.is_greenish("ff" + flows_wallpaper.CHANGED_PALETTE_SEED))
 
     def test_thumbnail_selector_matches_the_picker_content_description(self) -> None:
-        pattern = flows_wallpaper.thumbnail("triangle").desc
-        self.assertIsNotNone(re.fullmatch(pattern, "Wallpaper Item: triangle", re.IGNORECASE))
+        pattern = flows_wallpaper.thumbnail("rise").desc
+        self.assertIsNotNone(re.fullmatch(pattern, "Wallpaper Item: rise", re.IGNORECASE))
+        self.assertIsNone(re.fullmatch(pattern, "Wallpaper Item: triangle", re.IGNORECASE))
         self.assertIsNone(re.fullmatch(pattern, "Wallpaper Item: bloom", re.IGNORECASE))
 
 

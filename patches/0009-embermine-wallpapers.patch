@@ -7,6 +7,42 @@ Add the Embermine wallpaper collection (bloom, grow, pattern, rise, triangle) ab
 
 Co-authored-by: factory-droid[bot] <138933559+factory-droid[bot]@users.noreply.github.com>
 
+diff --git a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/Banner.kt b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/Banner.kt
+index 27295afc9a5f62f0c27355a254496d8554e00295..49201ae1557fc9eba3b2fa0acdbb320110b4f7bb 100644
+--- a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/Banner.kt
++++ b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/Banner.kt
+@@ -158,6 +158,7 @@ fun Banner(
+                     negativeButtonText = negativeButtonText,
+                     positiveOnClick = positiveOnClick,
+                     negativeOnClick = negativeOnClick,
++                    buttonTextColor = colors.buttonTextColor,
+                 )
+             }
+         } else {
+@@ -182,6 +183,7 @@ private fun BannerActions(
+     negativeButtonText: String? = null,
+     positiveOnClick: () -> Unit = {},
+     negativeOnClick: () -> Unit = {},
++    buttonTextColor: Color = ButtonDefaults.textButtonColors().contentColor,
+ ) {
+     Row(
+         modifier = Modifier.fillMaxWidth().padding(horizontal = AcornTheme.layout.size.static100),
+@@ -191,6 +193,7 @@ private fun BannerActions(
+             TextButton(
+                 text = negativeButtonText,
+                 onClick = negativeOnClick,
++                colors = ButtonDefaults.textButtonColors(contentColor = buttonTextColor),
+             )
+         }
+ 
+@@ -202,6 +205,7 @@ private fun BannerActions(
+             TextButton(
+                 text = positiveButtonText,
+                 onClick = positiveOnClick,
++                colors = ButtonDefaults.textButtonColors(contentColor = buttonTextColor),
+             )
+         }
+     }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
 index cd1fb285a4fa0b4d21b0dfd8239188f3b4881dcc..3dc62063aee5a9946aeea48987e73c56d217532e 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt

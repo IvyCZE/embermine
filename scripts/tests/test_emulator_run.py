@@ -1,9 +1,29 @@
+import inspect
 import re
 import unittest
 
 from scripts.emulator import flows_browse, flows_motion, flows_settings, run
 from scripts.emulator.naming import capture_name
 from scripts.tests.helpers import REPO_ROOT
+
+
+class BootOrderTests(unittest.TestCase):
+    def test_boot_settle_runs_after_the_boot_ui_and_before_night_mode_and_the_palette(self) -> None:
+        source = inspect.getsource(run.main)
+        suppress = source.index("devsetup.suppress_error_dialogs(adb)")
+        settle = source.index("devsetup.wait_for_boot_settled(adb, log, time.sleep)")
+        night = source.index("devsetup.set_night_mode(")
+        palette = source.index("devsetup.force_palette(")
+        self.assertLess(suppress, settle)
+        self.assertLess(settle, night)
+        self.assertLess(night, palette)
+
+    def test_boot_settle_is_only_for_non_legacy_runs(self) -> None:
+        source = inspect.getsource(run.main)
+        self.assertRegex(
+            source,
+            r"if not legacy:\n\s+index\.header\.append\(\"Boot: \" \+ devsetup\.wait_for_boot_settled\(adb, log, time\.sleep\)\)",
+        )
 
 
 class FlowWiringTests(unittest.TestCase):

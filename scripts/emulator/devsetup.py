@@ -30,15 +30,24 @@ def palette_json(seed: str = GREEN_SEED) -> str:
 
 ARGB_TOKEN = re.compile(r"0x(ff[0-9a-fA-F]{6})")
 OVERLAY_LINE = re.compile(r"^\s*\[(.)\]\s+(\S+)")
-# ThemeOverlayController maps system_palette -> neutral and accent_color -> accent.
+# ThemeOverlayController maps system_palette -> neutral, dynamic_color -> dynamic and accent_color -> accent.
 ACCENT_OVERLAY = "com.android.systemui:accent"
 PALETTE_OVERLAY = "com.android.systemui:neutral"
-REQUIRED_OVERLAYS = (ACCENT_OVERLAY, PALETTE_OVERLAY)
+# Compose dynamicLightColorScheme reads android.R.color.system_primary_light from this overlay on API 34,
+# and idmap2d applies it last, so it must be enabled and idmapped before the palette counts as applied.
+DYNAMIC_OVERLAY = "com.android.systemui:dynamic"
+REQUIRED_OVERLAYS = (ACCENT_OVERLAY, PALETTE_OVERLAY, DYNAMIC_OVERLAY)
+ACCENT_TONE = "system_accent1_500"
+PRIMARY_TONE = "system_primary_light"
+IDMAP_PROPERTY = "init.svc.idmap2d"
 PALETTE_ATTEMPTS = 5
 PALETTE_POLLS = 8
 POLL_SECONDS = 4
 # From this attempt on, overlays that stay disabled are also enabled directly.
 ENABLE_FROM_ATTEMPT = 3
+BOOT_POLL_SECONDS = 2
+BOOT_TIMEOUT_SECONDS = 180
+BOOT_FINISHED_LINE = "Finished processing BOOT_COMPLETED for u0"
 
 
 class PaletteError(LaunchError):
@@ -54,18 +63,15 @@ def is_greenish(argb_hex: str) -> bool:
     return g > r and g > b
 
 
-def accent_lines(adb: Adb) -> list[str]:
-    return [ln.strip() for ln in adb.shell("cmd overlay dump").splitlines() if "system_accent1_500" in ln]
-
-
-def resolved_accent(adb: Adb) -> str:
-    """Opaque ARGB value of system_accent1_500 as defined by the overlay manager, '' when unknown.
+def dump_value(dump: str, tone: str) -> str:
+    """Opaque ARGB value of one color resource in a `cmd overlay dump` output, '' when the dump lacks it.
     The dump reports the value of a disabled overlay too, so it never proves the palette is active.
     Resource ids (0x0106....) also appear on these lines and are not colors, hence the ff alpha filter."""
-    for line in accent_lines(adb):
-        tokens = ARGB_TOKEN.findall(line)
-        if tokens:
-            return tokens[-1].lower()
+    for line in dump.splitlines():
+        if tone in line:
+            tokens = ARGB_TOKEN.findall(line)
+            if tokens:
+                return tokens[-1].lower()
     return ""
 
 
@@ -84,6 +90,10 @@ class PaletteState:
     readback_ok: bool
     overlays: dict[str, bool]
     accent: str
+    # '' when the overlay dump does not report system_primary_light (then it does not block)
+    primary_light: str = ""
+    # value of init.svc.idmap2d: 'running' while an idmap transaction is in flight, '' when unset
+    idmap2d: str = ""
 
     @property
     def overlays_enabled(self) -> bool:
@@ -94,9 +104,17 @@ class PaletteState:
         return bool(self.accent) and is_greenish(self.accent)
 
     @property
+    def primary_green(self) -> bool:
+        return not self.primary_light or is_greenish(self.primary_light)
+
+    @property
+    def idmap_idle(self) -> bool:
+        return self.idmap2d != "running"
+
+    @property
     def applied(self) -> bool:
-        """Only an enabled accent and palette overlay count; the green dump value alone does not."""
-        return self.readback_ok and self.overlays_enabled and self.green
+        """Only enabled overlays, a green accent and primary, and an idle idmap2d count; the green dump value alone does not."""
+        return self.readback_ok and self.overlays_enabled and self.green and self.primary_green and self.idmap_idle
 
     def overlay_lines(self) -> list[str]:
         lines = []
@@ -112,15 +130,22 @@ class PaletteState:
         found += [f"{name} {'is disabled' if name in self.overlays else 'is not listed'}" for name in REQUIRED_OVERLAYS if not self.overlays.get(name)]
         if not self.green:
             found.append(f"accent tone {('0x' + self.accent) if self.accent else 'unknown'} is not green")
+        if not self.primary_green:
+            found.append(f"{PRIMARY_TONE} tone 0x{self.primary_light} is not green")
+        if not self.idmap_idle:
+            found.append("idmap2d is running (overlay transaction in flight)")
         return found
 
 
 def read_palette_state(adb: Adb, seed: str = GREEN_SEED) -> PaletteState:
     readback = adb.shell(f"settings get secure {PALETTE_SETTING}").strip()
+    dump = adb.shell("cmd overlay dump")
     return PaletteState(
         readback_ok=seed.lower() in readback.lower(),
         overlays=overlay_states(adb.shell("cmd overlay list android")),
-        accent=resolved_accent(adb),
+        accent=dump_value(dump, ACCENT_TONE),
+        primary_light=dump_value(dump, PRIMARY_TONE),
+        idmap2d=adb.shell(f"getprop {IDMAP_PROPERTY}").strip(),
     )
 
 
@@ -166,12 +191,16 @@ def force_palette(adb: Adb, log: Callable[[str], None], sleep: Callable[[float],
 def palette_evidence(adb: Adb, state: PaletteState, seed: str = GREEN_SEED) -> list[str]:
     readback = adb.shell(f"settings get secure {PALETTE_SETTING}").strip()
     accent = state.accent
+    primary = state.primary_light
     return [
         f"forced palette seed #{seed} (system_palette + accent_color, color_source preset)",
         f"{PALETTE_SETTING} read back: {readback}",
         "overlays from cmd overlay list android: " + "; ".join(state.overlay_lines()),
-        f"system_accent1_500 reported by cmd overlay dump (also shown for a disabled overlay): {('0x' + accent) if accent else 'not reported'}"
+        f"{ACCENT_TONE} reported by cmd overlay dump (also shown for a disabled overlay): {('0x' + accent) if accent else 'not reported'}"
         + (" (green)" if state.green else " (NOT green)"),
+        f"{PRIMARY_TONE} reported by cmd overlay dump: {('0x' + primary) if primary else 'not reported (not checked)'}"
+        + ("" if not primary else " (green)" if state.primary_green else " (NOT green)"),
+        f"idmap2d service: {state.idmap2d or 'unset'} ({'idle' if state.idmap_idle else 'running'})",
         f"palette applied: {'yes' if state.applied else 'NO (' + '; '.join(state.problems()) + ')'}",
     ]
 
@@ -183,6 +212,40 @@ def confirm_palette(adb: Adb, log: Callable[[str], None], sleep: Callable[[float
         return palette_evidence(adb, state, seed)
     log(f"palette lost: {describe_state(state)}")
     return force_palette(adb, log, sleep, seed)
+
+
+def user_unlocked(adb: Adb) -> bool:
+    if "RUNNING_UNLOCKED" in adb.shell("am get-started-user-state 0"):
+        return True
+    return "mIsUserUnlocked=true" in adb.shell("dumpsys user")
+
+
+def wait_for_boot_settled(
+    adb: Adb, log: Callable[[str], None], sleep: Callable[[float], None], timeout: float = BOOT_TIMEOUT_SECONDS
+) -> str:
+    """Wait until user 0 is RUNNING_UNLOCKED and the ActivityManager has finished BOOT_COMPLETED for it.
+
+    Starting the palette or the app earlier races the overlay manager: SystemUI's dynamic overlay can still be
+    idmapping when the first window is drawn, so the first capture shows Android's default colors.
+    The elapsed time is the sleep time between polls (shell calls are not counted). A timeout is logged as a
+    warning and does not stop the run. Returns the note for screens-index.md."""
+    waited = 0.0
+    while True:
+        unlocked = user_unlocked(adb)
+        finished = BOOT_FINISHED_LINE in adb.shell("logcat -d -b system -s ActivityManager:I")
+        if unlocked and finished:
+            note = f"user 0 RUNNING_UNLOCKED and BOOT_COMPLETED finished after about {waited:.0f} s of polling"
+            log(note)
+            return note
+        if waited >= timeout:
+            note = (
+                f"WARNING: boot did not settle within {timeout:.0f} s "
+                f"(user 0 unlocked: {unlocked}, BOOT_COMPLETED finished: {finished}); continuing"
+            )
+            log(note)
+            return note
+        sleep(BOOT_POLL_SECONDS)
+        waited += BOOT_POLL_SECONDS
 
 
 def set_night_mode(adb: Adb, theme: str, log: Callable[[str], None]) -> str:

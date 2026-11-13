@@ -304,6 +304,8 @@ def main(argv: list[str] | None = None) -> int:
             ]
         devsetup.wake_and_stay_on(adb)
         devsetup.suppress_error_dialogs(adb)
+        if not legacy:
+            index.header.append("Boot: " + devsetup.wait_for_boot_settled(adb, log, time.sleep))
         night = devsetup.set_night_mode(adb, "light" if legacy else args.variant, log)
         index.header.append(f"uimode night: {night}")
         if not legacy:

@@ -224,7 +224,8 @@ jobs:
         with:
           cache-read-only: true
 
-      - name: Configure (no-compile) and export
+      # mach bootstrap runs inside this script with a bounded retry (scripts/retry.sh) for HTTP 504 downloads.
+      - name: Configure (no-compile, mach bootstrap with retry) and export
         env:
           BUILDID: ${{ steps.res.outputs.buildid }}
         run: bash scripts/configure-tree.sh fx "$BUILDID"
@@ -236,7 +237,10 @@ jobs:
           free -m
           # If memory runs out, the OOM killer must hit Gradle, not the runner agent.
           echo 1000 | sudo tee "/proc/$$/oom_score_adj" >/dev/null
-          ./gradlew --no-daemon --max-workers=3 \
+          # Gradle fetches dependencies (and bundletool) over HTTP, so a transient 504 or a resolution hiccup is
+          # retried, at most 3 attempts. A failing test is not transient and runs once.
+          bash "$GITHUB_WORKSPACE/scripts/retry.sh" --attempts 3 --backoff 60 --transient-only --stream -- \
+            ./gradlew --no-daemon --max-workers=3 \
             -Dorg.gradle.jvmargs="-Xmx6g -Xms1g -XX:MaxMetaspaceSize=1536m -XX:+UseParallelGC" \
             -Pkotlin.daemon.jvmargs=-Xmx3g \
             --continue \

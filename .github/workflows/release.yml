@@ -1,0 +1,174 @@
+name: release
+
+# Daily check for a new Firefox for Android release, then a release build through build.yml (owner signing
+# key required). A GitHub Release v<version> is published only while the repository variable EMBERMINE_PUBLISH
+# is exactly 'true'. While it is not, a scheduled run only detects and logs its decision, and a manual run is
+# a dry run: APKs and release notes as artifacts, no Release, no tag. A failed run never publishes; the
+# report-failure job opens or updates an issue with the error and the run URL instead.
+
+on:
+  schedule:
+    - cron: "20 9 * * *"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Firefox version to build (empty = newest Firefox for Android, detected)
+        type: string
+        default: ""
+      rebuild:
+        description: Build the next -rN rebuild of that Firefox version (N = highest existing + 1, at most 9)
+        type: boolean
+        default: false
+      dry_run:
+        description: Build and upload APKs and release notes without publishing (default while publishing is gated)
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  issues: write
+  actions: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      build: ${{ steps.decide.outputs.build }}
+      publish: ${{ steps.decide.outputs.publish }}
+      fx_version: ${{ steps.decide.outputs.fx_version }}
+      rebuild: ${{ steps.decide.outputs.rebuild }}
+      version: ${{ steps.decide.outputs.version }}
+      tag: ${{ steps.decide.outputs.tag }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Detect the newest Firefox release and decide
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          GATE: ${{ vars.EMBERMINE_PUBLISH }}
+          REQUESTED: ${{ inputs.version }}
+          REBUILD: ${{ inputs.rebuild }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          python3 -m scripts.release.detect --event "$EVENT_NAME" --gate-open "$GATE" \
+            --requested "$REQUESTED" --rebuild "$REBUILD" --dry-run "$DRY_RUN" \
+            --repo "$REPO" --github-output
+
+  # The same patch and build path as ci.yml, in release mode: the owner signing key is required and there is
+  # no throwaway fallback. Secrets are inherited for the signing step only.
+  build:
+    needs: detect
+    if: needs.detect.outputs.build == 'true'
+    uses: ./.github/workflows/build.yml
+    with:
+      firefox-version: ${{ needs.detect.outputs.fx_version }}
+      rebuild: ${{ needs.detect.outputs.rebuild }}
+      release: true
+    secrets: inherit
+
+  # Checks the signed APKs (names, versionName and versionCode, owner key, one signer), the Mozilla
+  # release-notes link (HTTP 200) and writes the release notes. Both dry runs and real releases pass here.
+  package:
+    needs: [detect, build]
+    if: needs.detect.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Download the build
+        uses: actions/download-artifact@v8
+        with:
+          name: embermine-build
+          path: dist
+
+      - name: Check the artifacts and write the release notes
+        env:
+          VERSION: ${{ needs.detect.outputs.version }}
+        run: |
+          set -euo pipefail
+          python3 -m scripts.release.package --dist dist --version "$VERSION" \
+            --patch-dir patches --out notes/release-notes.md
+
+      - name: Upload the release notes
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-notes
+          path: notes/release-notes.md
+          if-no-files-found: error
+          retention-days: 30
+
+  # Creates the GitHub Release only when the gate is open and this is not a dry run. It runs only after every
+  # earlier job succeeded, so only a checked, owner-signed build can be uploaded.
+  publish:
+    needs: [detect, build, package]
+    if: vars.EMBERMINE_PUBLISH == 'true' && needs.detect.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Download the build
+        uses: actions/download-artifact@v8
+        with:
+          name: embermine-build
+          path: dist
+
+      - name: Download the release notes
+        uses: actions/download-artifact@v8
+        with:
+          name: release-notes
+          path: notes
+
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          VERSION: ${{ needs.detect.outputs.version }}
+          TAG: ${{ needs.detect.outputs.tag }}
+          SHA: ${{ github.sha }}
+        run: bash scripts/release/publish.sh
+
+  # Runs when detect, build, package or publish failed: opens an issue or comments on the open one for this
+  # Firefox version. It never publishes.
+  report-failure:
+    needs: [detect, build, package, publish]
+    if: failure()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+      actions: read
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Open or update the failure issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          FIREFOX_VERSION: ${{ needs.detect.outputs.fx_version }}
+        run: bash scripts/release/report-failure.sh

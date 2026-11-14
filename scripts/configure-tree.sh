@@ -5,6 +5,7 @@
 # On GitHub Actions the variables the Gradle and signing steps need are written to $GITHUB_ENV.
 set -euo pipefail
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 [ $# -eq 2 ] || { echo "usage: $0 <tree> <geckoview-buildid>" >&2; exit 2; }
 tree="$(cd "$1" && pwd)"
 buildid="$2"
@@ -31,11 +32,15 @@ export MOZ_BUILD_DATE="$buildid"
 cd "$tree"
 t0=$(date +%s)
 echo "::group::mach bootstrap"
-./mach --no-interactive bootstrap --application-choice=mobile_android_artifact_mode >"${RUNNER_TEMP:-/tmp}/bootstrap.log" 2>&1 || {
-  tail -n 80 "${RUNNER_TEMP:-/tmp}/bootstrap.log"
+# mach bootstrap downloads bundletool, the Android SDK and the NDK from the internet, and GitHub
+# sometimes answers those downloads with HTTP 504. A bounded retry turns that into a short delay.
+bootstrap_log="${RUNNER_TEMP:-/tmp}/bootstrap.log"
+bash "$script_dir/retry.sh" --attempts 3 --backoff 60 --log "$bootstrap_log" -- \
+  ./mach --no-interactive bootstrap --application-choice=mobile_android_artifact_mode || {
+  tail -n 80 "$bootstrap_log"
   exit 1
 }
-tail -n 20 "${RUNNER_TEMP:-/tmp}/bootstrap.log"
+tail -n 20 "$bootstrap_log"
 du -sh ~/.mozbuild
 echo "::endgroup::"
 echo "bootstrap took $(($(date +%s) - t0))s"

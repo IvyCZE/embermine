@@ -139,7 +139,8 @@ jobs:
           cache-read-only: false
           cache-cleanup: on-success
 
-      - name: Configure (no-compile) and export
+      # mach bootstrap runs inside this script with a bounded retry (scripts/retry.sh) for HTTP 504 downloads.
+      - name: Configure (no-compile, mach bootstrap with retry) and export
         env:
           BUILDID: ${{ steps.res.outputs.buildid }}
         run: bash scripts/configure-tree.sh fx "$BUILDID"

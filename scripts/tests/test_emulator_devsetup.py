@@ -243,6 +243,27 @@ class DynamicOverlayTests(unittest.TestCase):
         self.assertEqual(len(adb.puts()), 1)
         self.assertIn("palette applied: yes", evidence)
 
+    def test_a_pending_idmap2d_transaction_gets_the_longer_wait_not_a_rewrite(self) -> None:
+        # The transaction outlasts the normal poll window (about 36 s) but ends within the idmap window.
+        adb = palette_adb(ENABLED, GREEN_DUMP, idmap=lambda n: "running" if n <= 20 else "stopped")
+        evidence = devsetup.force_palette(adb, lambda _: None, lambda _: None)  # type: ignore[arg-type]
+        self.assertEqual(len(adb.puts()), 1)
+        self.assertIn("palette applied: yes", evidence)
+
+    def test_a_transaction_that_never_ends_fails_after_the_idmap_window_on_each_attempt(self) -> None:
+        adb = palette_adb(ENABLED, GREEN_DUMP, idmap="running")
+        with self.assertRaises(devsetup.PaletteError) as ctx:
+            devsetup.force_palette(adb, lambda _: None, lambda _: None)  # type: ignore[arg-type]
+        listings = [c for c in adb.commands if c == "cmd overlay list android"]
+        self.assertEqual(len(listings), devsetup.PALETTE_ATTEMPTS * devsetup.IDMAP_POLLS)
+        self.assertIn("palette applied: NO (idmap2d is running (overlay transaction in flight))", ctx.exception.evidence)
+
+    def test_confirm_palette_waits_for_a_pending_idmap2d_transaction_instead_of_rewriting(self) -> None:
+        adb = palette_adb(ENABLED, GREEN_DUMP, idmap=lambda n: "running" if n == 1 else "stopped")
+        evidence = devsetup.confirm_palette(adb, lambda _: None, lambda _: None)  # type: ignore[arg-type]
+        self.assertEqual(adb.puts(), [])
+        self.assertIn("palette applied: yes", evidence)
+
     def test_evidence_lists_all_three_overlays_and_the_idmap2d_state(self) -> None:
         evidence = devsetup.force_palette(palette_adb(ENABLED, GREEN_PRIMARY_DUMP), lambda _: None, lambda _: None)  # type: ignore[arg-type]
         self.assertIn(

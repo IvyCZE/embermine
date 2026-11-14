@@ -164,6 +164,8 @@ class WalkServer(ThreadingHTTPServer):
 
     def close(self) -> None:
         self.stop.set()
-        self.shutdown()
+        # shutdown() waits for serve_forever() to exit, which never happens when a failure came before start().
+        if self._thread is not None:
+            self.shutdown()
         self.server_close()
 

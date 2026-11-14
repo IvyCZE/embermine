@@ -335,7 +335,7 @@ def main(argv: list[str] | None = None) -> int:
         for flow in flow_list(args.variant, args.accent):
             run_flow(session, flow, deadline)
         if not legacy:
-            final = devsetup.read_palette_state(adb)
+            final = devsetup.settle_palette(adb, time.sleep)
             index.header.append("Palette at the end of the walk: " + "; ".join(final.overlay_lines()) + f"; {devsetup.describe_state(final)}")
             launcher.themed_icon_capture(session, app_label)
             launcher.plain_icon_capture(session, app_label)

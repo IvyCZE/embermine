@@ -1,7 +1,22 @@
 import http.client
+import threading
 import unittest
 
 from scripts.emulator.testserver import WalkServer
+
+
+class CloseTests(unittest.TestCase):
+    def test_close_without_start_returns_instead_of_waiting_for_a_loop_that_never_ran(self) -> None:
+        # A failure before the walk starts the server must still let the run finish (shutdown() blocks forever here).
+        server = WalkServer(0)
+        finished = threading.Event()
+
+        def close() -> None:
+            server.close()
+            finished.set()
+
+        threading.Thread(target=close, daemon=True).start()
+        self.assertTrue(finished.wait(5), "close() blocked on a server that was never started")
 
 
 class WalkServerTests(unittest.TestCase):

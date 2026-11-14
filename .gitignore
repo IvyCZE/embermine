@@ -18,6 +18,7 @@ out/
 *.jks
 *.p12
 *.pfx
+.safe_browsing_api_key
 .gradle/
 local.properties
 node_modules/

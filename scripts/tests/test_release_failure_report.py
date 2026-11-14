@@ -118,7 +118,6 @@ STUB_GH = """#!/usr/bin/env bash
 echo "gh $*" >>"$STUB_LOG"
 case "$1 $2" in
   "api repos/"*/actions/runs/*/jobs*) cat "$JOBS_FILE" ;;
-  "api repos/"*/actions/jobs/*/logs) cat "$LOG_FILE" ;;
   "issue list") cat "$ISSUES_FILE" ;;
   "issue create"|"issue comment")
     while [ $# -gt 0 ]; do
@@ -131,14 +130,32 @@ esac
 """
 
 
+STUB_CURL = """#!/usr/bin/env bash
+echo "curl $*" >>"$STUB_LOG"
+case "$*" in
+  *"/actions/jobs/"*"/logs"*)
+    [ "${LOG_FAIL:-0}" = 1 ] && exit 22
+    out=""
+    while [ $# -gt 0 ]; do
+      if [ "$1" = "-o" ]; then out="$2"; fi
+      shift
+    done
+    cp "$LOG_FILE" "$out"
+    ;;
+  *) exit 1 ;;
+esac
+"""
+
+
 class ReportScriptTests(TempDirTestCase):
     def setUp(self) -> None:
         super().setUp()
         self.bin = self.tmp / "bin"
         self.bin.mkdir()
-        gh = self.bin / "gh"
-        gh.write_text(STUB_GH, encoding="utf-8")
-        gh.chmod(gh.stat().st_mode | stat.S_IXUSR)
+        for name, text in (("gh", STUB_GH), ("curl", STUB_CURL)):
+            stub = self.bin / name
+            stub.write_text(text, encoding="utf-8")
+            stub.chmod(stub.stat().st_mode | stat.S_IXUSR)
         self.log = self.tmp / "gh.log"
         self.log.write_text("", encoding="utf-8")
         self.jobs = self.tmp / "jobs.json"
@@ -148,7 +165,9 @@ class ReportScriptTests(TempDirTestCase):
         self.issues = self.tmp / "issues.json"
         self.body = self.tmp / "body.md"
 
-    def run_report(self, issues: list[dict[str, object]]) -> subprocess.CompletedProcess[str]:
+    def run_report(
+        self, issues: list[dict[str, object]], log_fail: bool = False
+    ) -> subprocess.CompletedProcess[str]:
         self.issues.write_text(json.dumps(issues), encoding="utf-8")
         env = clean_env(
             HOME=str(self.home),
@@ -156,6 +175,7 @@ class ReportScriptTests(TempDirTestCase):
             STUB_LOG=str(self.log),
             JOBS_FILE=str(self.jobs),
             LOG_FILE=str(self.job_log),
+            LOG_FAIL="1" if log_fail else "0",
             ISSUES_FILE=str(self.issues),
             BODY_OUT=str(self.body),
             GH_TOKEN="x",
@@ -197,6 +217,24 @@ class ReportScriptTests(TempDirTestCase):
         self.run_report([{"number": 12, "title": "Release run failed for Firefox 159.0"}])
         calls = self.gh_calls()
         self.assertTrue(any("issue create" in c for c in calls), calls)
+
+    def test_job_log_is_fetched_with_curl_and_the_token(self) -> None:
+        proc = self.run_report([])
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        calls = self.gh_calls()
+        self.assertTrue(
+            any(c.startswith("curl ") and "/actions/jobs/" in c and c.endswith("/logs") for c in calls), calls
+        )
+        self.assertFalse(any("api repos" in c and "/logs" in c for c in calls), calls)
+        self.assertIn("0003-about-config-and-secret-settings.patch", self.body.read_text(encoding="utf-8"))
+
+    def test_failed_log_download_is_reported_and_not_an_empty_excerpt(self) -> None:
+        proc = self.run_report([], log_fail=True)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        body = self.body.read_text(encoding="utf-8")
+        self.assertIn("(no log was available)", body)
+        self.assertIn("warning: no log for job", proc.stderr)
+        self.assertTrue(any("issue create" in c for c in self.gh_calls()), self.gh_calls())
 
 
 if __name__ == "__main__":

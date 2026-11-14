@@ -19,8 +19,15 @@ gh api "repos/$REPO/actions/runs/$RUN_ID/jobs?per_page=100" >"$work/jobs.json"
 python3 -m scripts.release.failure_report failed-ids --jobs "$work/jobs.json" >"$work/failed-ids.txt"
 while read -r job_id; do
   [ -n "$job_id" ] || continue
-  gh api "repos/$REPO/actions/jobs/$job_id/logs" >"$work/logs/$job_id.log" ||
+  # curl, not gh api: the log holds terminal escape sequences that gh api refuses to print.
+  # A failed download leaves no log file, so the report says so instead of showing an empty excerpt.
+  if curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+    -o "$work/logs/$job_id.part" "https://api.github.com/repos/$REPO/actions/jobs/$job_id/logs"; then
+    mv "$work/logs/$job_id.part" "$work/logs/$job_id.log"
+  else
+    rm -f "$work/logs/$job_id.part"
     echo "warning: no log for job $job_id" >&2
+  fi
 done <"$work/failed-ids.txt"
 
 python3 -m scripts.release.failure_report body --jobs "$work/jobs.json" --logs "$work/logs" \

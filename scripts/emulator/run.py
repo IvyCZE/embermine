@@ -335,11 +335,11 @@ def main(argv: list[str] | None = None) -> int:
         for flow in flow_list(args.variant, args.accent):
             run_flow(session, flow, deadline)
         if not legacy:
-            final = devsetup.settle_palette(adb, time.sleep)
+            final = devsetup.settle_palette(adb, time.sleep, log=log)
             index.header.append("Palette at the end of the walk: " + "; ".join(final.overlay_lines()) + f"; {devsetup.describe_state(final)}")
             launcher.themed_icon_capture(session, app_label)
             launcher.plain_icon_capture(session, app_label)
-            if not final.applied:
+            if not final.accepted:
                 raise LaunchError("the forced palette was lost during the walk: " + "; ".join(final.problems()))
     except LaunchError as exc:
         log(f"FATAL: {exc}")

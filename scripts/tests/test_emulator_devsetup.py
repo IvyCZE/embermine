@@ -250,13 +250,25 @@ class DynamicOverlayTests(unittest.TestCase):
         self.assertEqual(len(adb.puts()), 1)
         self.assertIn("palette applied: yes", evidence)
 
-    def test_a_transaction_that_never_ends_fails_after_the_idmap_window_on_each_attempt(self) -> None:
+    def test_an_idmap2d_that_stays_running_is_accepted_once_the_overlays_are_green(self) -> None:
+        # Dev runs 43532774258 and 43535005412: idmap2d stayed running for 10 minutes after the overlays read
+        # enabled and green, and the shell cannot stop it (SELinux). The enabled overlays are accepted after the window.
         adb = palette_adb(ENABLED, GREEN_DUMP, idmap="running")
+        logged: list[str] = []
+        evidence = devsetup.force_palette(adb, logged.append, lambda _: None)  # type: ignore[arg-type]
+        listings = [c for c in adb.commands if c == "cmd overlay list android"]
+        self.assertEqual(len(listings), devsetup.IDMAP_POLLS)
+        self.assertEqual(len(adb.puts()), 1)
+        self.assertTrue(any(line.startswith("WARNING: idmap2d still running") for line in logged))
+        self.assertIn("palette applied: yes (accepted with idmap2d still running)", evidence)
+
+    def test_a_palette_that_never_turns_green_fails_after_each_attempt_even_with_idmap2d_running(self) -> None:
+        adb = palette_adb(ENABLED, BLUE_DUMP, idmap="running")
         with self.assertRaises(devsetup.PaletteError) as ctx:
             devsetup.force_palette(adb, lambda _: None, lambda _: None)  # type: ignore[arg-type]
         listings = [c for c in adb.commands if c == "cmd overlay list android"]
-        self.assertEqual(len(listings), devsetup.PALETTE_ATTEMPTS * devsetup.IDMAP_POLLS)
-        self.assertIn("palette applied: NO (idmap2d is running (overlay transaction in flight))", ctx.exception.evidence)
+        self.assertEqual(len(listings), devsetup.PALETTE_ATTEMPTS * devsetup.PALETTE_POLLS)
+        self.assertIn("palette applied: NO (accent tone 0xff3c68ff is not green; idmap2d is running (overlay transaction in flight))", ctx.exception.evidence)
 
     def test_confirm_palette_waits_for_a_pending_idmap2d_transaction_instead_of_rewriting(self) -> None:
         adb = palette_adb(ENABLED, GREEN_DUMP, idmap=lambda n: "running" if n == 1 else "stopped")

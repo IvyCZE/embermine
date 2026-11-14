@@ -123,6 +123,11 @@ class PaletteState:
         """Everything else is in place, so only a pending idmap2d transaction blocks the palette."""
         return self.readback_ok and self.overlays_enabled and self.green and self.primary_green and not self.idmap_idle
 
+    @property
+    def accepted(self) -> bool:
+        """Applied, or enabled and green while idmap2d is still running after the idmap window (see settle_palette)."""
+        return self.applied or self.waiting_for_idmap
+
     def overlay_lines(self) -> list[str]:
         lines = []
         for name in REQUIRED_OVERLAYS:
@@ -157,20 +162,46 @@ def read_palette_state(adb: Adb, seed: str = GREEN_SEED) -> PaletteState:
 
 
 def describe_state(state: PaletteState) -> str:
-    return "applied" if state.applied else "NOT applied (" + "; ".join(state.problems()) + ")"
+    if state.applied:
+        return "applied"
+    if state.waiting_for_idmap:
+        return "accepted with idmap2d still running"
+    return "NOT applied (" + "; ".join(state.problems()) + ")"
+
+
+def _no_log(_: str) -> None:
+    pass
 
 
 def settle_palette(
-    adb: Adb, sleep: Callable[[float], None], seed: str = GREEN_SEED, polls: int = PALETTE_POLLS
+    adb: Adb,
+    sleep: Callable[[float], None],
+    seed: str = GREEN_SEED,
+    polls: int = PALETTE_POLLS,
+    log: Callable[[str], None] = _no_log,
 ) -> PaletteState:
     """Poll until the palette applies or the polls run out. While only a pending idmap2d transaction blocks it,
-    IDMAP_POLLS apply instead, because rewriting the setting would start another transaction."""
+    IDMAP_POLLS apply instead, because rewriting the setting would start another transaction.
+
+    On the emulator idmap2d can outlive its transaction: the overlays read enabled with green values while the
+    service keeps reporting running (dev runs 43532774258 and 43535005412 waited 10 minutes). system_server
+    stops the service, but the harness shell cannot (SELinux denies ctl.stop to uid 2000). OverlayManager enables
+    an overlay only after its idmap is created, so after the window the enabled, green palette is accepted with a
+    warning. The captures show whether the palette is rendered."""
     count = 0
     while True:
         sleep(POLL_SECONDS)
         count += 1
         state = read_palette_state(adb, seed)
-        if state.applied or count >= (IDMAP_POLLS if state.waiting_for_idmap else polls):
+        if state.applied:
+            return state
+        if state.waiting_for_idmap and count >= IDMAP_POLLS:
+            log(
+                f"WARNING: idmap2d still running after {IDMAP_POLLS} polls with the overlays enabled and green; "
+                "accepting the palette (the shell cannot stop idmap2d)"
+            )
+            return state
+        if count >= (IDMAP_POLLS if state.waiting_for_idmap else polls):
             return state
 
 
@@ -186,8 +217,8 @@ def force_palette(adb: Adb, log: Callable[[str], None], sleep: Callable[[float],
     for attempt in range(1, PALETTE_ATTEMPTS + 1):
         # adb joins its arguments into one remote command line, so the JSON gets its own layer of quoting.
         adb.shell(f"settings put secure {PALETTE_SETTING} '{value}'")
-        state = settle_palette(adb, sleep, seed)
-        if state.applied:
+        state = settle_palette(adb, sleep, seed, log=log)
+        if state.accepted:
             break
         log(f"palette attempt {attempt}: {describe_state(state)}")
         if attempt < PALETTE_ATTEMPTS:
@@ -200,7 +231,7 @@ def force_palette(adb: Adb, log: Callable[[str], None], sleep: Callable[[float],
     evidence = palette_evidence(adb, state, seed)
     for line in evidence:
         log(line)
-    if not state.applied:
+    if not state.accepted:
         raise PaletteError(f"forced palette is not active after {PALETTE_ATTEMPTS} attempts: " + "; ".join(state.problems()), evidence)
     return evidence
 
@@ -218,16 +249,24 @@ def palette_evidence(adb: Adb, state: PaletteState, seed: str = GREEN_SEED) -> l
         f"{PRIMARY_TONE} reported by cmd overlay dump: {('0x' + primary) if primary else 'not reported (not checked)'}"
         + ("" if not primary else " (green)" if state.primary_green else " (NOT green)"),
         f"idmap2d service: {state.idmap2d or 'unset'} ({'idle' if state.idmap_idle else 'running'})",
-        f"palette applied: {'yes' if state.applied else 'NO (' + '; '.join(state.problems()) + ')'}",
+        f"palette applied: {_verdict(state)}",
     ]
+
+
+def _verdict(state: PaletteState) -> str:
+    if state.applied:
+        return "yes"
+    if state.waiting_for_idmap:
+        return "yes (accepted with idmap2d still running)"
+    return "NO (" + "; ".join(state.problems()) + ")"
 
 
 def confirm_palette(adb: Adb, log: Callable[[str], None], sleep: Callable[[float], None], seed: str = GREEN_SEED) -> list[str]:
     """Check that the forced palette is still active and force it again when it was lost; returns evidence lines."""
     state = read_palette_state(adb, seed)
     if not state.applied and state.waiting_for_idmap:
-        state = settle_palette(adb, sleep, seed)
-    if state.applied:
+        state = settle_palette(adb, sleep, seed, log=log)
+    if state.accepted:
         return palette_evidence(adb, state, seed)
     log(f"palette lost: {describe_state(state)}")
     return force_palette(adb, log, sleep, seed)

@@ -16,6 +16,8 @@ out/
 *.aab
 *.keystore
 *.jks
+*.p12
+*.pfx
 .gradle/
 local.properties
 node_modules/

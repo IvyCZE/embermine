@@ -6,11 +6,12 @@ Subject: [PATCH] Embermine: 0006-material-shapes
 Add shared MaterialShapes containers for Compose icons and View toolbars,
 using 40 dp primaryContainer backgrounds and onPrimaryContainer icons.
 
-The main drawer list uses Circle. Its library and navigation rows use
+The main drawer commands, including expanded submenus, use Circle by default. Its library and navigation rows use
 ClamShell, as do the four tab-tray selectors. Homepage shortcuts use Circle;
 the homepage stories and private-mode buttons use Cookie12Sided.
 
-The address-bar menu uses Sunny, and tab-strip close buttons use Flower.
+The address-bar menu uses Sunny. Only the selected tab shows a close
+button, with a Flower container.
 The address-bar site-info icon and idle homepage microphone have no added
 container. Search-edit microphone, Lens and QR actions and search engine
 selector items use Cookie12Sided. The optional bottom navigation bar and
@@ -776,7 +777,7 @@ index e8a75d9438e517211cb5ef75f530e0d5b4b175ed..cd1fb285a4fa0b4d21b0dfd8239188f3
          navigationToolbar.setNavigationOnClickListener {
              onBackPressedDispatcher.onBackPressed()
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/tabstrip/TabStrip.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/tabstrip/TabStrip.kt
-index 8155be98d747acd03460bc1c7ee5c6c1da022389..8afb796d767624ea1130ee3841df0d11ef253670 100644
+index 8155be98d747acd03460bc1c7ee5c6c1da022389..14cdf5af89dad22ff99d73648ada64dc2370da34 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/tabstrip/TabStrip.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/tabstrip/TabStrip.kt
 @@ -69,6 +69,8 @@ import mozilla.components.browser.state.action.TabListAction
@@ -788,6 +789,15 @@ index 8155be98d747acd03460bc1c7ee5c6c1da022389..8afb796d767624ea1130ee3841df0d11
  import mozilla.components.compose.base.modifier.thenConditional
  import mozilla.components.compose.base.theme.PreviewThemeProvider
  import mozilla.components.compose.base.theme.Theme
+@@ -479,7 +481,7 @@ private fun TabItem(
+                 }
+             }
+ 
+-            if (state.isCloseButtonVisible) {
++            if (state.isSelected && state.isCloseButtonVisible) {
+                 IconButton(
+                     onClick = { onCloseTabClick(state.id, state.isPrivate) },
+                     contentDescription = stringResource(id = R.string.close_tab_title, state.title),
 @@ -490,16 +492,22 @@ private fun TabItem(
                              Modifier.clearAndSetSemantics {}
                          },
@@ -1069,7 +1079,7 @@ index aec18f553f7e70e4c9f1776f5e9c5b4be1e01ff7..866fdc7b6c60e098de62d48a378d9fa1
                  shape = rightShape,
                  index = 3,
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/MenuItem.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/MenuItem.kt
-index 26d1f7905c4ca7188975e9db23aebf72c6ea6104..dfac29d41416b463f2d8ab1f57d90f011f01933c 100644
+index 26d1f7905c4ca7188975e9db23aebf72c6ea6104..b714ca90c29b80dac3166fb56add63cf81ff7bd1 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/MenuItem.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/MenuItem.kt
 @@ -53,6 +53,7 @@ import androidx.compose.ui.text.style.TextOverflow
@@ -1084,7 +1094,7 @@ index 26d1f7905c4ca7188975e9db23aebf72c6ea6104..dfac29d41416b463f2d8ab1f57d90f01
   * @param labelModifier [Modifier] to be applied to the label.
   * @param beforeIconDescription Content description of the icon.
   * @param isBeforeIconHighlighted Whether or not the menu item should be highlighted with a notification icon.
-+ * @param beforeIconShape Optional [EmbermineShape] drawn behind [beforeIconPainter].
++ * @param beforeIconShape [EmbermineShape] drawn behind [beforeIconPainter], or null for no container.
   * @param description An optional description text below the label.
   * @param maxDescriptionLines An optional maximum number of lines for the description text to span.
   * @param stateDescription Extra content description about state to be added after the label and description.
@@ -1092,7 +1102,7 @@ index 26d1f7905c4ca7188975e9db23aebf72c6ea6104..dfac29d41416b463f2d8ab1f57d90f01
      labelModifier: Modifier = Modifier,
      beforeIconDescription: String? = null,
      isBeforeIconHighlighted: Boolean = false,
-+    beforeIconShape: EmbermineShape? = null,
++    beforeIconShape: EmbermineShape? = EmbermineShape.Circle,
      description: String? = null,
      maxDescriptionLines: Int = 2,
      stateDescription: String = "",

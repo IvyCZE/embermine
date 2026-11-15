@@ -3,7 +3,7 @@ From: IvyCZE <me@ivy.yt>
 Date: Mon, 9 Nov 2026 06:54:08 +0000
 Subject: [PATCH] Embermine: 0009-embermine-wallpapers
 
-Add the Embermine wallpaper collection (bloom, grow, pattern, rise, triangle) above Classic Firefox. The wallpapers are drawn on the device from EmbermineWallpaperData in the current palette: Material You tones when the switch is on, the Nova violet ramp when it is off, and an ember palette below Android 12. Each wallpaper is center-cropped into the portrait, landscape and thumbnail files and re-drawn when its palette fingerprint changes, on startup and on resume. Bloom is the default on new installs. Homepage card text uses the lightest palette tone, and cards use an opaque dark tone without a border. The recent-tab, recent-synced-tab and story cards paint their own title and detail text with that same content color, so none of them keeps the dark surface color on the dark card.
+Add the Embermine wallpaper collection (bloom, grow, pattern, rise, triangle) above Classic Firefox. The wallpapers are drawn on the device from EmbermineWallpaperData in the current palette: Material You tones when the switch is on, the Nova violet ramp when it is off, and an ember palette below Android 12. A 50% black scrim darkens the artwork for foreground contrast. Combined top-positioned homepage tab and address bars use opaque theme surfaces. Each wallpaper is center-cropped into the portrait, landscape and thumbnail files and re-drawn when its palette fingerprint changes, on startup and on resume. Bloom is the default on new installs. Homepage card text uses the lightest palette tone, and cards use an opaque dark tone without a border. The recent-tab, recent-synced-tab and story cards paint their own title and detail text with that same content color, so none of them keeps the dark surface color on the dark card.
 
 Co-authored-by: factory-droid[bot] <138933559+factory-droid[bot]@users.noreply.github.com>
 
@@ -157,7 +157,7 @@ index 8bcd414a14fe96d3d696621fa8c88400359c9326..adb9565974addd5c956c98e301704134
              }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperPalette.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperPalette.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..ed51e896a8aaf1736baaa6ac4e26f2b6454b4adb
+index 0000000000000000000000000000000000000000..158a29d130e630e5720a61cbcf8822875f1afa7c
 --- /dev/null
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperPalette.kt
 @@ -0,0 +1,99 @@
@@ -211,7 +211,7 @@ index 0000000000000000000000000000000000000000..ed51e896a8aaf1736baaa6ac4e26f2b6
 +        private const val ALPHA_SHIFT = 24
 +        private const val RGB_MASK = 0xFFFFFFL
 +        private const val OPAQUE_MASK = 0xFFFFFFFFL
-+        private const val RENDER_VERSION = "v2"
++        private const val RENDER_VERSION = "v3"
 +
 +        /** Picks the palette source: Ember below Android 12, the system accent when the switch is on, else Nova. */
 +        fun source(sdkInt: Int, switchOn: Boolean): EmbermineWallpaperPaletteSource =
@@ -262,10 +262,10 @@ index 0000000000000000000000000000000000000000..ed51e896a8aaf1736baaa6ac4e26f2b6
 +}
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperRenderer.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperRenderer.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..1e803f0c1171e023105c5575e1dfb84e1ff599b8
+index 0000000000000000000000000000000000000000..fba0a42e776cefa545777a89b37a729f4220a148
 --- /dev/null
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperRenderer.kt
-@@ -0,0 +1,68 @@
+@@ -0,0 +1,69 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -331,6 +331,7 @@ index 0000000000000000000000000000000000000000..1e803f0c1171e023105c5575e1dfb84e
 +            paint.color = palette.tones[shape.role]
 +            canvas.drawPath(path, paint)
 +        }
++        canvas.drawColor(0x80000000.toInt())
 +        return bitmap
 +    }
 +}
@@ -658,6 +659,75 @@ index a9df63d6b47f24cb329b52abf79588c8c9127194..d303030ff722b6c601c0c40fb2d1f6ce
          )
  
          DropdownMenu(
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/HomeToolbarComposable.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/HomeToolbarComposable.kt
+index 1925b43598a0e5238cbce89be9412c19cc21992d..38f1b3e0cd903c94563f185e1b72556ee181bd7f 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/HomeToolbarComposable.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/HomeToolbarComposable.kt
+@@ -13,6 +13,7 @@ import androidx.compose.animation.core.Easing
+ import androidx.compose.animation.core.tween
+ import androidx.compose.animation.fadeIn
+ import androidx.compose.animation.fadeOut
++import androidx.compose.foundation.background
+ import androidx.compose.foundation.layout.Box
+ import androidx.compose.foundation.layout.Column
+ import androidx.compose.foundation.layout.ColumnScope
+@@ -110,12 +111,15 @@ internal class HomeToolbarComposable(
+         val currentQuery = toolbarStore.observeAsComposableState { it.editState.query.current }.value
+         val isPrivateMode = browsingModeManager.mode.isPrivate
+         val isUniversalEdgeToEdge = settings.enableUniversalEdgeToEdgeWallpapers
++        val hasOpaqueTopBars = !settings.shouldUseBottomToolbar && settings.shouldShowTabStripAtTop
+         val hasWallpaperBackground =
+             hasWallpaperBackground(appStore = appStore, settings = settings, isPrivateMode = isPrivateMode)
+         // Tint the browser action icons outside the address bar (tab counter, menu) with the
+         // wallpaper's text color. The page actions inside the address bar (e.g. voice search) keep
+         // the default color so they stay legible on the address bar background. Universal only.
+-        val wallpaperTextColor = WallpaperTheme.onWallpaper.takeIf { isUniversalEdgeToEdge && hasWallpaperBackground }
++        val wallpaperTextColor = WallpaperTheme.onWallpaper.takeIf {
++            isUniversalEdgeToEdge && hasWallpaperBackground && !hasOpaqueTopBars
++        }
+ 
+         BackInvokedHandler(isSearching) {
+             val sourceTabId = appStore.state.searchState.sourceTabId
+@@ -132,7 +136,7 @@ internal class HomeToolbarComposable(
+                     homepageToolbarColors(
+                         isPrivateMode = isPrivateMode,
+                         shouldUseEdgeToEdgeColors =
+-                            hasWallpaperBackground &&
++                            !hasOpaqueTopBars && hasWallpaperBackground &&
+                                 if (settings.enableHomepageTrendingRecentSearch) {
+                                     !isSearching
+                                 } else {
+@@ -140,13 +144,13 @@ internal class HomeToolbarComposable(
+                                 },
+                     )
+             ) {
+-                ToolbarContent(wallpaperTextColor = wallpaperTextColor)
++                ToolbarContent(wallpaperTextColor = wallpaperTextColor, opaqueTabStrip = hasOpaqueTopBars)
+             }
+         }
+     }
+ 
+     @Composable
+-    private fun ToolbarContent(wallpaperTextColor: Color?) {
++    private fun ToolbarContent(wallpaperTextColor: Color?, opaqueTabStrip: Boolean) {
+         val shouldUseBottomToolbar = remember { settings.shouldUseBottomToolbar }
+         val shouldShowTabStrip = remember {
+             if (shouldUseBottomToolbar) {
+@@ -168,7 +172,13 @@ internal class HomeToolbarComposable(
+             }
+ 
+             if (shouldShowTabStrip) {
+-                tabStripContent()
++                Box(
++                    modifier = Modifier.background(
++                        if (opaqueTabStrip) MaterialTheme.colorScheme.surface else Color.Transparent,
++                    ),
++                ) {
++                    tabStripContent()
++                }
+             }
+ 
+             AddressBar(wallpaperTextColor = wallpaperTextColor)
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/HomepageCard.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/HomepageCard.kt
 index 0c721d2eabc04e98565bf8b74f00bc000659f5e8..b8e9efaf3e197833ffb235a96555bf84b2b3b13d 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/HomepageCard.kt

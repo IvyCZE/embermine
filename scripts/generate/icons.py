@@ -204,10 +204,11 @@ def _render(target: Target, art: IconArt, tree: Path) -> str:
     if target.kind == "background":
         pieces: list[Piece] = background_pieces(art, canvas_matrix(art, vw, vh), vw, vh)
     elif target.kind == "launcher":
+        is_launcher = target.out.endswith("/ic_launcher_foreground.xml")
         pieces = color_pieces(
             art,
-            canvas_matrix(art, vw, vh),
-            include_sunny=not target.out.endswith("/ic_launcher_foreground.xml"),
+            canvas_matrix(art, vw, vh) if is_launcher else canvas_matrix(art, vw, vh, viewport_dp=66.0),
+            include_sunny=not is_launcher,
         )
     elif target.kind == "launcher-mono":
         pieces = monochrome_pieces(art, canvas_matrix(art, vw, vh), fill)

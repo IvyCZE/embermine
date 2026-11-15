@@ -1,7 +1,7 @@
 """Icon layers read from icon.svg, and the Android path pieces built from them.
 
-The adaptive launcher layers share one matrix: the whole icon.svg canvas is mapped into the 66 dp
-safe zone of the 108 dp canvas. The full-bleed background keeps the dark fill across the canvas,
+The adaptive launcher layers share one matrix: the whole icon.svg canvas is mapped into the 72 dp
+visible viewport of the 108 dp canvas. The full-bleed background keeps the dark fill across the canvas,
 and Sunny, the ermine and the flower keep their icon.svg proportions inside the mask. Illustrations
 fit the art into their own viewport.
 """
@@ -33,7 +33,7 @@ SUNNY_GROUP = "sunny.svg 4"
 FLOWER_GROUP = "flower.svg"
 BLACK = "#000000"
 CANVAS_DP = 108.0
-SAFE_ZONE_DP = 66.0
+LAUNCHER_VIEWPORT_DP = 72.0
 MARGIN = 0.04
 
 Bounds = tuple[float, float, float, float]
@@ -126,20 +126,18 @@ def fit_matrix(bounds: Bounds, box: Box, flip: bool = False) -> Matrix:
     return (scale, 0.0, 0.0, sign * scale, tx, ty)
 
 
-def safe_zone_box(width: float, height: float) -> Box:
-    """The 66 dp square at the centre of a 108 dp adaptive canvas, in viewport units."""
-    half = SAFE_ZONE_DP / 2 * width / CANVAS_DP
+def viewport_box(width: float, height: float, viewport_dp: float) -> Box:
+    """A centred viewport within the 108 dp adaptive canvas, in drawable units."""
+    half = viewport_dp / 2 * width / CANVAS_DP
     cx, cy = width / 2, height / 2
     return (cx - half, cy - half, cx + half, cy + half)
 
 
-def canvas_matrix(art: IconArt, width: float, height: float) -> Matrix:
-    """Maps the whole icon.svg canvas into the safe zone of a ``width`` x ``height`` viewport.
-
-    Sunny (about 25.8 to 82.2 dp on the 108 dp canvas), the ermine and the flower all use this one
-    matrix, so the launcher layers keep the proportions of icon.svg and sit inside the mask.
-    """
-    return fit_matrix((0.0, 0.0, art.size, art.size), safe_zone_box(width, height))
+def canvas_matrix(
+    art: IconArt, width: float, height: float, *, viewport_dp: float = LAUNCHER_VIEWPORT_DP
+) -> Matrix:
+    """Map the original canvas onto the visible icon viewport without shrinking its proportions."""
+    return fit_matrix((0.0, 0.0, art.size, art.size), viewport_box(width, height, viewport_dp))
 
 
 def margin_box(width: float, height: float) -> Box:

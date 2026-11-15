@@ -6,7 +6,9 @@ Subject: [PATCH] Embermine: 0006-material-shapes
 Add shared MaterialShapes containers for Compose icons and View toolbars,
 using 40 dp primaryContainer backgrounds and onPrimaryContainer icons.
 
-The main drawer commands, including expanded submenus, use Circle by default. Its library and navigation rows use
+The main drawer commands, including expanded submenus, use Circle by default.
+Custom-tab drawer navigation uses ClamShell, and its toolbar menu and close
+actions use Sunny, including caller-provided close-button artwork. Its library and navigation rows use
 ClamShell, as do the four tab-tray selectors. Homepage shortcuts use Circle;
 the homepage stories and private-mode buttons use Cookie12Sided.
 
@@ -533,7 +535,7 @@ index 0000000000000000000000000000000000000000..4bda6b5b3755cdaffc42410db9ea5658
 +    }
 +}
 diff --git a/mobile/android/android-components/components/compose/browser-toolbar/src/main/java/mozilla/components/compose/browser/toolbar/ActionContainer.kt b/mobile/android/android-components/components/compose/browser-toolbar/src/main/java/mozilla/components/compose/browser/toolbar/ActionContainer.kt
-index 81c6901c9b95f66f4cd2253e222eb7a8afc275d2..89ac555353b1382c61ca6d7907fec1ce97216ef1 100644
+index 81c6901c9b95f66f4cd2253e222eb7a8afc275d2..b54ca52b4c59747989d88602871237c4e4bc8860 100644
 --- a/mobile/android/android-components/components/compose/browser-toolbar/src/main/java/mozilla/components/compose/browser/toolbar/ActionContainer.kt
 +++ b/mobile/android/android-components/components/compose/browser-toolbar/src/main/java/mozilla/components/compose/browser/toolbar/ActionContainer.kt
 @@ -85,6 +85,7 @@ private fun ActionButtonResItem(
@@ -544,8 +546,16 @@ index 81c6901c9b95f66f4cd2253e222eb7a8afc275d2..89ac555353b1382c61ca6d7907fec1ce
          )
      }
  }
+@@ -104,6 +105,7 @@ private fun ActionButtonItem(
+             onLongClick = action.onLongClick,
+             onInteraction = { event -> onInteraction(event) },
+             testTag = action.testTag,
++            shape = action.shape,
+         )
+     }
+ }
 diff --git a/mobile/android/android-components/components/compose/browser-toolbar/src/main/java/mozilla/components/compose/browser/toolbar/concept/Action.kt b/mobile/android/android-components/components/compose/browser-toolbar/src/main/java/mozilla/components/compose/browser/toolbar/concept/Action.kt
-index 5f15b33bb93d8a684ec17cf7121213564062a7a7..dd32a7dbe4d15130f8a8041a95ae4c88c29cb059 100644
+index 5f15b33bb93d8a684ec17cf7121213564062a7a7..9b0ae70d9016422a379bb8751c67b867fc796b60 100644
 --- a/mobile/android/android-components/components/compose/browser-toolbar/src/main/java/mozilla/components/compose/browser/toolbar/concept/Action.kt
 +++ b/mobile/android/android-components/components/compose/browser-toolbar/src/main/java/mozilla/components/compose/browser/toolbar/concept/Action.kt
 @@ -7,6 +7,7 @@ package mozilla.components.compose.browser.toolbar.concept
@@ -572,6 +582,14 @@ index 5f15b33bb93d8a684ec17cf7121213564062a7a7..dd32a7dbe4d15130f8a8041a95ae4c88
      ) : Action()
  
      /**
+@@ -57,6 +60,7 @@ sealed class Action {
+         val onClick: BrowserToolbarInteraction,
+         val onLongClick: BrowserToolbarInteraction? = null,
+         val testTag: String? = null,
++        val shape: EmbermineShape? = null,
+     ) : Action() {
+ 
+         /** An enum class defining the current state of the [ActionButton]. */
 diff --git a/mobile/android/android-components/components/compose/browser-toolbar/src/main/java/mozilla/components/compose/browser/toolbar/ui/ActionButton.kt b/mobile/android/android-components/components/compose/browser-toolbar/src/main/java/mozilla/components/compose/browser/toolbar/ui/ActionButton.kt
 index 04d9e0fc2790f715e408151a055644f8896b1ea5..79ee106a8718d18b4373a7c8a74195ba862ace06 100644
 --- a/mobile/android/android-components/components/compose/browser-toolbar/src/main/java/mozilla/components/compose/browser/toolbar/ui/ActionButton.kt
@@ -826,6 +844,26 @@ index 8155be98d747acd03460bc1c7ee5c6c1da022389..14cdf5af89dad22ff99d73648ada64dc
                  }
              } else {
                  Spacer(modifier = Modifier.size(8.dp))
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/CustomTabMenu.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/CustomTabMenu.kt
+index b46dd27c45abf9d3febbf2660e9119c8b9dd60b8..df98feab47f3000c22fa0e365c4f49e711b60b64 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/CustomTabMenu.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/CustomTabMenu.kt
+@@ -144,6 +144,7 @@ internal fun CustomTabMenu(
+                     onShareButtonClick = onShareButtonClick,
+                     goBackState = if (canGoBack) MenuItemState.ENABLED else MenuItemState.DISABLED,
+                     goForwardState = if (canGoForward) MenuItemState.ENABLED else MenuItemState.DISABLED,
++                    shapedIcons = true,
+                 )
+ 
+                 if (scrollState.canScrollBackward) {
+@@ -168,6 +169,7 @@ internal fun CustomTabMenu(
+                     onShareButtonClick = onShareButtonClick,
+                     goBackState = if (canGoBack) MenuItemState.ENABLED else MenuItemState.DISABLED,
+                     goForwardState = if (canGoForward) MenuItemState.ENABLED else MenuItemState.DISABLED,
++                    shapedIcons = true,
+                 )
+             }
+         },
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/ExtensionsMenuItem.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/ExtensionsMenuItem.kt
 index 6962dfd8799446121f2b7be511ec4957d391df91..a3010cba0bef3827dadc6c9fd03a57701e87fddd 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/ExtensionsMenuItem.kt
@@ -1315,6 +1353,34 @@ index 7500c18a76bc441aaa7bafd78a24d377efdde2b6..c6969b45bde5fe8d15f36c8fab77648f
  
      private fun buildSiteInfoAction(
          drawableResId: Int,
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/toolbar/CustomTabBrowserToolbarMiddleware.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/toolbar/CustomTabBrowserToolbarMiddleware.kt
+index ea3c0f6fef52bd9618b4f6e41e07b19b8b9d084e..6852a5cfb458b6fb236d453514ad484137734575 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/toolbar/CustomTabBrowserToolbarMiddleware.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/toolbar/CustomTabBrowserToolbarMiddleware.kt
+@@ -25,6 +25,7 @@ import mozilla.components.browser.state.state.CustomTabSessionState
+ import mozilla.components.browser.state.state.SecurityInfo
+ import mozilla.components.browser.state.store.BrowserStore
+ import mozilla.components.browser.toolbar.R as toolbarR
++import mozilla.components.compose.base.embermine.EmbermineShape
+ import mozilla.components.compose.browser.toolbar.concept.Action
+ import mozilla.components.compose.browser.toolbar.concept.Action.ActionButton
+ import mozilla.components.compose.browser.toolbar.concept.Action.ActionButtonRes
+@@ -418,6 +419,7 @@ class CustomTabBrowserToolbarMiddleware(
+                         contentDescription =
+                             uiContext.getString(customtabsR.string.mozac_feature_customtabs_exit_button),
+                         onClick = CloseClicked,
++                        shape = EmbermineShape.Sunny,
+                     )
+                 )
+ 
+@@ -531,6 +533,7 @@ class CustomTabBrowserToolbarMiddleware(
+                 drawableResId = iconsR.drawable.mozac_ic_ellipsis_vertical_24,
+                 contentDescription = R.string.content_description_menu,
+                 onClick = MenuClicked,
++                shape = EmbermineShape.Sunny,
+             )
+         )
+     }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/list/ListItem.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/list/ListItem.kt
 index 2bed1c8efb4131ae3861222986d1469c394af652..1699bc1b94ba93b54912f0cc29bff8cf4f2731a3 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/list/ListItem.kt
@@ -3100,6 +3166,66 @@ index 0913d08f5422040486757dce8c44b17343987edc..38772948da04bf0a4550f0e1065d73d0
          )
  
      private fun expectedBookmarkButton(source: Source = Source.AddressBar.BrowserEnd) =
+diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/components/toolbar/CustomTabBrowserToolbarMiddlewareTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/components/toolbar/CustomTabBrowserToolbarMiddlewareTest.kt
+index 1642fe9177e562113f58d1345d97ca2ef8832616..d83831c4c5b277d1ae798c60bbc23fe0aac31aef 100644
+--- a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/components/toolbar/CustomTabBrowserToolbarMiddlewareTest.kt
++++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/components/toolbar/CustomTabBrowserToolbarMiddlewareTest.kt
+@@ -36,6 +36,7 @@ import mozilla.components.browser.state.state.createCustomTab
+ import mozilla.components.browser.state.state.createTab
+ import mozilla.components.browser.state.store.BrowserStore
+ import mozilla.components.browser.toolbar.R as toolbarR
++import mozilla.components.compose.base.embermine.EmbermineShape
+ import mozilla.components.compose.browser.toolbar.concept.Action.ActionButton
+ import mozilla.components.compose.browser.toolbar.concept.Action.ActionButtonRes
+ import mozilla.components.compose.browser.toolbar.concept.Action.AnimatedPillActionRes
+@@ -141,6 +142,7 @@ class CustomTabBrowserToolbarMiddlewareTest {
+                 drawable = AppCompatResources.getDrawable(testContext, iconsR.drawable.mozac_ic_cross_24),
+                 contentDescription = testContext.getString(customtabsR.string.mozac_feature_customtabs_exit_button),
+                 onClick = CloseClicked,
++                shape = EmbermineShape.Sunny,
+             )
+ 
+         val toolbarStore = buildStore()
+@@ -148,6 +150,7 @@ class CustomTabBrowserToolbarMiddlewareTest {
+         val toolbarBrowserActions = toolbarStore.state.displayState.browserActionsStart
+         assertEquals(1, toolbarBrowserActions.size)
+         val closeButton = toolbarBrowserActions[0] as ActionButton
++        assertEquals(expectedCloseButton.shape, closeButton.shape)
+         assertNotNull(closeButton.drawable)
+         assertEquals(expectedCloseButton.drawable?.state, closeButton.drawable?.state)
+     }
+@@ -162,6 +165,7 @@ class CustomTabBrowserToolbarMiddlewareTest {
+                 drawable = closeButtonIcon.toDrawable(testContext.resources),
+                 contentDescription = testContext.getString(customtabsR.string.mozac_feature_customtabs_exit_button),
+                 onClick = CloseClicked,
++                shape = EmbermineShape.Sunny,
+             )
+ 
+         val toolbarStore = buildStore()
+@@ -169,6 +173,7 @@ class CustomTabBrowserToolbarMiddlewareTest {
+         val toolbarBrowserActions = toolbarStore.state.displayState.browserActionsStart
+         assertEquals(1, toolbarBrowserActions.size)
+         val closeButton = toolbarBrowserActions[0] as ActionButton
++        assertEquals(expectedCloseButton.shape, closeButton.shape)
+         assertEquals(expectedCloseButton.contentDescription, closeButton.contentDescription)
+         assertEquals(expectedCloseButton.shouldTint, closeButton.shouldTint)
+         assertNotNull(closeButton.drawable)
+@@ -1080,6 +1085,7 @@ class CustomTabBrowserToolbarMiddlewareTest {
+                 drawableResId = iconsR.drawable.mozac_ic_ellipsis_vertical_24,
+                 contentDescription = R.string.content_description_menu,
+                 onClick = MenuClicked,
++                shape = EmbermineShape.Sunny,
+             )
+ 
+         val toolbarStore = buildStore()
+@@ -1098,6 +1104,7 @@ class CustomTabBrowserToolbarMiddlewareTest {
+                 drawableResId = iconsR.drawable.mozac_ic_ellipsis_vertical_24,
+                 contentDescription = R.string.content_description_menu,
+                 onClick = MenuClicked,
++                shape = EmbermineShape.Sunny,
+             )
+ 
+         val toolbarStore = buildStore()
 diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineViewShapesTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/EmbermineViewShapesTest.kt
 new file mode 100644
 index 0000000000000000000000000000000000000000..ee7930fbf68e5ce00343f31b8bcd8520cb08a9cb

@@ -147,11 +147,10 @@ class OutputTest(unittest.TestCase):
         self.assertEqual(rect_attrs[ANDROID + "fillColor"], "#471B18")
         self.assertEqual(sunny_attrs[ANDROID + "fillColor"], "#823C35")
         self.assertEqual(bounds(rect_loops[0]), (0.0, 0.0, 108.0, 108.0))
-        # Sunny's scallop peaks must stay within 30 dp of the centre, leaving a dark ring inside the
-        # launcher mask (about 33 dp to 36 dp from the centre).
+        # Keep the original dark ring around Sunny inside the launcher's 36 dp circular mask.
         for loop in sunny_loops:
             for x, y in loop:
-                self.assertLessEqual(math.hypot(x - 54.0, y - 54.0), 30.0)
+                self.assertLessEqual(math.hypot(x - 54.0, y - 54.0), 33.0)
 
     def test_launcher_art_stays_inside_the_safe_zone_circle(self):
         # Google's adaptive icon safe zone is a 66 dp circle centred on the 108 dp canvas.
@@ -169,12 +168,12 @@ class OutputTest(unittest.TestCase):
                     for value in (x0, y0, x1, y1):
                         self.assertTrue(21.0 <= value <= 87.0, (suffix, value))
 
-    def test_canvas_matrix_maps_icon_canvas_onto_the_safe_zone(self):
+    def test_canvas_matrix_preserves_original_proportions_in_the_visible_viewport(self):
         matrix = canvas_matrix(self.art, 108.0, 108.0)
-        self.assertAlmostEqual(matrix[0], 66.0 / self.art.size)
-        self.assertAlmostEqual(matrix[3], 66.0 / self.art.size)
-        self.assertAlmostEqual(matrix[4], 21.0)
-        self.assertAlmostEqual(matrix[5], 21.0)
+        self.assertAlmostEqual(matrix[0], 72.0 / self.art.size)
+        self.assertAlmostEqual(matrix[3], 72.0 / self.art.size)
+        self.assertAlmostEqual(matrix[4], 18.0)
+        self.assertAlmostEqual(matrix[5], 18.0)
 
     def test_launcher_art_keeps_the_palette_and_outlines(self):
         pieces = _pieces(self._output("ic_launcher_foreground.xml"))

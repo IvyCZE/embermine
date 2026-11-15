@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -19,6 +20,7 @@ sys.path.insert(0, str(ROOT / "scripts" / "generate"))
 
 import wallpapers  # noqa: E402
 from svgart.svgdoc import parse_document  # noqa: E402
+from svgart.geometry import Cubic, parse_path  # noqa: E402
 
 ASSETS = ROOT / "assets" / "wallpapers"
 GRAYS = ("#000000", "#3E3B39", "#6D6A6A", "#9B9A9C", "#CAC9CD", "#FFFFFF")
@@ -81,6 +83,24 @@ class GrayRoleTest(unittest.TestCase):
 
 
 class BakingTest(unittest.TestCase):
+    def test_flower_outlines_have_no_collapsed_bezier_segments(self):
+        found = 0
+        ns = "{http://www.w3.org/2000/svg}"
+        for asset in sorted(ASSETS.glob("*.svg")):
+            for group in ET.parse(asset).getroot().iter(ns + "g"):
+                if not group.get("id", "").startswith("flower.svg"):
+                    continue
+                found += 1
+                for path in group.iter(ns + "path"):
+                    for subpath in parse_path(path.get("d")):
+                        previous = subpath.start
+                        for segment in subpath.segments:
+                            if isinstance(segment, Cubic):
+                                with self.subTest(asset=asset.name, group=group.get("id")):
+                                    self.assertNotEqual(previous, (segment.x, segment.y))
+                            previous = (segment.x, segment.y)
+        self.assertEqual(found, 8)
+
     def test_nested_group_and_path_transforms_are_applied_to_every_point(self):
         body = (
             '<g transform="translate(10 20)">'

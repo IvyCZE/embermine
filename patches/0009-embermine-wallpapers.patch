@@ -3,7 +3,7 @@ From: IvyCZE <me@ivy.yt>
 Date: Mon, 9 Nov 2026 06:54:08 +0000
 Subject: [PATCH] Embermine: 0009-embermine-wallpapers
 
-Add the Embermine wallpaper collection (bloom, grow, pattern, rise, triangle) above Classic Firefox. The wallpapers are drawn on the device from EmbermineWallpaperData in the current palette: Material You tones when the switch is on, the Nova violet ramp when it is off, and an ember palette below Android 12. Each wallpaper is center-cropped into the portrait, landscape and thumbnail files and re-drawn when its palette fingerprint changes, on startup and on resume. Bloom is the default on new installs. Homepage card text uses the lightest palette tone, and cards use a translucent dark tone. The recent-tab, recent-synced-tab and story cards paint their own title and detail text with that same content color, so none of them keeps the dark surface color on the dark card.
+Add the Embermine wallpaper collection (bloom, grow, pattern, rise, triangle) above Classic Firefox. The wallpapers are drawn on the device from EmbermineWallpaperData in the current palette: Material You tones when the switch is on, the Nova violet ramp when it is off, and an ember palette below Android 12. Each wallpaper is center-cropped into the portrait, landscape and thumbnail files and re-drawn when its palette fingerprint changes, on startup and on resume. Bloom is the default on new installs. Homepage card text uses the lightest palette tone, and cards use an opaque dark tone without a border. The recent-tab, recent-synced-tab and story cards paint their own title and detail text with that same content color, so none of them keeps the dark surface color on the dark card.
 
 Co-authored-by: factory-droid[bot] <138933559+factory-droid[bot]@users.noreply.github.com>
 
@@ -157,7 +157,7 @@ index 8bcd414a14fe96d3d696621fa8c88400359c9326..adb9565974addd5c956c98e301704134
              }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperPalette.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperPalette.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..b163a0844553f83f5e7a289763fbe6bfed9decb3
+index 0000000000000000000000000000000000000000..ed51e896a8aaf1736baaa6ac4e26f2b6454b4adb
 --- /dev/null
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperPalette.kt
 @@ -0,0 +1,99 @@
@@ -196,7 +196,7 @@ index 0000000000000000000000000000000000000000..b163a0844553f83f5e7a289763fbe6bf
 +    val textColor: Long
 +        get() = tones.last().toLong() and OPAQUE_MASK
 +
-+    /** Color for cards laid over a wallpaper: a translucent dark tone, so the wallpaper shows through. */
++    /** Color for cards laid over a wallpaper: an opaque dark tone. */
 +    val cardColor: Long
 +        get() = (CARD_ALPHA shl ALPHA_SHIFT) or (tones[CARD_ROLE].toLong() and RGB_MASK)
 +
@@ -207,11 +207,11 @@ index 0000000000000000000000000000000000000000..b163a0844553f83f5e7a289763fbe6bf
 +    companion object {
 +        private const val ROLE_COUNT = 6
 +        private const val CARD_ROLE = 1
-+        private const val CARD_ALPHA = 0xC0L
++        private const val CARD_ALPHA = 0xFFL
 +        private const val ALPHA_SHIFT = 24
 +        private const val RGB_MASK = 0xFFFFFFL
 +        private const val OPAQUE_MASK = 0xFFFFFFFFL
-+        private const val RENDER_VERSION = "v1"
++        private const val RENDER_VERSION = "v2"
 +
 +        /** Picks the palette source: Ember below Android 12, the system accent when the switch is on, else Nova. */
 +        fun source(sdkInt: Int, switchOn: Boolean): EmbermineWallpaperPaletteSource =
@@ -659,7 +659,7 @@ index a9df63d6b47f24cb329b52abf79588c8c9127194..d303030ff722b6c601c0c40fb2d1f6ce
  
          DropdownMenu(
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/HomepageCard.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/HomepageCard.kt
-index 0c721d2eabc04e98565bf8b74f00bc000659f5e8..d0073217f1f08cd4708671fec10e8c66e447fb2a 100644
+index 0c721d2eabc04e98565bf8b74f00bc000659f5e8..b8e9efaf3e197833ffb235a96555bf84b2b3b13d 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/HomepageCard.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/HomepageCard.kt
 @@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
@@ -670,6 +670,24 @@ index 0c721d2eabc04e98565bf8b74f00bc000659f5e8..d0073217f1f08cd4708671fec10e8c66
  
  private val cardElevation = 6.dp
  
+@@ -26,7 +27,7 @@ val homepageCardImageShape: Shape
+     @Composable get() = MaterialTheme.shapes.medium
+ 
+ /**
+- * Card for use on the homepage, with the default style including a border and rounded corner shape.
++ * Card for use on the homepage, with a rounded corner shape.
+  *
+  * @param backgroundColor [Color] to be applied to the background of this card.
+  * @param modifier [Modifier] to be applied to this card.
+@@ -41,7 +42,7 @@ internal fun HomepageCard(
+     modifier: Modifier = Modifier,
+     shape: Shape = homepageCardShape,
+     elevation: CardElevation = CardDefaults.cardElevation(defaultElevation = cardElevation),
+-    border: BorderStroke? = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
++    border: BorderStroke? = null,
+     content: @Composable ColumnScope.() -> Unit,
+ ) {
+     HomepageCard(
 @@ -50,7 +51,7 @@ internal fun HomepageCard(
          colors =
              CardDefaults.cardColors(
@@ -679,6 +697,24 @@ index 0c721d2eabc04e98565bf8b74f00bc000659f5e8..d0073217f1f08cd4708671fec10e8c66
              ),
          elevation = elevation,
          border = border,
+@@ -59,7 +60,7 @@ internal fun HomepageCard(
+ }
+ 
+ /**
+- * Card for use on the homepage, with the default style including a border and rounded corner shape.
++ * Card for use on the homepage, with a rounded corner shape.
+  *
+  * @param modifier [Modifier] to be applied to this card.
+  * @param shape [Shape] to be applied to this card.
+@@ -74,7 +75,7 @@ internal fun HomepageCard(
+     shape: Shape = homepageCardShape,
+     colors: CardColors = CardDefaults.cardColors(),
+     elevation: CardElevation = CardDefaults.cardElevation(defaultElevation = cardElevation),
+-    border: BorderStroke? = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
++    border: BorderStroke? = null,
+     content: @Composable ColumnScope.() -> Unit,
+ ) {
+     Card(
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/ui/WallpaperBackground.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/ui/WallpaperBackground.kt
 index 663da26892208a3f9d07964b24532cebf220ca48..e09bbc5d240af8f5b7572a2153fc3e570da108c9 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/ui/WallpaperBackground.kt
@@ -772,10 +808,20 @@ index d57c8223c22b811e56063eb46e07794277f08da3..9224bf2a0e012323884dab9819384695
  
      var openLinksInAPrivateTab by
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpaperState.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpaperState.kt
-index 16b4065434bdbec368b58441964868cbe6f33516..9fe495cd266a7661f064c44e8a475e38956a47f7 100644
+index 16b4065434bdbec368b58441964868cbe6f33516..803cb3625c5af251bcd3aefadd6a79e11c588106 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpaperState.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpaperState.kt
-@@ -49,6 +49,19 @@ data class WallpaperState(
+@@ -41,14 +41,27 @@ data class WallpaperState(
+             when {
+                 currentWallpaper.cardColorLight != null && currentWallpaper.cardColorDark != null -> {
+                     if (isSystemInDarkTheme()) {
+-                        Color(currentWallpaper.cardColorDark)
++                        Color(currentWallpaper.cardColorDark).copy(alpha = 1f)
+                     } else {
+-                        Color(currentWallpaper.cardColorLight)
++                        Color(currentWallpaper.cardColorLight).copy(alpha = 1f)
+                     }
+                 }
                  else -> MaterialTheme.colorScheme.surfaceBright
              }
  
@@ -795,6 +841,18 @@ index 16b4065434bdbec368b58441964868cbe6f33516..9fe495cd266a7661f064c44e8a475e38
      /** [Color] to use for a button background color on the current wallpaper. */
      val buttonBackgroundColor: Color
          @Composable
+@@ -81,7 +94,10 @@ data class WallpaperState(
+         run: @Composable (cardColorLight: Color, cardColorDark: Color) -> Unit
+     ) {
+         if (currentWallpaper.cardColorLight != null && currentWallpaper.cardColorDark != null) {
+-            run(Color(currentWallpaper.cardColorLight), Color(currentWallpaper.cardColorDark))
++            run(
++                Color(currentWallpaper.cardColorLight).copy(alpha = 1f),
++                Color(currentWallpaper.cardColorDark).copy(alpha = 1f),
++            )
+         }
+     }
+ }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpaperTheme.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpaperTheme.kt
 index 1c8e716ccc98305de370ca54aa1f5affada0b3ae..7b35dce05aa382c649e53345e991a54ce2d6ebcf 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpaperTheme.kt
@@ -979,7 +1037,7 @@ index 84bea931e6c19df1954fbbdebb1de28643c29518..d20918356b03eb48d8b878d4b101c0ea
      <string name="embermine_onboarding_tou_body_line_3" translatable="false">Embermine does not send diagnostic or interaction data to Mozilla unless you turn it on. %1$s</string>
 diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperPaletteTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperPaletteTest.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..4c183d0d971319e20a589b8d6126858787b7f00b
+index 0000000000000000000000000000000000000000..9326d907e29c81044646f310e5069eeb1ec64df3
 --- /dev/null
 +++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/embermine/wallpapers/EmbermineWallpaperPaletteTest.kt
 @@ -0,0 +1,62 @@
@@ -1024,8 +1082,8 @@ index 0000000000000000000000000000000000000000..4c183d0d971319e20a589b8d61268587
 +    }
 +
 +    @Test
-+    fun cardIsTranslucentDarkTone() {
-+        assertEquals(0xC03A1410L, EmbermineWallpaperPalette.ember().cardColor)
++    fun cardIsOpaqueDarkTone() {
++        assertEquals(0xFF3A1410L, EmbermineWallpaperPalette.ember().cardColor)
 +    }
 +
 +    @Test

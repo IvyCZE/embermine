@@ -104,8 +104,8 @@ def _shape_bounds(shape: Shape) -> Bounds:
 
 
 def art_bounds(art: IconArt) -> Bounds:
-    """Bounds of the color art (flower and ermine, strokes included), in canvas units."""
-    boxes = [_shape_bounds(shape) for shape in [art.flower, *art.ermine]]
+    """Bounds of the complete logo, including Sunny and the ermine's strokes."""
+    boxes = [_shape_bounds(shape) for shape in [art.sunny, art.flower, *art.ermine]]
     return (
         min(b[0] for b in boxes),
         min(b[1] for b in boxes),
@@ -180,9 +180,12 @@ def _cut_outs(shape: Shape, m: Matrix) -> list[list[Point]]:
     return outlines
 
 
-def color_pieces(art: IconArt, m: Matrix) -> list[Piece]:
-    """Flower, then the ermine in document order, with their own fills and strokes."""
-    pieces = [Piece(_moved(art.flower, m), fill=art.flower.fill, evenodd=art.flower.evenodd)]
+def color_pieces(art: IconArt, m: Matrix, *, include_sunny: bool = True) -> list[Piece]:
+    """Sunny, flower, then the ermine in document order, with their own fills and strokes."""
+    pieces = []
+    if include_sunny:
+        pieces.append(Piece(_moved(art.sunny, m), fill=art.sunny.fill, evenodd=art.sunny.evenodd))
+    pieces.append(Piece(_moved(art.flower, m), fill=art.flower.fill, evenodd=art.flower.evenodd))
     for shape in art.ermine:
         pieces.append(
             Piece(
@@ -205,7 +208,7 @@ def background_pieces(art: IconArt, m: Matrix, width: float, height: float) -> l
 
 
 def monochrome_pieces(art: IconArt, m: Matrix, fill: str) -> list[Piece]:
-    """One opaque silhouette: the flower and the ermine's light parts, minus the cut-outs.
+    """Sunny's outline, the flower and the ermine's light parts, minus the cut-outs.
 
     Each silhouette loop (a light shape or the flower, wound counter-clockwise) has every cut-out
     subtracted from it, so the holes stay exact where loops overlap. The loops are then filled with
@@ -216,6 +219,11 @@ def monochrome_pieces(art: IconArt, m: Matrix, fill: str) -> list[Piece]:
         cut_outs.extend(_cut_outs(shape, m))
 
     loops: list[list[Point]] = []
+    half_outline = art.size * scale_factor(m) * 0.0125
+    for sub in _moved(art.sunny, m):
+        points = flatten(sub)
+        loops.append(counter_clockwise(offset_closed(points, half_outline)))
+        loops.append(list(reversed(counter_clockwise(offset_closed(points, -half_outline)))))
     seen: set[tuple[tuple[float, float], ...]] = set()
     for shape in [art.flower, *(s for s in art.ermine if not _is_detail(s))]:
         for sub in parity_oriented(_moved(shape, m)):

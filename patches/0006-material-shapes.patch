@@ -3,20 +3,22 @@ From: IvyCZE <me@ivy.yt>
 Date: Sat, 7 Nov 2026 20:10:30 +0000
 Subject: [PATCH] Embermine: 0006-material-shapes
 
-Add the EmbermineShape enum (MaterialShapes), the ShapedIconBackground
-helper (40 dp primaryContainer container behind the icon, drawn without
-changing layout), and EmbermineShapeDrawable for View toolbars. Opt in
-main menu items, the library row, the bottom navigation row, the account
-avatar and the site protection panel rows, leaving the other menus
-unshaped. Add a JVM test for the shape mapping.
+Add shared MaterialShapes containers for Compose icons and View toolbars,
+using 40 dp primaryContainer backgrounds and onPrimaryContainer icons.
 
-Part 2 shapes the toolbar, tab strip, homepage and search bar. The
-address bar menu and site security shield take Sunny and Cookie6Sided
-through ActionButtonRes.shape, set only for Source.AddressBar, so the
-bottom navigation bar stays unshaped. The tab close X takes Flower, the
-homepage stories icon and private button take Cookie12Sided, top site
-cards take Cookie6Sided, search engine selector items take Cookie12Sided,
-and the search bar mic, Lens and QR buttons take Sunny.
+The main drawer list uses Circle. Its library and navigation rows use
+ClamShell, as do the four tab-tray selectors. Homepage shortcuts use Circle;
+the homepage stories and private-mode buttons use Cookie12Sided.
+
+The address-bar menu uses Sunny, and tab-strip close buttons use Flower.
+The address-bar site-info icon and idle homepage microphone have no added
+container. Search-edit microphone, Lens and QR actions and search engine
+selector items use Cookie12Sided. The optional bottom navigation bar and
+tab-strip new-tab button keep their original appearance.
+
+Add shape containers to the remaining specified tab-tray, tab-group,
+selection, Settings, History, Downloads and site-protection controls, plus
+JVM tests for the shared shape mapping.
 
 Co-authored-by: factory-droid[bot] <138933559+factory-droid[bot]@users.noreply.github.com>
 
@@ -115,10 +117,10 @@ index 4ca27d732a6957293d3203fe0797125991d12f75..f39ff937e701bb1d2df190eb303f7552
          elevation = elevation,
 diff --git a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/EmbermineShape.kt b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/EmbermineShape.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..34e96710c2a9b948c7bcd55b109acd1bb2cb0efd
+index 0000000000000000000000000000000000000000..54001d226863f53a2289c27ef52268b8a7c7b2fd
 --- /dev/null
 +++ b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/EmbermineShape.kt
-@@ -0,0 +1,31 @@
+@@ -0,0 +1,33 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -134,6 +136,8 @@ index 0000000000000000000000000000000000000000..34e96710c2a9b948c7bcd55b109acd1b
 +
 +@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 +enum class EmbermineShape(val polygon: RoundedPolygon) {
++    Circle(MaterialShapes.Circle),
++    ClamShell(MaterialShapes.ClamShell),
 +    Cookie12Sided(MaterialShapes.Cookie12Sided),
 +    Cookie9Sided(MaterialShapes.Cookie9Sided),
 +    Cookie7Sided(MaterialShapes.Cookie7Sided),
@@ -483,10 +487,10 @@ index 83ff1f36a4e8511c566bf34bade24a2e0d04db79..9b79b6bad73069f9eed20e64b682a5a9
              text = text,
 diff --git a/mobile/android/android-components/components/compose/base/src/test/java/mozilla/components/compose/base/embermine/EmbermineShapeTest.kt b/mobile/android/android-components/components/compose/base/src/test/java/mozilla/components/compose/base/embermine/EmbermineShapeTest.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..d9e51b078ed1d78e5a67bfcd911ad2d21988dce2
+index 0000000000000000000000000000000000000000..4bda6b5b3755cdaffc42410db9ea565808ea4962
 --- /dev/null
 +++ b/mobile/android/android-components/components/compose/base/src/test/java/mozilla/components/compose/base/embermine/EmbermineShapeTest.kt
-@@ -0,0 +1,38 @@
+@@ -0,0 +1,40 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -505,6 +509,8 @@ index 0000000000000000000000000000000000000000..d9e51b078ed1d78e5a67bfcd911ad2d2
 +    @Test
 +    fun `every EmbermineShape maps to its MaterialShapes polygon`() {
 +        val expected = mapOf(
++            EmbermineShape.Circle to MaterialShapes.Circle,
++            EmbermineShape.ClamShell to MaterialShapes.ClamShell,
 +            EmbermineShape.Cookie12Sided to MaterialShapes.Cookie12Sided,
 +            EmbermineShape.Cookie9Sided to MaterialShapes.Cookie9Sided,
 +            EmbermineShape.Cookie7Sided to MaterialShapes.Cookie7Sided,
@@ -931,7 +937,7 @@ index 2b0030de2ed51523fcc482ff615ab6395017e887..542a1dad9818f164c1acda9f442d96a8
              Spacer(Modifier.height(4.dp))
  
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/MainMenu.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/MainMenu.kt
-index aec18f553f7e70e4c9f1776f5e9c5b4be1e01ff7..ca2de3391b393ace37e06f5b4a5c69d836260d5a 100644
+index aec18f553f7e70e4c9f1776f5e9c5b4be1e01ff7..866fdc7b6c60e098de62d48a378d9fa16b6fe6df 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/MainMenu.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/MainMenu.kt
 @@ -45,6 +45,7 @@ import androidx.compose.ui.tooling.preview.Preview
@@ -962,7 +968,7 @@ index aec18f553f7e70e4c9f1776f5e9c5b4be1e01ff7..ca2de3391b393ace37e06f5b4a5c69d8
                      state = ipProtectionMenuState,
                      onToggle = onIPProtectionClick,
                      onNavigate = onIPProtectionNavigate,
-+                    beforeIconShape = EmbermineShape.Cookie12Sided,
++                    beforeIconShape = EmbermineShape.Circle,
                  )
              }
          }
@@ -970,7 +976,7 @@ index aec18f553f7e70e4c9f1776f5e9c5b4be1e01ff7..ca2de3391b393ace37e06f5b4a5c69d8
                      webExtensionMenuCount = webExtensionMenuCount,
                      extensionsMenuItemDescription = extensionsMenuItemDescription,
                      onExtensionsMenuClick = onExtensionsMenuClick,
-+                    beforeIconShape = EmbermineShape.Cookie12Sided,
++                    beforeIconShape = EmbermineShape.Circle,
                      extensionSubmenu = extensionSubmenu,
                  )
              }
@@ -978,7 +984,7 @@ index aec18f553f7e70e4c9f1776f5e9c5b4be1e01ff7..ca2de3391b393ace37e06f5b4a5c69d8
              MenuItem(
                  label = stringResource(id = R.string.browser_menu_settings),
                  beforeIconPainter = painterResource(id = iconsR.drawable.mozac_ic_settings_24),
-+                beforeIconShape = EmbermineShape.Cookie12Sided,
++                beforeIconShape = EmbermineShape.Circle,
                  onClick = onSettingsButtonClick,
              )
          }
@@ -986,7 +992,7 @@ index aec18f553f7e70e4c9f1776f5e9c5b4be1e01ff7..ca2de3391b393ace37e06f5b4a5c69d8
              MenuItem(
                  label = stringResource(id = R.string.browser_menu_edit_bookmark),
                  beforeIconPainter = painterResource(id = iconsR.drawable.mozac_ic_bookmark_fill_24),
-+                beforeIconShape = EmbermineShape.Cookie12Sided,
++                beforeIconShape = EmbermineShape.Circle,
                  state = MenuItemState.ACTIVE,
                  onClick = onEditBookmarkButtonClick,
              )
@@ -994,7 +1000,7 @@ index aec18f553f7e70e4c9f1776f5e9c5b4be1e01ff7..ca2de3391b393ace37e06f5b4a5c69d8
              MenuItem(
                  label = stringResource(id = R.string.browser_menu_bookmark_this_page_2),
                  beforeIconPainter = painterResource(id = iconsR.drawable.mozac_ic_bookmark_24),
-+                beforeIconShape = EmbermineShape.Cookie12Sided,
++                beforeIconShape = EmbermineShape.Circle,
                  onClick = onBookmarkPageMenuClick,
              )
          }
@@ -1002,7 +1008,7 @@ index aec18f553f7e70e4c9f1776f5e9c5b4be1e01ff7..ca2de3391b393ace37e06f5b4a5c69d8
          MenuItem(
              label = stringResource(id = R.string.browser_menu_find_in_page),
              beforeIconPainter = painterResource(id = iconsR.drawable.mozac_ic_search_24),
-+            beforeIconShape = EmbermineShape.Cookie12Sided,
++            beforeIconShape = EmbermineShape.Circle,
              onClick = onFindInPageMenuClick,
          )
  
@@ -1010,7 +1016,7 @@ index aec18f553f7e70e4c9f1776f5e9c5b4be1e01ff7..ca2de3391b393ace37e06f5b4a5c69d8
              label = stringResource(id = labelId),
              stateDescription = badgeText,
              beforeIconPainter = painterResource(id = iconsR.drawable.mozac_ic_device_desktop_24),
-+            beforeIconShape = EmbermineShape.Cookie12Sided,
++            beforeIconShape = EmbermineShape.Circle,
              state = menuItemState,
              onClick = onSwitchToDesktopSiteMenuClick,
          ) {
@@ -1018,7 +1024,7 @@ index aec18f553f7e70e4c9f1776f5e9c5b4be1e01ff7..ca2de3391b393ace37e06f5b4a5c69d8
              webExtensionMenuCount = webExtensionMenuCount,
              extensionsMenuItemDescription = extensionsMenuItemDescription,
              onExtensionsMenuClick = onExtensionsMenuClick,
-+            beforeIconShape = EmbermineShape.Cookie12Sided,
++            beforeIconShape = EmbermineShape.Circle,
              extensionSubmenu = extensionSubmenu,
          )
  
@@ -1026,7 +1032,7 @@ index aec18f553f7e70e4c9f1776f5e9c5b4be1e01ff7..ca2de3391b393ace37e06f5b4a5c69d8
          label = stringResource(id = R.string.browser_menu_more_settings),
          stateDescription = "Collapsed",
          beforeIconPainter = painterResource(id = iconsR.drawable.mozac_ic_ellipsis_horizontal_24),
-+        beforeIconShape = EmbermineShape.Cookie12Sided,
++        beforeIconShape = EmbermineShape.Circle,
          isBeforeIconHighlighted = isMoreMenuHighlighted,
          onClick = onMoreMenuClick,
      ) {
@@ -1034,7 +1040,7 @@ index aec18f553f7e70e4c9f1776f5e9c5b4be1e01ff7..ca2de3391b393ace37e06f5b4a5c69d8
          LibraryMenuItem(
              modifier = Modifier.weight(1f).fillMaxHeight(),
              iconRes = iconsR.drawable.mozac_ic_history_24,
-+            iconShape = EmbermineShape.Sunny,
++            iconShape = EmbermineShape.ClamShell,
              labelRes = R.string.library_history,
              shape = leftShape,
              index = 0,
@@ -1042,7 +1048,7 @@ index aec18f553f7e70e4c9f1776f5e9c5b4be1e01ff7..ca2de3391b393ace37e06f5b4a5c69d8
          LibraryMenuItem(
              modifier = Modifier.weight(1f).fillMaxHeight(),
              iconRes = iconsR.drawable.mozac_ic_bookmark_tray_fill_24,
-+            iconShape = EmbermineShape.Slanted,
++            iconShape = EmbermineShape.ClamShell,
              labelRes = R.string.library_bookmarks,
              shape = middleShape,
              index = 1,
@@ -1050,7 +1056,7 @@ index aec18f553f7e70e4c9f1776f5e9c5b4be1e01ff7..ca2de3391b393ace37e06f5b4a5c69d8
              modifier = Modifier.weight(1f).fillMaxHeight(),
              isHighlighted = isDownloadHighlighted,
              iconRes = iconsR.drawable.mozac_ic_download_24,
-+            iconShape = EmbermineShape.Flower,
++            iconShape = EmbermineShape.ClamShell,
              labelRes = R.string.library_downloads,
              shape = if (showPasswords) middleShape else rightShape,
              index = 2,
@@ -1058,7 +1064,7 @@ index aec18f553f7e70e4c9f1776f5e9c5b4be1e01ff7..ca2de3391b393ace37e06f5b4a5c69d8
              LibraryMenuItem(
                  modifier = Modifier.weight(1f).fillMaxHeight(),
                  iconRes = iconsR.drawable.mozac_ic_login_24,
-+                iconShape = EmbermineShape.Pentagon,
++                iconShape = EmbermineShape.ClamShell,
                  labelRes = R.string.browser_menu_passwords,
                  shape = rightShape,
                  index = 3,
@@ -1099,7 +1105,7 @@ index 26d1f7905c4ca7188975e9db23aebf72c6ea6104..dfac29d41416b463f2d8ab1f57d90f01
          afterIconPainter = afterIconPainter,
          afterIconDescription = afterIconDescription,
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/MenuNavigation.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/MenuNavigation.kt
-index 021825312c54e1e139141c4251aa9a516694276f..5987ad6959da2474e697158d412a0f6c6f0408a5 100644
+index 021825312c54e1e139141c4251aa9a516694276f..75adb44733e5fbee026355528064e2c0a2c8bcad 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/MenuNavigation.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/MenuNavigation.kt
 @@ -35,6 +35,8 @@ import androidx.compose.ui.text.style.TextAlign
@@ -1133,7 +1139,7 @@ index 021825312c54e1e139141c4251aa9a516694276f..5987ad6959da2474e697158d412a0f6c
              state = goBackState,
              painter = painterResource(id = iconsR.drawable.mozac_ic_back_24),
              label = stringResource(id = R.string.browser_menu_back),
-+            iconShape = EmbermineShape.Cookie9Sided.takeIf { shapedIcons },
++            iconShape = EmbermineShape.ClamShell.takeIf { shapedIcons },
              onClick = { onBackButtonClick(false) },
              onLongClick = { onBackButtonClick(true) },
          )
@@ -1141,7 +1147,7 @@ index 021825312c54e1e139141c4251aa9a516694276f..5987ad6959da2474e697158d412a0f6c
              state = goForwardState,
              painter = painterResource(id = iconsR.drawable.mozac_ic_forward_24),
              label = stringResource(id = R.string.browser_menu_forward),
-+            iconShape = EmbermineShape.Clover4Leaf.takeIf { shapedIcons },
++            iconShape = EmbermineShape.ClamShell.takeIf { shapedIcons },
              onClick = { onForwardButtonClick(false) },
              onLongClick = { onForwardButtonClick(true) },
          )
@@ -1149,7 +1155,7 @@ index 021825312c54e1e139141c4251aa9a516694276f..5987ad6959da2474e697158d412a0f6c
              state = state,
              painter = painterResource(id = iconsR.drawable.mozac_ic_share_android_24),
              label = stringResource(id = R.string.browser_menu_share),
-+            iconShape = EmbermineShape.Pill.takeIf { shapedIcons },
++            iconShape = EmbermineShape.ClamShell.takeIf { shapedIcons },
              onClick = onShareButtonClick,
          )
  
@@ -1157,7 +1163,7 @@ index 021825312c54e1e139141c4251aa9a516694276f..5987ad6959da2474e697158d412a0f6c
                  state = state,
                  painter = painterResource(id = iconsR.drawable.mozac_ic_cross_24),
                  label = stringResource(id = R.string.browser_menu_stop),
-+                iconShape = EmbermineShape.Flower.takeIf { shapedIcons },
++                iconShape = EmbermineShape.ClamShell.takeIf { shapedIcons },
                  onClick = onStopButtonClick,
              )
          } else {
@@ -1165,7 +1171,7 @@ index 021825312c54e1e139141c4251aa9a516694276f..5987ad6959da2474e697158d412a0f6c
                  state = state,
                  painter = painterResource(id = iconsR.drawable.mozac_ic_arrow_clockwise_24),
                  label = stringResource(id = R.string.browser_menu_refresh),
-+                iconShape = EmbermineShape.Flower.takeIf { shapedIcons },
++                iconShape = EmbermineShape.ClamShell.takeIf { shapedIcons },
                  onClick = { onRefreshButtonClick(false) },
                  onLongClick = { onRefreshButtonClick(true) },
              )
@@ -1201,7 +1207,7 @@ index 021825312c54e1e139141c4251aa9a516694276f..5987ad6959da2474e697158d412a0f6c
          Spacer(modifier = Modifier.height(FirefoxTheme.layout.space.static50))
  
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/header/MozillaAccountMenuItem.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/header/MozillaAccountMenuItem.kt
-index 876982af79245ce3c703d816ec64f7386e6cde74..7dd227de076fd30e0ce0ca8006ba02ba5f8b8f87 100644
+index 876982af79245ce3c703d816ec64f7386e6cde74..d8194bdf7ade50d751d80dedef005bcf09eaf877 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/header/MozillaAccountMenuItem.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/header/MozillaAccountMenuItem.kt
 @@ -38,6 +38,8 @@ import androidx.compose.ui.text.style.TextOverflow
@@ -1245,7 +1251,7 @@ index 876982af79245ce3c703d816ec64f7386e6cde74..7dd227de076fd30e0ce0ca8006ba02ba
 -                fallback = { FallbackAvatarIcon() },
 -            )
 +    ShapedIconBackground(
-+        shape = EmbermineShape.Cookie12Sided,
++        shape = EmbermineShape.Circle,
 +        defaultContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
 +    ) { contentColor ->
 +        if (accountState is AuthenticationProblem) {
@@ -1269,7 +1275,7 @@ index 876982af79245ce3c703d816ec64f7386e6cde74..7dd227de076fd30e0ce0ca8006ba02ba
      }
  }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/toolbar/BrowserToolbarMiddleware.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/toolbar/BrowserToolbarMiddleware.kt
-index 7500c18a76bc441aaa7bafd78a24d377efdde2b6..10de612d9acb0fb88be6bdbab379b1240f3f1617 100644
+index 7500c18a76bc441aaa7bafd78a24d377efdde2b6..c6969b45bde5fe8d15f36c8fab77648f13f89c26 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/toolbar/BrowserToolbarMiddleware.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/toolbar/BrowserToolbarMiddleware.kt
 @@ -29,6 +29,7 @@ import mozilla.components.browser.state.store.BrowserStore
@@ -1280,7 +1286,7 @@ index 7500c18a76bc441aaa7bafd78a24d377efdde2b6..10de612d9acb0fb88be6bdbab379b124
  import mozilla.components.compose.browser.toolbar.concept.Action
  import mozilla.components.compose.browser.toolbar.concept.Action.ActionButton
  import mozilla.components.compose.browser.toolbar.concept.Action.ActionButton.State.DEFAULT
-@@ -1469,7 +1470,19 @@ class BrowserToolbarMiddleware(
+@@ -1469,7 +1470,18 @@ class BrowserToolbarMiddleware(
                  isShortcut && this is ActionButton -> copy(onLongClick = buildShortcutLongPressMenu(source))
                  else -> this
              }
@@ -1293,7 +1299,6 @@ index 7500c18a76bc441aaa7bafd78a24d377efdde2b6..10de612d9acb0fb88be6bdbab379b124
 +        if (this !is ActionButtonRes || source !is Source.AddressBar) return this
 +        return when (toolbarAction) {
 +            ToolbarAction.Menu -> copy(shape = EmbermineShape.Sunny)
-+            ToolbarAction.SiteInfo -> copy(shape = EmbermineShape.Cookie6Sided)
 +            else -> this
          }
 +    }
@@ -1801,7 +1806,7 @@ index 0b85c6501b7577830753f4d0e36a03723f240cde..6b89eab266d044391a9948777be361d6
                  item.setOnMenuItemClickListener {
                      onClick()
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/BrowserToolbarMiddleware.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/BrowserToolbarMiddleware.kt
-index 9c8c89423b273f3160dbaeaa0aa301b3559f129f..efb86d8b3775064e91a7f0015faf7dafda43f914 100644
+index 9c8c89423b273f3160dbaeaa0aa301b3559f129f..833c3d86cf87797e808d2c7b8b01660cde55c9fc 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/BrowserToolbarMiddleware.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/BrowserToolbarMiddleware.kt
 @@ -23,6 +23,7 @@ import mozilla.components.browser.state.selector.getNormalOrPrivateTabs
@@ -1812,15 +1817,7 @@ index 9c8c89423b273f3160dbaeaa0aa301b3559f129f..efb86d8b3775064e91a7f0015faf7daf
  import mozilla.components.compose.browser.toolbar.concept.Action
  import mozilla.components.compose.browser.toolbar.concept.Action.ActionButton
  import mozilla.components.compose.browser.toolbar.concept.Action.ActionButtonRes
-@@ -402,6 +403,7 @@ class BrowserToolbarMiddleware(
-                     drawableResId = iconsR.drawable.mozac_ic_microphone_24,
-                     contentDescription = R.string.voice_search_content_description,
-                     onClick = VoiceSearchClicked,
-+                    shape = EmbermineShape.Sunny,
-                 )
-             )
-         }
-@@ -701,6 +703,7 @@ class BrowserToolbarMiddleware(
+@@ -701,6 +702,7 @@ class BrowserToolbarMiddleware(
                      contentDescription = R.string.content_description_menu,
                      highlighted = highlighted,
                      onClick = MenuClicked(source),
@@ -1829,7 +1826,7 @@ index 9c8c89423b273f3160dbaeaa0aa301b3559f129f..efb86d8b3775064e91a7f0015faf7daf
              }
  
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/TopSites.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/TopSites.kt
-index 37f487b9077e86df557e453c44149f02e59600b9..cefbb7ca63a0a89bdc9900dc4a934f9f58fd5cf9 100644
+index 37f487b9077e86df557e453c44149f02e59600b9..26b7020568614dc46f0b74461010b82834264590 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/TopSites.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/TopSites.kt
 @@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.padding
@@ -1871,12 +1868,12 @@ index 37f487b9077e86df557e453c44149f02e59600b9..cefbb7ca63a0a89bdc9900dc4a934f9f
                  }
                  .size(faviconCardSize),
 -        shape = CircleShape,
-+        shape = EmbermineShape.Cookie6Sided.toShape(),
++        shape = EmbermineShape.Circle.toShape(),
          colors = CardDefaults.cardColors(containerColor = backgroundColor),
          elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
      ) {
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/AddShortcutItem.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/AddShortcutItem.kt
-index d30c78a2a9dd033624f1c5dee847cf9bf6906848..556e8f18688830e8b005ea7213336a9d7fd7d832 100644
+index d30c78a2a9dd033624f1c5dee847cf9bf6906848..8fe15577b060583af80f3a131f8c4d445c01219d 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/AddShortcutItem.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/AddShortcutItem.kt
 @@ -15,10 +15,10 @@ import androidx.compose.foundation.layout.fillMaxSize
@@ -1904,7 +1901,7 @@ index d30c78a2a9dd033624f1c5dee847cf9bf6906848..556e8f18688830e8b005ea7213336a9d
              Card(
                  modifier = Modifier.size(itemLayout.faviconCardSize),
 -                shape = CircleShape,
-+                shape = EmbermineShape.Cookie6Sided.toShape(),
++                shape = EmbermineShape.Circle.toShape(),
                  colors = CardDefaults.cardColors(containerColor = topSiteColors.faviconCardBackgroundColor),
                  elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
              ) {
@@ -2142,7 +2139,7 @@ index 6d2fe7b231d930d877071664512f5185333e7217..a7dad8b3cd89e3ba6786a095d5bb6372
              is HistoryFragmentState.Mode.Editing -> {
                  setUiForSelectingMode(context.getString(R.string.history_multi_select_title, mode.selectedItems.size))
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/search/BrowserToolbarSearchMiddleware.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/search/BrowserToolbarSearchMiddleware.kt
-index 1a19f03082a5ba2b908f9eda9d331546b3c83c76..aed53dc1d53c50aa80ff3c158c9bef1360fc1927 100644
+index 1a19f03082a5ba2b908f9eda9d331546b3c83c76..21baad34b738419cefd36cfefafe321da4c9e807 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/search/BrowserToolbarSearchMiddleware.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/search/BrowserToolbarSearchMiddleware.kt
 @@ -33,6 +33,7 @@ import mozilla.components.browser.state.selector.findTab
@@ -2157,7 +2154,7 @@ index 1a19f03082a5ba2b908f9eda9d331546b3c83c76..aed53dc1d53c50aa80ff3c158c9bef13
                      drawableResId = iconsR.drawable.mozac_ic_microphone_24,
                      contentDescription = R.string.voice_search_content_description,
                      onClick = VoiceSearchButtonClicked,
-+                    shape = EmbermineShape.Sunny,
++                    shape = EmbermineShape.Cookie12Sided,
                  )
              )
          }
@@ -2165,7 +2162,7 @@ index 1a19f03082a5ba2b908f9eda9d331546b3c83c76..aed53dc1d53c50aa80ff3c158c9bef13
                          contentDescription = R.string.lens_search_content_description,
                          state = ActionButton.State.DEFAULT,
                          onClick = LensButtonClicked,
-+                        shape = EmbermineShape.Sunny,
++                        shape = EmbermineShape.Cookie12Sided,
                      )
                  )
              } else {
@@ -2173,7 +2170,7 @@ index 1a19f03082a5ba2b908f9eda9d331546b3c83c76..aed53dc1d53c50aa80ff3c158c9bef13
                          contentDescription = qrR.string.mozac_feature_qr_scanner,
                          state = ActionButton.State.DEFAULT,
                          onClick = QrScannerClicked,
-+                        shape = EmbermineShape.Sunny,
++                        shape = EmbermineShape.Cookie12Sided,
                      )
                  )
              }
@@ -2668,7 +2665,7 @@ index 386ec9645b84be55de88ef203f01d8f82f30d6d0..3a8cedc964a11d28f15b41e1aee56f83
  }
  
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/banner/TabsTrayBanner.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/banner/TabsTrayBanner.kt
-index fb98a6991ec2889518d63649f8162ad05077a881..9e01c7a8062bc79467facf477c9636c31baab030 100644
+index fb98a6991ec2889518d63649f8162ad05077a881..b6ca17a9e5efb4933dc1b40f76fd18e79c31a6bc 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/banner/TabsTrayBanner.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/banner/TabsTrayBanner.kt
 @@ -47,6 +47,8 @@ import androidx.compose.ui.unit.dp
@@ -2694,7 +2691,7 @@ index fb98a6991ec2889518d63649f8162ad05077a881..9e01c7a8062bc79467facf477c9636c3
      ) {
 -        Icon(painterResource(iconsR.drawable.mozac_ic_private_mode_24), null)
 +        ShapedIconBackground(
-+            shape = EmbermineShape.Cookie7Sided,
++            shape = EmbermineShape.ClamShell,
 +            defaultContentColor = LocalContentColor.current,
 +        ) { contentColor ->
 +            Icon(
@@ -2715,7 +2712,7 @@ index fb98a6991ec2889518d63649f8162ad05077a881..9e01c7a8062bc79467facf477c9636c3
 -            showTabCount = hasTabDataLoaded,
 -        )
 +        ShapedIconBackground(
-+            shape = EmbermineShape.Cookie4Sided,
++            shape = EmbermineShape.ClamShell,
 +            defaultContentColor = MaterialTheme.colorScheme.onSurface,
 +            containerSize = TabCounterShapeSize,
 +        ) { contentColor ->
@@ -2738,7 +2735,7 @@ index fb98a6991ec2889518d63649f8162ad05077a881..9e01c7a8062bc79467facf477c9636c3
 -                tint = LocalContentColor.current,
 -            )
 +            ShapedIconBackground(
-+                shape = EmbermineShape.Flower,
++                shape = EmbermineShape.ClamShell,
 +                defaultContentColor = LocalContentColor.current,
 +            ) { contentColor ->
 +                BadgedIcon(
@@ -2756,7 +2753,7 @@ index fb98a6991ec2889518d63649f8162ad05077a881..9e01c7a8062bc79467facf477c9636c3
      ) {
 -        Icon(painterResource(iconsR.drawable.mozac_ic_sync_tabs_24), null)
 +        ShapedIconBackground(
-+            shape = EmbermineShape.Gem,
++            shape = EmbermineShape.ClamShell,
 +            defaultContentColor = LocalContentColor.current,
 +        ) { contentColor ->
 +            Icon(

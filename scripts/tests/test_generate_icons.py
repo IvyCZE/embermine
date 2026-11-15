@@ -183,6 +183,20 @@ class OutputTest(unittest.TestCase):
         self.assertIn("#F5EBE0", fills)
         self.assertTrue(any(attrs.get(ANDROID + "strokeColor") == "#000000" for attrs, _ in pieces))
 
+    def test_colored_logos_keep_sunny_behind_the_ermine(self):
+        for target in icons.TARGETS:
+            if target.kind in ("art", "lockup", "launcher") and not target.out.endswith("/ic_launcher_foreground.xml"):
+                with self.subTest(target=target.out):
+                    pieces = _pieces(self.outputs[target.out])
+                    self.assertEqual(pieces[0][0][ANDROID + "fillColor"], "#823C35")
+                    self.assertEqual(pieces[1][0][ANDROID + "fillColor"], "#FFB561")
+
+    def test_default_browser_banner_logo_has_a_square_viewport(self):
+        root = ET.fromstring(self._output("firefox_as_default_banner_illustration.xml"))
+        self.assertEqual(root.get(ANDROID + "width"), "64dp")
+        self.assertEqual(root.get(ANDROID + "height"), "64dp")
+        self.assertEqual(root.get(ANDROID + "viewportWidth"), root.get(ANDROID + "viewportHeight"))
+
     def test_monochrome_is_one_solid_colour_with_cut_outs(self):
         text = self._output("ic_launcher_monochrome.xml")
         pieces = _pieces(text)
@@ -197,6 +211,12 @@ class OutputTest(unittest.TestCase):
             self.assertTrue(_filled(loops, apply(matrix, *inside)), inside)
         for cut in (EYE, EAR, LEG_LINE_62, LEG_LINE_63):
             self.assertFalse(_filled(loops, apply(matrix, *cut)), cut)
+
+    def test_monochrome_keeps_a_sunny_outline(self):
+        _, loops = _pieces(self._output("ic_launcher_monochrome.xml"))[0]
+        matrix = canvas_matrix(self.art, 108.0, 108.0)
+        boundary = self.art.sunny.subpaths[0].start
+        self.assertTrue(_filled(loops, apply(matrix, *boundary)))
 
     def test_status_and_splash_icons_take_their_size_from_the_source(self):
         self.assertIn('android:width="24dp"', self._output("ic_status_logo.xml"))

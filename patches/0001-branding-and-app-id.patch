@@ -3,7 +3,7 @@ From: IvyCZE <me@ivy.yt>
 Date: Fri, 30 Oct 2026 23:02:46 +0000
 Subject: [PATCH] Embermine: 0001-branding-and-app-id
 
-Release applicationId yt.ivy.embermine, no sharedUserId, shortcuts target the new package, app name strings say Embermine, app icon picker hidden.
+Release applicationId yt.ivy.embermine, no sharedUserId, shortcuts target the new package, app name strings say Embermine, app icon picker hidden. The homepage wordmark is 20 dp high, and the default-browser banner logo is centered without mirroring or overlapping its dismiss button.
 
 Release launcher icon is an adaptive icon whose background, foreground and monochrome drawables are generated from assets/icon/icon.svg. The legacy Firefox launcher and wordmark webp files that the generator replaces are removed.
 
@@ -11,6 +11,53 @@ Call sites that name a Mozilla product or service (Terms of Use, IP Protection, 
 
 Co-authored-by: factory-droid[bot] <138933559+factory-droid[bot]@users.noreply.github.com>
 
+diff --git a/mobile/android/android-components/components/compose/menu/src/main/java/mozilla/components/compose/menu/ui/MenuBanner.kt b/mobile/android/android-components/components/compose/menu/src/main/java/mozilla/components/compose/menu/ui/MenuBanner.kt
+index 080fa1b5976269e290cf27867f344aa0de18db99..1c2fa2ebdd07b102e26d8e04c82e992958507557 100644
+--- a/mobile/android/android-components/components/compose/menu/src/main/java/mozilla/components/compose/menu/ui/MenuBanner.kt
++++ b/mobile/android/android-components/components/compose/menu/src/main/java/mozilla/components/compose/menu/ui/MenuBanner.kt
+@@ -21,15 +21,12 @@ import androidx.compose.material3.Text
+ import androidx.compose.runtime.Composable
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+-import androidx.compose.ui.graphics.graphicsLayer
+-import androidx.compose.ui.platform.LocalLayoutDirection
+ import androidx.compose.ui.res.dimensionResource
+ import androidx.compose.ui.res.painterResource
+ import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.semantics.semantics
+ import androidx.compose.ui.text.style.TextOverflow
+ import androidx.compose.ui.tooling.preview.PreviewLightDark
+-import androidx.compose.ui.unit.LayoutDirection
+ import mozilla.components.compose.base.button.IconButton
+ import mozilla.components.compose.base.text.Text as AcornText
+ import mozilla.components.compose.base.text.value
+@@ -57,8 +54,6 @@ fun MenuBanner(
+     onDismiss: () -> Unit,
+     modifier: Modifier = Modifier,
+ ) {
+-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+-
+     Surface(
+         modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
+         shape = MaterialTheme.shapes.extraLarge,
+@@ -98,9 +93,14 @@ fun MenuBanner(
+                     painter = icon.painter,
+                     contentDescription = null,
+                     modifier =
+-                        Modifier.align(Alignment.Bottom)
+-                            .padding(end = AcornTheme.layout.space.static200)
+-                            .graphicsLayer(scaleX = if (isRtl) 1f else -1f),
++                        Modifier.align(Alignment.CenterVertically)
++                            .padding(
++                                start = AcornTheme.layout.space.static100,
++                                end = AcornTheme.layout.space.static600,
++                                top = AcornTheme.layout.space.static100,
++                                bottom = AcornTheme.layout.space.static100,
++                            )
++                            .size(AcornTheme.layout.size.static800),
+                 )
+             }
+ 
 diff --git a/mobile/android/fenix/app/build.gradle b/mobile/android/fenix/app/build.gradle
 index 4d8cdf341a237422f8311e6b1c42842007eba42c..e81e7e66717484dfa32db9422e7c5d6da72d282f 100644
 --- a/mobile/android/fenix/app/build.gradle
@@ -186,6 +233,27 @@ index 39a5306cfed96816af59f5eb7fc42af635b08679..651fca2f247cc9006c36a70b801909cc
                  style = FirefoxTheme.typography.subtitle1,
                  modifier = Modifier.semantics { heading() },
              )
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/ui/WordmarkAndLogo.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/ui/WordmarkAndLogo.kt
+index 80e2ae8d7c0a1f68277cb44191685ee4c2f878d7..869ea85ef01307e49d4a38ecc873cc1c946965a5 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/ui/WordmarkAndLogo.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/ui/WordmarkAndLogo.kt
+@@ -13,7 +13,6 @@ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.graphics.ColorFilter
+-import androidx.compose.ui.res.dimensionResource
+ import androidx.compose.ui.res.painterResource
+ import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.semantics.SemanticsPropertyKey
+@@ -77,7 +76,7 @@ internal fun Wordmark(color: Color?) {
+                     testTagsAsResourceId = true
+                     testTag = HOMEPAGE_WORDMARK_TEXT
+                 }
+-                .height(dimensionResource(R.dimen.wordmark_text_height)),
++                .height(20.dp),
+         painter = painterResource(getAttr(R.attr.fenixWordmarkText)),
+         colorFilter = color?.let { ColorFilter.tint(it) },
+         contentDescription = stringResource(R.string.app_name),
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ipprotection/ui/IPProtectionBottomSheet.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ipprotection/ui/IPProtectionBottomSheet.kt
 index 33ce3fcbf871321053042b4f98f42918bcfb1789..c229fc64621b48ce0a75f50cf6d9bf7c72c1f7ed 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ipprotection/ui/IPProtectionBottomSheet.kt

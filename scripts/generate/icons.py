@@ -128,7 +128,7 @@ TARGETS: tuple[Target, ...] = (
     Target(
         f"{RELEASE}/drawable-nodpi/firefox_as_default_banner_illustration.xml",
         "art",
-        src=f"{MAIN}/drawable-nodpi/firefox_as_default_banner_illustration.xml",
+        size=("64dp", "64dp", 64.0, 64.0),
     ),
     Target(
         f"{RELEASE}/drawable-nodpi/kit_sleeping_under_laptop.xml",
@@ -204,7 +204,11 @@ def _render(target: Target, art: IconArt, tree: Path) -> str:
     if target.kind == "background":
         pieces: list[Piece] = background_pieces(art, canvas_matrix(art, vw, vh), vw, vh)
     elif target.kind == "launcher":
-        pieces = color_pieces(art, canvas_matrix(art, vw, vh))
+        pieces = color_pieces(
+            art,
+            canvas_matrix(art, vw, vh),
+            include_sunny=not target.out.endswith("/ic_launcher_foreground.xml"),
+        )
     elif target.kind == "launcher-mono":
         pieces = monochrome_pieces(art, canvas_matrix(art, vw, vh), fill)
     elif target.kind == "art":

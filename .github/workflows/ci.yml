@@ -19,7 +19,7 @@ jobs:
       - name: Upload icon preview
         uses: actions/upload-artifact@v7
         with:
-          name: embermine-icon-sunny-larger
-          path: preview/embermine-icon-sunny-larger.png
+          name: embermine-icon-sunny-midpoint
+          path: preview/embermine-icon-sunny-midpoint.png
           if-no-files-found: error
           retention-days: 30

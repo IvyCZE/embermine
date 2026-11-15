@@ -6,10 +6,10 @@ Subject: [PATCH] Embermine: 0008-loading-indicator
 
 diff --git a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/EmbermineLoadingIndicator.kt b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/EmbermineLoadingIndicator.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..85283d8955855ab31114b8e049aff447b24b7b0d
+index 0000000000000000000000000000000000000000..02bc1c372ba0effc5ab7d335df731cec9cf8b3cf
 --- /dev/null
 +++ b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/embermine/EmbermineLoadingIndicator.kt
-@@ -0,0 +1,21 @@
+@@ -0,0 +1,29 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -18,10 +18,18 @@ index 0000000000000000000000000000000000000000..85283d8955855ab31114b8e049aff447
 +
 +import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 +import androidx.compose.material3.LoadingIndicator
++import androidx.compose.material3.LoadingIndicatorDefaults
++import androidx.compose.material3.MaterialShapes
 +import androidx.compose.material3.MaterialTheme
 +import androidx.compose.runtime.Composable
 +import androidx.compose.ui.Modifier
 +import androidx.compose.ui.graphics.Color
++
++/** Shared spinning sequence, keeping the Material shapes in order without Pentagon. */
++@OptIn(ExperimentalMaterial3ExpressiveApi::class)
++val EmbermineLoadingIndicatorPolygons = LoadingIndicatorDefaults.IndeterminateIndicatorPolygons.filterNot {
++    it === MaterialShapes.Pentagon
++}
 +
 +@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 +@Composable
@@ -29,7 +37,7 @@ index 0000000000000000000000000000000000000000..85283d8955855ab31114b8e049aff447
 +    modifier: Modifier = Modifier,
 +    color: Color = MaterialTheme.colorScheme.primary,
 +) {
-+    LoadingIndicator(modifier = modifier, color = color)
++    LoadingIndicator(modifier = modifier, color = color, polygons = EmbermineLoadingIndicatorPolygons)
 +}
 diff --git a/mobile/android/android-components/components/feature/importer/build.gradle b/mobile/android/android-components/components/feature/importer/build.gradle
 index e31709b7bd833779dddcbdb72f9c360e6ce4c514..b4a68d694885096f8f9656740fe6c6811a396ad1 100644
@@ -453,10 +461,10 @@ index 0000000000000000000000000000000000000000..6cb964d5103a4e218b4cdf59cbede336
 +}
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineRefreshIndicator.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineRefreshIndicator.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..2f437e13ed0617ee3689529c20b621d3fd2b2884
+index 0000000000000000000000000000000000000000..434e6ef0738baec806199b0e06e5a234a3d7db86
 --- /dev/null
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/embermine/EmbermineRefreshIndicator.kt
-@@ -0,0 +1,141 @@
+@@ -0,0 +1,146 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -480,6 +488,7 @@ index 0000000000000000000000000000000000000000..2f437e13ed0617ee3689529c20b621d3
 +import androidx.core.view.children
 +import androidx.core.view.isVisible
 +import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
++import mozilla.components.compose.base.embermine.EmbermineLoadingIndicatorPolygons
 +import org.mozilla.fenix.theme.FirefoxTheme
 +
 +private const val REFRESH_INDICATOR_TAG = "embermine_refresh_indicator"
@@ -554,7 +563,11 @@ index 0000000000000000000000000000000000000000..2f437e13ed0617ee3689529c20b621d3
 +    val containerColor = MaterialTheme.colorScheme.primaryContainer
 +    val indicatorColor = MaterialTheme.colorScheme.onPrimaryContainer
 +    if (refreshing) {
-+        ContainedLoadingIndicator(containerColor = containerColor, indicatorColor = indicatorColor)
++        ContainedLoadingIndicator(
++            containerColor = containerColor,
++            indicatorColor = indicatorColor,
++            polygons = EmbermineLoadingIndicatorPolygons,
++        )
 +    } else {
 +        ContainedLoadingIndicator(
 +            progress = progress,

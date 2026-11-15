@@ -136,6 +136,13 @@ class OutputTest(unittest.TestCase):
                 root = ET.fromstring(text)
                 self.assertEqual(root.tag, "vector", rel)
 
+    def test_generated_resource_strings_fit_android_utf8_string_pool(self):
+        for rel, text in self.outputs.items():
+            if rel.endswith(".xml"):
+                for element in ET.fromstring(text).iter():
+                    for name, value in element.attrib.items():
+                        self.assertLessEqual(len(value.encode("utf-8")), 0x7FFF, (rel, name))
+
     def test_outputs_are_deterministic(self):
         again = icons.build_outputs(self.art, self.tree)
         self.assertEqual(again, self.outputs)
@@ -199,23 +206,25 @@ class OutputTest(unittest.TestCase):
     def test_monochrome_is_one_solid_colour_with_cut_outs(self):
         text = self._output("ic_launcher_monochrome.xml")
         pieces = _pieces(text)
-        self.assertEqual(len(pieces), 1)
-        attrs, loops = pieces[0]
-        self.assertEqual(attrs[ANDROID + "fillColor"], "#000000")
-        self.assertNotIn(ANDROID + "strokeColor", attrs)
+        for attrs, _ in pieces:
+            self.assertEqual(attrs[ANDROID + "fillColor"], "#000000")
+            self.assertNotIn(ANDROID + "strokeColor", attrs)
+        def filled(point):
+            return any(_filled(loops, point) for _, loops in pieces)
+
         matrix = canvas_matrix(self.art, 108.0, 108.0)
-        self.assertTrue(_filled(loops, apply(matrix, *FLOWER)))
-        self.assertTrue(_filled(loops, apply(matrix, *BODY)))
+        self.assertTrue(filled(apply(matrix, *FLOWER)))
+        self.assertTrue(filled(apply(matrix, *BODY)))
         for inside in (LEG_INSIDE_62, LEG_INSIDE_63):
-            self.assertTrue(_filled(loops, apply(matrix, *inside)), inside)
+            self.assertTrue(filled(apply(matrix, *inside)), inside)
         for cut in (EYE, EAR, LEG_LINE_62, LEG_LINE_63):
-            self.assertFalse(_filled(loops, apply(matrix, *cut)), cut)
+            self.assertFalse(filled(apply(matrix, *cut)), cut)
 
     def test_monochrome_keeps_a_sunny_outline(self):
-        _, loops = _pieces(self._output("ic_launcher_monochrome.xml"))[0]
+        pieces = _pieces(self._output("ic_launcher_monochrome.xml"))
         matrix = canvas_matrix(self.art, 108.0, 108.0)
         boundary = self.art.sunny.subpaths[0].start
-        self.assertTrue(_filled(loops, apply(matrix, *boundary)))
+        self.assertTrue(any(_filled(loops, apply(matrix, *boundary)) for _, loops in pieces))
 
     def test_status_and_splash_icons_take_their_size_from_the_source(self):
         self.assertIn('android:width="24dp"', self._output("ic_status_logo.xml"))

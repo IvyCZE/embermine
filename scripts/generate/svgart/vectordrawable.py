@@ -30,6 +30,11 @@ def vector_drawable(
     for piece in pieces:
         if not piece.subpaths:
             raise ValueError("a path piece has no contours")
+        data = path_data(piece.subpaths)
+        # AAPT substitutes STRING_TOO_LARGE beyond this limit, producing an XML drawable
+        # that builds successfully but cannot be inflated by Android (including launcher icons).
+        if len(data.encode("utf-8")) > 0x7FFF:
+            raise ValueError("pathData exceeds Android's 32,767-byte resource string limit; split the paint layers")
         lines.append("    <path")
         if piece.fill is not None:
             lines.append(f'        android:fillColor="{piece.fill}"')
@@ -40,6 +45,6 @@ def vector_drawable(
             lines.append(f'        android:strokeWidth="{format_number(piece.stroke_width)}"')
             lines.append('        android:strokeLineCap="round"')
             lines.append('        android:strokeLineJoin="round"')
-        lines.append(f'        android:pathData="{path_data(piece.subpaths)}" />')
+        lines.append(f'        android:pathData="{data}" />')
     lines.append("</vector>")
     return "\n".join(lines) + "\n"

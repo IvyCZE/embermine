@@ -216,12 +216,13 @@ def monochrome_pieces(art: IconArt, m: Matrix, fill: str) -> list[Piece]:
     for shape in art.ermine:
         cut_outs.extend(_cut_outs(shape, m))
 
-    loops: list[list[Point]] = []
+    sunny_loops: list[list[Point]] = []
     half_outline = art.size * scale_factor(m) * 0.0125
     for sub in _moved(art.sunny, m):
         points = flatten(sub)
-        loops.append(counter_clockwise(offset_closed(points, half_outline)))
-        loops.append(list(reversed(counter_clockwise(offset_closed(points, -half_outline)))))
+        sunny_loops.append(counter_clockwise(offset_closed(points, half_outline)))
+        sunny_loops.append(list(reversed(counter_clockwise(offset_closed(points, -half_outline)))))
+    loops: list[list[Point]] = []
     seen: set[tuple[tuple[float, float], ...]] = set()
     for shape in [art.flower, *(s for s in art.ermine if not _is_detail(s))]:
         for sub in parity_oriented(_moved(shape, m)):
@@ -234,7 +235,12 @@ def monochrome_pieces(art: IconArt, m: Matrix, fill: str) -> list[Piece]:
             for cut in cut_outs:
                 pieces = [part for loop in pieces for part in _cut_loop(loop, cut)]
             loops.extend(pieces)
-    return [Piece([polygon_subpath(loop) for loop in loops], fill=fill)]
+    # Separate paint layers keep pathData below Android's 32,767-byte string limit.
+    # Keep each outline with its holes so the nonzero fill rule still applies within each path.
+    return [
+        Piece([polygon_subpath(loop) for loop in sunny_loops], fill=fill),
+        Piece([polygon_subpath(loop) for loop in loops], fill=fill),
+    ]
 
 
 def _cut_loop(loop: list[Point], cut: list[Point]) -> list[list[Point]]:

@@ -23,6 +23,7 @@ from svgart.geometry import (  # noqa: E402
 from svgart.regions import offset_closed, subtract_polygon, winding_number, without_repeats  # noqa: E402
 from svgart.layers import Piece  # noqa: E402
 from svgart.svgdoc import parse_document  # noqa: E402
+from svgart.vectordrawable import vector_drawable  # noqa: E402
 
 SQUARE = [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)]
 
@@ -84,6 +85,11 @@ class WithoutRepeatsTest(unittest.TestCase):
 
 
 class PathAndTransformTest(unittest.TestCase):
+    def test_vector_drawable_rejects_paths_android_would_replace_with_string_too_large(self):
+        piece = Piece(parse_path("M0,0" + "L1,1" * 9000 + "Z"), fill="#000000")
+        with self.assertRaisesRegex(ValueError, "32,767-byte resource string limit"):
+            vector_drawable("24dp", "24dp", (24.0, 24.0), [piece])
+
     def test_relative_and_absolute_commands_parse_to_the_same_box(self):
         subpaths = parse_path("M0 0 h10 v10 H0 z")
         self.assertEqual(len(subpaths), 1)

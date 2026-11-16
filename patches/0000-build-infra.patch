@@ -16,10 +16,10 @@ Port ShakeSensitivitySlider and FontSizeSlider to the SliderState overload of
 Slider: material3 1.5 hid the value/thumb/track overload.
 
 diff --git a/gradle/libs.versions.toml b/gradle/libs.versions.toml
-index fd0aba7a9e1d38d794081747c5b656c5c6b45619..28607d535c30456415d9b7d6f9c01f147792bcae 100644
+index d98dbc2a84c517f9ded7c8bf5558c5106dc39867..68bd63a2494fe9fa869df091dea08c8a83749cd4 100644
 --- a/gradle/libs.versions.toml
 +++ b/gradle/libs.versions.toml
-@@ -214,7 +214,7 @@ androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref =
+@@ -218,7 +218,7 @@ androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref =
  androidx-compose-animation = { module = "androidx.compose.animation:animation" }
  androidx-compose-foundation = { module = "androidx.compose.foundation:foundation" }
  androidx-compose-material-icons = { module = "androidx.compose.material:material-icons-core" }
@@ -28,7 +28,7 @@ index fd0aba7a9e1d38d794081747c5b656c5c6b45619..28607d535c30456415d9b7d6f9c01f14
  androidx-compose-material3-adaptive = { module = "androidx.compose.material3.adaptive:adaptive" }
  androidx-compose-material3-adaptivelayout = { module = "androidx.compose.material3.adaptive:adaptive-layout" }
  androidx-compose-material3-adaptivenavigation = { module = "androidx.compose.material3.adaptive:adaptive-navigation" }
-@@ -229,6 +229,7 @@ androidx-compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-mani
+@@ -233,6 +233,7 @@ androidx-compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-mani
  androidx-compose-ui-text-android = { module = "androidx.compose.ui:ui-text-android" }
  androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
  androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
@@ -97,10 +97,10 @@ index e6368976f1c6a87519bdfdcf1de9e137d29b20da..902b103d257991fab4799c46116b372c
              Modifier.fillMaxWidth().semantics {
                  contentDescription = sliderContentDescription
 diff --git a/mobile/android/fenix/app/build.gradle b/mobile/android/fenix/app/build.gradle
-index e8032b0120463613dd5c1e03660a60536f98a801..4d8cdf341a237422f8311e6b1c42842007eba42c 100644
+index 03399d00fcf00ae37cecd164ed74de7d9c1ff14f..c1b009b85d102f1b7cbba3d16895c92d4765817f 100644
 --- a/mobile/android/fenix/app/build.gradle
 +++ b/mobile/android/fenix/app/build.gradle
-@@ -75,6 +75,8 @@ android {
+@@ -76,6 +76,8 @@ android {
  
          buildConfigField "String[]", "SUPPORTED_LOCALE_ARRAY", getSupportedLocales()
          buildConfigField "boolean", "IS_BENCHMARK_BUILD", "false"
@@ -109,7 +109,7 @@ index e8032b0120463613dd5c1e03660a60536f98a801..4d8cdf341a237422f8311e6b1c428420
      }
  
      def releaseTemplate = {
-@@ -242,10 +244,8 @@ android {
+@@ -244,10 +246,8 @@ android {
              if (project.hasProperty("benchmarkTest")) {
                  include "arm64-v8a"
              } else {
@@ -122,7 +122,7 @@ index e8032b0120463613dd5c1e03660a60536f98a801..4d8cdf341a237422f8311e6b1c428420
              }
          }
      }
-@@ -286,6 +286,8 @@ android {
+@@ -288,6 +288,8 @@ android {
  androidComponents {
      onVariants(selector().all()) { variant ->
          def buildType = variant.buildType
@@ -131,7 +131,7 @@ index e8032b0120463613dd5c1e03660a60536f98a801..4d8cdf341a237422f8311e6b1c428420
  
          project.logger.debug("----------------------------------------------")
          project.logger.debug("Variant name:      " + variant.name)
-@@ -297,19 +299,20 @@ androidComponents {
+@@ -299,19 +301,20 @@ androidComponents {
          // object so we could read the flag directly; onVariants only gives us the build type name, so
          // we gate on the names instead.
          if (buildType in ['nightly', 'beta', 'release', 'benchmark']) {
@@ -267,7 +267,7 @@ index 0000000000000000000000000000000000000000..167d46a7c1b46f1a6405b8a4f7954696
 +    }
 +}
 diff --git a/mobile/android/gradle/plugins/conventions/src/main/java/org/mozilla/conventions/ProjectPlugin.kt b/mobile/android/gradle/plugins/conventions/src/main/java/org/mozilla/conventions/ProjectPlugin.kt
-index 20a42d6eabb471a159f7c2bf38133a45d352e62a..d03fd22090944aea7f6c98d79a7aa4d69ece08b7 100644
+index 6581061224e2b43d59a27a95c34fd3586e04f013..89238f8924f1b78a23c58c2dd4824f355466de62 100644
 --- a/mobile/android/gradle/plugins/conventions/src/main/java/org/mozilla/conventions/ProjectPlugin.kt
 +++ b/mobile/android/gradle/plugins/conventions/src/main/java/org/mozilla/conventions/ProjectPlugin.kt
 @@ -346,7 +346,7 @@ class ProjectPlugin : Plugin<Project> {

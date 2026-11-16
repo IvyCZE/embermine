@@ -110,7 +110,7 @@ index 22d15715e28560802b834a3999e521f22de67482..1454c874d4a180f419a8996fea1abb5b
          title = {
              Text(
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bookmarks/BookmarksScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bookmarks/BookmarksScreen.kt
-index 8b89f9131590bf42d8271e7b1be907b26efc82ee..b8c14d6c97dd8bb86d7acb0822ff38b778b80b86 100644
+index 375166f43315517df387777f56a74aa8187454c6..4c905ded112e1763ebe8a616f7d7e088be14a4d4 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bookmarks/BookmarksScreen.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bookmarks/BookmarksScreen.kt
 @@ -30,7 +30,6 @@ import androidx.compose.foundation.lazy.LazyListScope
@@ -129,7 +129,7 @@ index 8b89f9131590bf42d8271e7b1be907b26efc82ee..b8c14d6c97dd8bb86d7acb0822ff38b7
  import mozilla.components.compose.base.menu.DropdownMenu
  import mozilla.components.compose.base.menu.MenuItem
  import mozilla.components.compose.base.searchbar.TopSearchBar
-@@ -317,7 +317,7 @@ private fun BookmarksList(store: BookmarksStore) {
+@@ -318,7 +318,7 @@ private fun BookmarksList(store: BookmarksStore) {
          when {
              state.isLoading -> {
                  Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -229,10 +229,10 @@ index 2abebcabaf8f06fc0b8db810c3bdeb4dbc3ffe67..9ea1c86fd29188bca7214ee9d6a22aab
              return@Scaffold
          }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/BaseBrowserFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/BaseBrowserFragment.kt
-index ed334079e8101613de078bc55577be9a48fd07bb..44acf8beee96c2465a3450450db44297fd538838 100644
+index bfc1e163c344e60ae92415ad90e92bf3a93961d9..eb54904216016594d48daf3dc453434c1e39cbd9 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/BaseBrowserFragment.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/BaseBrowserFragment.kt
-@@ -211,6 +211,7 @@ import org.mozilla.fenix.databinding.FragmentBrowserBinding
+@@ -213,6 +213,7 @@ import org.mozilla.fenix.databinding.FragmentBrowserBinding
  import org.mozilla.fenix.downloads.DownloadService
  import org.mozilla.fenix.downloads.RenameAndChangeLocationDialogFragment
  import org.mozilla.fenix.downloads.dialog.createDownloadAppDialog
@@ -240,7 +240,7 @@ index ed334079e8101613de078bc55577be9a48fd07bb..44acf8beee96c2465a3450450db44297
  import org.mozilla.fenix.ext.accessibilityManager
  import org.mozilla.fenix.ext.breadcrumb
  import org.mozilla.fenix.ext.components
-@@ -1457,6 +1458,7 @@ abstract class BaseBrowserFragment :
+@@ -1467,6 +1468,7 @@ abstract class BaseBrowserFragment :
                  view = view,
              )
          }

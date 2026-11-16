@@ -759,10 +759,10 @@ index a8c3408aaa69b5941ad94c463c5dceb72972712c..45687e100d07ce951279f95569ba7844
                              onInteraction(event)
                          }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
-index e8a75d9438e517211cb5ef75f530e0d5b4b175ed..cd1fb285a4fa0b4d21b0dfd8239188f3b4881dcc 100644
+index 05675e79c7324f7c46b251e8ff6fc48b3cb1cc25..8727cbba8f93b87055099321eec89ddf1374c8e3 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
-@@ -139,6 +139,7 @@ import org.mozilla.fenix.debugsettings.gleandebugtools.DefaultGleanDebugToolsSto
+@@ -137,6 +137,7 @@ import org.mozilla.fenix.debugsettings.gleandebugtools.DefaultGleanDebugToolsSto
  import org.mozilla.fenix.debugsettings.ui.FenixOverlay
  import org.mozilla.fenix.downloads.DownloadSnackbar
  import org.mozilla.fenix.e2e.EdgeToEdgeFragmentLifecycleCallbacks
@@ -770,7 +770,7 @@ index e8a75d9438e517211cb5ef75f530e0d5b4b175ed..cd1fb285a4fa0b4d21b0dfd8239188f3
  import org.mozilla.fenix.experiments.ResearchSurfaceDialogFragment
  import org.mozilla.fenix.experiments.UninstallSurveyManager
  import org.mozilla.fenix.ext.alreadyOnDestination
-@@ -1513,7 +1514,7 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, Crash
+@@ -1515,7 +1516,7 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, Crash
              setSupportActionBar(navigationToolbar)
              // Add ids to this that we don't want to have a toolbar back button
              setupNavigationToolbar()
@@ -779,7 +779,7 @@ index e8a75d9438e517211cb5ef75f530e0d5b4b175ed..cd1fb285a4fa0b4d21b0dfd8239188f3
  
              isToolbarInflated = true
          }
-@@ -1527,6 +1528,14 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, Crash
+@@ -1529,6 +1530,14 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, Crash
              navHost.navController,
              AppBarConfiguration.Builder(*topLevelDestinationIds).build(),
          )
@@ -795,10 +795,10 @@ index e8a75d9438e517211cb5ef75f530e0d5b4b175ed..cd1fb285a4fa0b4d21b0dfd8239188f3
          navigationToolbar.setNavigationOnClickListener {
              onBackPressedDispatcher.onBackPressed()
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/tabstrip/TabStrip.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/tabstrip/TabStrip.kt
-index 8155be98d747acd03460bc1c7ee5c6c1da022389..14cdf5af89dad22ff99d73648ada64dc2370da34 100644
+index 71907d12aeb81d5d15e87eb929966d48106abd7a..bb51a32f8581fd8b6e91be94368ebb639e3bb2bc 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/tabstrip/TabStrip.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/tabstrip/TabStrip.kt
-@@ -69,6 +69,8 @@ import mozilla.components.browser.state.action.TabListAction
+@@ -68,6 +68,8 @@ import mozilla.components.browser.state.action.TabListAction
  import mozilla.components.browser.state.state.createTab
  import mozilla.components.browser.state.store.BrowserStore
  import mozilla.components.compose.base.button.IconButton
@@ -807,7 +807,7 @@ index 8155be98d747acd03460bc1c7ee5c6c1da022389..14cdf5af89dad22ff99d73648ada64dc
  import mozilla.components.compose.base.modifier.thenConditional
  import mozilla.components.compose.base.theme.PreviewThemeProvider
  import mozilla.components.compose.base.theme.Theme
-@@ -479,7 +481,7 @@ private fun TabItem(
+@@ -478,7 +480,7 @@ private fun TabItem(
                  }
              }
  
@@ -816,23 +816,18 @@ index 8155be98d747acd03460bc1c7ee5c6c1da022389..14cdf5af89dad22ff99d73648ada64dc
                  IconButton(
                      onClick = { onCloseTabClick(state.id, state.isPrivate) },
                      contentDescription = stringResource(id = R.string.close_tab_title, state.title),
-@@ -490,16 +492,22 @@ private fun TabItem(
+@@ -489,11 +491,17 @@ private fun TabItem(
                              Modifier.clearAndSetSemantics {}
                          },
                  ) {
 -                    Icon(
 -                        painter = painterResource(iconsR.drawable.mozac_ic_cross_20),
--                        tint =
-+                    ShapedIconBackground(
-+                        shape = EmbermineShape.Flower,
-+                        defaultContentColor =
-                             if (state.isSelected) {
-                                 MaterialTheme.colorScheme.onSurface
-                             } else {
-                                 MaterialTheme.colorScheme.onSurfaceVariant
-                             },
+-                        tint = colors.closeButtonColors.get(state.isSelected),
 -                        contentDescription = null,
 -                    )
++                    ShapedIconBackground(
++                        shape = EmbermineShape.Flower,
++                        defaultContentColor = colors.closeButtonColors.get(state.isSelected),
 +                        containerSize = 32.dp,
 +                    ) { contentColor ->
 +                        Icon(
@@ -893,10 +888,10 @@ index 6962dfd8799446121f2b7be511ec4957d391df91..a3010cba0bef3827dadc6c9fd03a5770
              descriptionState = descriptionState,
              modifier =
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/IPProtectionMenuItem.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/IPProtectionMenuItem.kt
-index 812f2e65d25653d5bb7b438c6a6922d29970ef20..5fb50482857a73ce8eb6bcc2c7b0553a0177d13c 100644
+index bb16e919963f4bce5164761229b47fe797813ead..66f2157359a7d5d2dfda57ccf6d9a723a307cf57 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/IPProtectionMenuItem.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/IPProtectionMenuItem.kt
-@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.stateDescription
+@@ -31,6 +31,7 @@ import androidx.compose.ui.semantics.stateDescription
  import androidx.compose.ui.tooling.preview.Preview
  import androidx.compose.ui.tooling.preview.PreviewParameter
  import androidx.compose.ui.unit.dp
@@ -904,7 +899,7 @@ index 812f2e65d25653d5bb7b438c6a6922d29970ef20..5fb50482857a73ce8eb6bcc2c7b0553a
  import mozilla.components.compose.base.modifier.debouncedClickable
  import mozilla.components.compose.base.theme.ThemedValue
  import mozilla.components.compose.base.theme.ThemedValueProvider
-@@ -54,12 +55,14 @@ private val MENU_ITEM_MIN_HEIGHT = 52.dp
+@@ -52,12 +53,14 @@ private val MENU_ITEM_MIN_HEIGHT = 52.dp
   * @param state The current [IPProtectionMenuState] to display.
   * @param onToggle Called when the label row is tapped to toggle IP Protection on or off.
   * @param onNavigate Called when the chevron is tapped to open the IP Protection settings screen.
@@ -919,7 +914,7 @@ index 812f2e65d25653d5bb7b438c6a6922d29970ef20..5fb50482857a73ce8eb6bcc2c7b0553a
  ) {
      val statusDescription = badgeText(state.status)
      val role =
-@@ -84,6 +87,7 @@ internal fun IPProtectionMenuItem(
+@@ -81,6 +84,7 @@ internal fun IPProtectionMenuItem(
          description = descriptionText(state),
          minHeight = MENU_ITEM_MIN_HEIGHT,
          beforeIconPainter = painterResource(iconsR.drawable.mozac_ic_globe_24),
@@ -1255,7 +1250,7 @@ index 021825312c54e1e139141c4251aa9a516694276f..75adb44733e5fbee026355528064e2c0
          Spacer(modifier = Modifier.height(FirefoxTheme.layout.space.static50))
  
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/header/MozillaAccountMenuItem.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/header/MozillaAccountMenuItem.kt
-index 876982af79245ce3c703d816ec64f7386e6cde74..d8194bdf7ade50d751d80dedef005bcf09eaf877 100644
+index 0b6230fdf14d9ceb31fb3788235ad28378b58625..b389e86ec428c0eee958a4b33b72b3ff86d74d99 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/header/MozillaAccountMenuItem.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/menu/compose/header/MozillaAccountMenuItem.kt
 @@ -38,6 +38,8 @@ import androidx.compose.ui.text.style.TextOverflow
@@ -1267,7 +1262,7 @@ index 876982af79245ce3c703d816ec64f7386e6cde74..d8194bdf7ade50d751d80dedef005bcf
  import mozilla.components.compose.base.theme.ThemedValue
  import mozilla.components.compose.base.theme.ThemedValueProvider
  import mozilla.components.service.fxa.manager.AccountState
-@@ -151,11 +153,11 @@ internal fun MozillaAccountMenuItem(
+@@ -143,11 +145,11 @@ internal fun MozillaAccountMenuItem(
  }
  
  @Composable
@@ -1281,7 +1276,7 @@ index 876982af79245ce3c703d816ec64f7386e6cde74..d8194bdf7ade50d751d80dedef005bcf
      )
  }
  
-@@ -173,21 +175,26 @@ private fun AvatarIcon(
+@@ -165,21 +167,26 @@ private fun AvatarIcon(
      account: Account?,
      accountState: AccountState,
  ) {
@@ -1323,7 +1318,7 @@ index 876982af79245ce3c703d816ec64f7386e6cde74..d8194bdf7ade50d751d80dedef005bcf
      }
  }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/toolbar/BrowserToolbarMiddleware.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/toolbar/BrowserToolbarMiddleware.kt
-index 7500c18a76bc441aaa7bafd78a24d377efdde2b6..c6969b45bde5fe8d15f36c8fab77648f13f89c26 100644
+index 539fe743a10fb39cc25fb08f70a1ae913796b7d7..44b9d47587cb819eabdcd76584cf6ee89dbd295c 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/toolbar/BrowserToolbarMiddleware.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/toolbar/BrowserToolbarMiddleware.kt
 @@ -29,6 +29,7 @@ import mozilla.components.browser.state.store.BrowserStore
@@ -1354,7 +1349,7 @@ index 7500c18a76bc441aaa7bafd78a24d377efdde2b6..c6969b45bde5fe8d15f36c8fab77648f
      private fun buildSiteInfoAction(
          drawableResId: Int,
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/toolbar/CustomTabBrowserToolbarMiddleware.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/toolbar/CustomTabBrowserToolbarMiddleware.kt
-index ea3c0f6fef52bd9618b4f6e41e07b19b8b9d084e..6852a5cfb458b6fb236d453514ad484137734575 100644
+index 87ae74cea4e16bd3e5944eb919894c60e4fea66c..f531579ea5126ce58e4bcdfddae2d21af9c34cbb 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/toolbar/CustomTabBrowserToolbarMiddleware.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/toolbar/CustomTabBrowserToolbarMiddleware.kt
 @@ -25,6 +25,7 @@ import mozilla.components.browser.state.state.CustomTabSessionState
@@ -1365,7 +1360,7 @@ index ea3c0f6fef52bd9618b4f6e41e07b19b8b9d084e..6852a5cfb458b6fb236d453514ad4841
  import mozilla.components.compose.browser.toolbar.concept.Action
  import mozilla.components.compose.browser.toolbar.concept.Action.ActionButton
  import mozilla.components.compose.browser.toolbar.concept.Action.ActionButtonRes
-@@ -418,6 +419,7 @@ class CustomTabBrowserToolbarMiddleware(
+@@ -431,6 +432,7 @@ class CustomTabBrowserToolbarMiddleware(
                          contentDescription =
                              uiContext.getString(customtabsR.string.mozac_feature_customtabs_exit_button),
                          onClick = CloseClicked,
@@ -1373,7 +1368,7 @@ index ea3c0f6fef52bd9618b4f6e41e07b19b8b9d084e..6852a5cfb458b6fb236d453514ad4841
                      )
                  )
  
-@@ -531,6 +533,7 @@ class CustomTabBrowserToolbarMiddleware(
+@@ -544,6 +546,7 @@ class CustomTabBrowserToolbarMiddleware(
                  drawableResId = iconsR.drawable.mozac_ic_ellipsis_vertical_24,
                  contentDescription = R.string.content_description_menu,
                  onClick = MenuClicked,
@@ -1821,27 +1816,25 @@ index 0e39c9cdc4d87cb7b7929174507e9e4a363e2c39..443d16a28805656d0b6b5419d36235f1
          it.setHomeAsUpIndicator(navigationIcon)
          it.setHomeActionContentDescription(R.string.action_bar_up_description)
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ext/Fragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ext/Fragment.kt
-index 0b85c6501b7577830753f4d0e36a03723f240cde..6b89eab266d044391a9948777be361d6e38e5003 100644
+index 2ce8325e0380aec66454d76746106386689accb1..4b7c72b5d2c0b939fdb1cf26e6b008528cd47172 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ext/Fragment.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/ext/Fragment.kt
-@@ -27,6 +27,7 @@ import androidx.navigation.NavDirections
+@@ -26,11 +26,14 @@ import androidx.navigation.NavDirections
  import androidx.navigation.NavOptions
  import androidx.navigation.fragment.findNavController
  import com.google.android.material.R as materialR
 +import mozilla.components.compose.base.embermine.EmbermineShape
  import mozilla.components.concept.base.crash.Breadcrumb
- import mozilla.components.support.utils.ext.isLandscape
- import mozilla.components.support.utils.ext.pixelSizeFor
-@@ -36,6 +37,8 @@ import org.mozilla.fenix.R
+ import mozilla.components.ui.icons.R as iconsR
+ import org.mozilla.fenix.NavHostActivity
+ import org.mozilla.fenix.R
  import org.mozilla.fenix.components.Components
- import org.mozilla.fenix.components.toolbar.ToolbarContainerView
- import org.mozilla.fenix.components.toolbar.ToolbarPosition
 +import org.mozilla.fenix.embermine.setEmbermineShapedIcon
 +import org.mozilla.fenix.embermine.settingsBackNavigationShape
  import org.mozilla.fenix.navigation.DefaultNavControllerProvider
  import org.mozilla.fenix.navigation.NavControllerProvider
  import org.mozilla.fenix.theme.ThemeManager
-@@ -73,8 +76,8 @@ fun Fragment.getPreferenceKey(@StringRes resourceId: Int): String = getString(re
+@@ -68,8 +71,8 @@ fun Fragment.getPreferenceKey(@StringRes resourceId: Int): String = getString(re
   */
  fun Fragment.showToolbar(title: String) {
      (requireActivity() as AppCompatActivity).title = title
@@ -1851,7 +1844,7 @@ index 0b85c6501b7577830753f4d0e36a03723f240cde..6b89eab266d044391a9948777be361d6
  }
  
  /**
-@@ -84,18 +87,20 @@ fun Fragment.showToolbar(title: String) {
+@@ -79,18 +82,20 @@ fun Fragment.showToolbar(title: String) {
   * @param title The title of the toolbar.
   * @param contentDescription The content description of the icon button for accessibility.
   * @param iconResId The resource ID of the icon to be displayed.
@@ -1873,7 +1866,7 @@ index 0b85c6501b7577830753f4d0e36a03723f240cde..6b89eab266d044391a9948777be361d6
  
      val menuHost = activity as MenuHost
      val provider =
-@@ -108,6 +113,7 @@ fun Fragment.showToolbarWithIconButton(
+@@ -103,6 +108,7 @@ fun Fragment.showToolbarWithIconButton(
                  val colorResId = ThemeManager.resolveAttribute(materialR.attr.colorOnSurface, activity)
                  item.iconTintList = ColorStateList.valueOf(activity.getColor(colorResId))
                  item.contentDescription = contentDescription
@@ -2141,7 +2134,7 @@ index e68dd4d1bb01e82b0d18ddcbfac4573c388f9f77..6a32ad93e0a2faff6c55c545a92faf5a
      }
  }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/history/HistoryFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/history/HistoryFragment.kt
-index 2b23811faec65ca07e1b55a5c8a76f1d7ad709a0..8af16162e94b1a4833581ac28412c6da10a253af 100644
+index ba2b9fac977efbf61c91b3f351746fee25f64828..7a6cbe15b276dc47d0ac2022a9a9d64b9429a8eb 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/history/HistoryFragment.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/library/history/HistoryFragment.kt
 @@ -69,6 +69,7 @@ import mozilla.components.browser.state.action.RecentlyClosedAction
@@ -2160,7 +2153,7 @@ index 2b23811faec65ca07e1b55a5c8a76f1d7ad709a0..8af16162e94b1a4833581ac28412c6da
  import org.mozilla.fenix.ext.components
  import org.mozilla.fenix.ext.getRootView
  import org.mozilla.fenix.ext.nav
-@@ -299,6 +301,8 @@ class HistoryFragment :
+@@ -300,6 +302,8 @@ class HistoryFragment :
          val closedTabs = requireContext().components.core.store.state.closedTabs.size
          if (!isEnabled && closedTabs == 0) {
              deleteHistory?.isEnabled = false
@@ -2169,7 +2162,7 @@ index 2b23811faec65ca07e1b55a5c8a76f1d7ad709a0..8af16162e94b1a4833581ac28412c6da
              deleteHistory?.icon?.setTint(requireContext().getColorFromAttr(materialR.attr.colorOnSurfaceVariant))
          }
      }
-@@ -325,6 +329,16 @@ class HistoryFragment :
+@@ -326,6 +330,16 @@ class HistoryFragment :
                  }
          } else {
              inflater.inflate(R.menu.history_menu, menu)
@@ -2186,7 +2179,7 @@ index 2b23811faec65ca07e1b55a5c8a76f1d7ad709a0..8af16162e94b1a4833581ac28412c6da
              deleteHistory = menu.findItem(R.id.history_delete)
              updateDeleteMenuItemView(!historyStore.state.isEmpty)
          }
-@@ -830,5 +844,6 @@ class HistoryFragment :
+@@ -835,5 +849,6 @@ class HistoryFragment :
  
      companion object {
          private const val PAGE_SIZE = 25
@@ -2215,10 +2208,10 @@ index 6d2fe7b231d930d877071664512f5185333e7217..a7dad8b3cd89e3ba6786a095d5bb6372
              is HistoryFragmentState.Mode.Editing -> {
                  setUiForSelectingMode(context.getString(R.string.history_multi_select_title, mode.selectedItems.size))
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/search/BrowserToolbarSearchMiddleware.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/search/BrowserToolbarSearchMiddleware.kt
-index 1a19f03082a5ba2b908f9eda9d331546b3c83c76..21baad34b738419cefd36cfefafe321da4c9e807 100644
+index 0766a1a7a37720530c97048e03644f480e85a03a..88e589a9d2cbc9e9c2902c0c9f5f59654060ae33 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/search/BrowserToolbarSearchMiddleware.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/search/BrowserToolbarSearchMiddleware.kt
-@@ -33,6 +33,7 @@ import mozilla.components.browser.state.selector.findTab
+@@ -34,6 +34,7 @@ import mozilla.components.browser.state.selector.findTab
  import mozilla.components.browser.state.state.selectedOrDefaultSearchEngine
  import mozilla.components.browser.state.store.BrowserStore
  import mozilla.components.browser.toolbar.R as toolbarR
@@ -2226,7 +2219,7 @@ index 1a19f03082a5ba2b908f9eda9d331546b3c83c76..21baad34b738419cefd36cfefafe321d
  import mozilla.components.compose.browser.toolbar.BrowserToolbar
  import mozilla.components.compose.browser.toolbar.concept.Action
  import mozilla.components.compose.browser.toolbar.concept.Action.ActionButton
-@@ -546,6 +547,7 @@ class BrowserToolbarSearchMiddleware(
+@@ -539,6 +540,7 @@ class BrowserToolbarSearchMiddleware(
                      drawableResId = iconsR.drawable.mozac_ic_microphone_24,
                      contentDescription = R.string.voice_search_content_description,
                      onClick = VoiceSearchButtonClicked,
@@ -2234,22 +2227,30 @@ index 1a19f03082a5ba2b908f9eda9d331546b3c83c76..21baad34b738419cefd36cfefafe321d
                  )
              )
          }
-@@ -568,6 +570,7 @@ class BrowserToolbarSearchMiddleware(
-                         contentDescription = R.string.lens_search_content_description,
-                         state = ActionButton.State.DEFAULT,
-                         onClick = LensButtonClicked,
-+                        shape = EmbermineShape.Cookie12Sided,
-                     )
+@@ -565,6 +567,7 @@ class BrowserToolbarSearchMiddleware(
+                 contentDescription = qrR.string.mozac_feature_qr_scanner,
+                 state = ActionButton.State.DEFAULT,
+                 onClick = QrScannerClicked,
++                shape = EmbermineShape.Cookie12Sided,
+             )
+         }
+ 
+@@ -576,6 +579,7 @@ class BrowserToolbarSearchMiddleware(
+                     contentDescription = R.string.lens_search_content_description,
+                     state = ActionButton.State.DEFAULT,
+                     onClick = LensButtonClicked,
++                    shape = EmbermineShape.Cookie12Sided,
                  )
-             } else {
-@@ -577,6 +580,7 @@ class BrowserToolbarSearchMiddleware(
-                         contentDescription = qrR.string.mozac_feature_qr_scanner,
-                         state = ActionButton.State.DEFAULT,
-                         onClick = QrScannerClicked,
-+                        shape = EmbermineShape.Cookie12Sided,
-                     )
+             CameraMode.QR ->
+                 ActionButtonRes(
+@@ -583,6 +587,7 @@ class BrowserToolbarSearchMiddleware(
+                     contentDescription = qrR.string.mozac_feature_qr_scanner,
+                     state = ActionButton.State.DEFAULT,
+                     onClick = LensButtonClicked,
++                    shape = EmbermineShape.Cookie12Sided,
                  )
-             }
+         }
+     }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/HttpsOnlyFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/HttpsOnlyFragment.kt
 index e13b7a64b30496164ca8f5a1a6cb3d317d970b3b..34cfb726049deffc65616eae284be9eb03a96697 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/HttpsOnlyFragment.kt
@@ -2271,10 +2272,10 @@ index e13b7a64b30496164ca8f5a1a6cb3d317d970b3b..34cfb726049deffc65616eae284be9eb
          inflater: LayoutInflater,
          container: ViewGroup?,
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/IPProtectionScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/IPProtectionScreen.kt
-index 8997490e76fc4a2d84c3a4f6bc930393cd35a59f..375e52afea6cca60778c8bb0397423e335a5b7b7 100644
+index 31ecc275d5a4e679fdfa71740cd7af8a98dd3101..43bfc18a594d348ee28cc4c7af3f05ab3103a0c0 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/IPProtectionScreen.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/IPProtectionScreen.kt
-@@ -80,6 +80,7 @@ import mozilla.components.ui.icons.R as iconsR
+@@ -83,6 +83,7 @@ import mozilla.components.ui.icons.R as iconsR
  import org.mozilla.fenix.R
  import org.mozilla.fenix.compose.list.TextListItem
  import org.mozilla.fenix.compose.settings.SettingsSectionHeader
@@ -2282,7 +2283,7 @@ index 8997490e76fc4a2d84c3a4f6bc930393cd35a59f..375e52afea6cca60778c8bb0397423e3
  import org.mozilla.fenix.theme.FirefoxTheme
  
  private val PROMO_ILLUSTRATION_SIZE = 60.dp
-@@ -202,10 +203,7 @@ private fun IPProtectionTopAppBar(
+@@ -213,10 +214,7 @@ private fun IPProtectionTopAppBar(
                  onClick = onNavigateBack,
                  contentDescription = stringResource(R.string.ip_protection_navigate_back_button_content_description),
              ) {
@@ -2706,7 +2707,7 @@ index 0db33ca5971ceb1b7058c0eed11006d8532dadc4..38a6ab30c983ddf6ec78432fae184f0c
          }
      }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabgroups/ExpandedTabGroup.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabgroups/ExpandedTabGroup.kt
-index 386ec9645b84be55de88ef203f01d8f82f30d6d0..3a8cedc964a11d28f15b41e1aee56f83b64e8e68 100644
+index e7754841b2ca3545854499745333945b391189eb..0e85a3a0bd0a9c3b75b14c0b9fe1f9c64a31e8e1 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabgroups/ExpandedTabGroup.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabgroups/ExpandedTabGroup.kt
 @@ -34,6 +34,8 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
@@ -2715,9 +2716,9 @@ index 386ec9645b84be55de88ef203f01d8f82f30d6d0..3a8cedc964a11d28f15b41e1aee56f83
  import mozilla.components.compose.base.button.IconButton
 +import mozilla.components.compose.base.embermine.EmbermineShape
 +import mozilla.components.compose.base.embermine.ShapedIconBackground
+ import mozilla.components.compose.draggable.ItemInteractionHandler
+ import mozilla.components.compose.draggable.NoOpItemInteractionHandler
  import mozilla.components.ui.icons.R as iconsR
- import org.mozilla.fenix.R
- import org.mozilla.fenix.tabstray.TabsTrayTestTag
 @@ -186,11 +188,16 @@ private fun AddTabToGroupButton(
          contentDescription = stringResource(id = R.string.add_tab),
          modifier = modifier.testTag(TabsTrayTestTag.BOTTOM_SHEET_ADD_TAB_BUTTON),
@@ -3013,7 +3014,7 @@ index 293936da4b20efa79fdafd4745b616b02fda7505..b2e69a37ba8178e24bbf222abf83d90d
              menuItems =
                  generateTabGroupMenuItems(
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/tabitems/TabListTabItem.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/tabitems/TabListTabItem.kt
-index 92e53c93511a439d83b08f8a0200ff54feb3fb00..15048c4cbc1ff584dca42152b50b4106d9b70876 100644
+index bba8ea5ad308654f42a37f971ba02777a810c19e..78c52ef4433448ede6804a62edde5115aa5fa203 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/tabitems/TabListTabItem.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/tabitems/TabListTabItem.kt
 @@ -36,6 +36,8 @@ import androidx.compose.ui.unit.Dp
@@ -3022,9 +3023,9 @@ index 92e53c93511a439d83b08f8a0200ff54feb3fb00..15048c4cbc1ff584dca42152b50b4106
  import mozilla.components.compose.base.RadioCheckmark
 +import mozilla.components.compose.base.RadioCheckmarkColors
 +import mozilla.components.compose.base.embermine.EmbermineShape
+ import mozilla.components.compose.draggable.ItemInteractionState
  import mozilla.components.support.base.utils.MAX_URI_LENGTH
  import org.mozilla.fenix.R
- import org.mozilla.fenix.compose.SwipeToDismissBackground
 @@ -199,6 +201,8 @@ private fun TabListIcon(
          RadioCheckmark(
              isSelected = selectionState.isSelected,
@@ -3035,10 +3036,10 @@ index 92e53c93511a439d83b08f8a0200ff54feb3fb00..15048c4cbc1ff584dca42152b50b4106
      }
  }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/tabpage/TabLayout.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/tabpage/TabLayout.kt
-index 4225e89d3ef507f521de61b9e167f848b7a00fa7..0cd9d4dd6844f08e8b3d167de5f26e03c03c680a 100644
+index 4db06b68de3b5692356b61cd6b0ed7a7c7eae941..0b67065e25842040bd2d498f623fa976c1aa07a1 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/tabpage/TabLayout.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/tabpage/TabLayout.kt
-@@ -84,7 +84,9 @@ import kotlin.math.max
+@@ -80,7 +80,9 @@ import kotlin.math.max
  import kotlinx.coroutines.flow.filterNotNull
  import kotlinx.coroutines.flow.first
  import mozilla.components.compose.base.RadioCheckmark
@@ -3048,7 +3049,7 @@ index 4225e89d3ef507f521de61b9e167f848b7a00fa7..0cd9d4dd6844f08e8b3d167de5f26e03
  import mozilla.components.compose.base.modifier.thenConditional
  import mozilla.components.compose.base.theme.Theme
  import mozilla.components.compose.base.theme.ThemedValue
-@@ -1176,6 +1178,8 @@ private fun TabListItemContent(
+@@ -1168,6 +1170,8 @@ private fun TabListItemContent(
                          RadioCheckmark(
                              isSelected = selectionState.isSelected,
                              modifier = Modifier.padding(end = FirefoxTheme.layout.space.dynamic200),
@@ -3057,7 +3058,7 @@ index 4225e89d3ef507f521de61b9e167f848b7a00fa7..0cd9d4dd6844f08e8b3d167de5f26e03
                          )
                      } else {
                          TabGroupMenuButton(
-@@ -1696,6 +1700,8 @@ private fun ReorderableTabList(
+@@ -1690,6 +1694,8 @@ private fun ReorderableTabList(
                                          RadioCheckmark(
                                              isSelected = selectionState.isSelected,
                                              modifier = Modifier.padding(end = FirefoxTheme.layout.space.dynamic200),
@@ -3067,7 +3068,7 @@ index 4225e89d3ef507f521de61b9e167f848b7a00fa7..0cd9d4dd6844f08e8b3d167de5f26e03
                                      } else {
                                          TabGroupMenuButton(
 diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/components/toolbar/BrowserToolbarMiddlewareTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/components/toolbar/BrowserToolbarMiddlewareTest.kt
-index 0913d08f5422040486757dce8c44b17343987edc..38772948da04bf0a4550f0e1065d73d0d14f25f8 100644
+index 4aeb388ac85b394d7a519126bb13f8ae07f4f5f8..f19e7ccc0a2f603cd26c6acb87bc8070d94e4132 100644
 --- a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/components/toolbar/BrowserToolbarMiddlewareTest.kt
 +++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/components/toolbar/BrowserToolbarMiddlewareTest.kt
 @@ -54,6 +54,7 @@ import mozilla.components.browser.state.store.BrowserStore
@@ -3078,7 +3079,7 @@ index 0913d08f5422040486757dce8c44b17343987edc..38772948da04bf0a4550f0e1065d73d0
  import mozilla.components.compose.browser.toolbar.concept.Action
  import mozilla.components.compose.browser.toolbar.concept.Action.ActionButton
  import mozilla.components.compose.browser.toolbar.concept.Action.ActionButtonRes
-@@ -2159,6 +2160,7 @@ class BrowserToolbarMiddlewareTest {
+@@ -2176,6 +2177,7 @@ class BrowserToolbarMiddlewareTest {
                      contentDescription = toolbarR.string.mozac_browser_toolbar_content_description_site_info,
                      onClick = StartPageActions.SiteInfoClicked,
                      testTag = SITE_INFO_LOCAL_FILE,
@@ -3086,7 +3087,7 @@ index 0913d08f5422040486757dce8c44b17343987edc..38772948da04bf0a4550f0e1065d73d0
                  )
  
              val toolbarStore = buildStore(middleware)
-@@ -2193,6 +2195,7 @@ class BrowserToolbarMiddlewareTest {
+@@ -2210,6 +2212,7 @@ class BrowserToolbarMiddlewareTest {
                      contentDescription = toolbarR.string.mozac_browser_toolbar_content_description_site_info,
                      onClick = StartPageActions.SiteInfoClicked,
                      testTag = SITE_INFO_SECURE,
@@ -3094,7 +3095,7 @@ index 0913d08f5422040486757dce8c44b17343987edc..38772948da04bf0a4550f0e1065d73d0
                  )
  
              val toolbarStore = buildStore(middleware)
-@@ -2267,6 +2270,7 @@ class BrowserToolbarMiddlewareTest {
+@@ -2284,6 +2287,7 @@ class BrowserToolbarMiddlewareTest {
                      contentDescription = toolbarR.string.mozac_browser_toolbar_content_description_site_info,
                      onClick = StartPageActions.SiteInfoClicked,
                      testTag = SITE_INFO_SECURE,
@@ -3102,7 +3103,7 @@ index 0913d08f5422040486757dce8c44b17343987edc..38772948da04bf0a4550f0e1065d73d0
                  )
              val expectedInsecureIndicator =
                  ActionButtonRes(
-@@ -2274,6 +2278,7 @@ class BrowserToolbarMiddlewareTest {
+@@ -2291,6 +2295,7 @@ class BrowserToolbarMiddlewareTest {
                      contentDescription = toolbarR.string.mozac_browser_toolbar_content_description_site_info,
                      onClick = StartPageActions.SiteInfoClicked,
                      testTag = SITE_INFO_INSECURE_CONNECTION,
@@ -3110,7 +3111,7 @@ index 0913d08f5422040486757dce8c44b17343987edc..38772948da04bf0a4550f0e1065d73d0
                  )
              val toolbarStore =
                  buildStore(middleware).also {
-@@ -2325,6 +2330,7 @@ class BrowserToolbarMiddlewareTest {
+@@ -2342,6 +2347,7 @@ class BrowserToolbarMiddlewareTest {
                      contentDescription = toolbarR.string.mozac_browser_toolbar_content_description_site_info,
                      onClick = StartPageActions.SiteInfoClicked,
                      testTag = SITE_INFO_INSECURE_CONNECTION,
@@ -3118,7 +3119,7 @@ index 0913d08f5422040486757dce8c44b17343987edc..38772948da04bf0a4550f0e1065d73d0
                  )
              val toolbarStore =
                  buildStore(middleware).also {
-@@ -2368,6 +2374,7 @@ class BrowserToolbarMiddlewareTest {
+@@ -2385,6 +2391,7 @@ class BrowserToolbarMiddlewareTest {
                      contentDescription = toolbarR.string.mozac_browser_toolbar_content_description_site_info,
                      onClick = StartPageActions.SiteInfoClicked,
                      testTag = SITE_INFO_SECURE,
@@ -3126,7 +3127,7 @@ index 0913d08f5422040486757dce8c44b17343987edc..38772948da04bf0a4550f0e1065d73d0
                  )
              val expectedInsecureIndicator =
                  ActionButtonRes(
-@@ -2375,6 +2382,7 @@ class BrowserToolbarMiddlewareTest {
+@@ -2392,6 +2399,7 @@ class BrowserToolbarMiddlewareTest {
                      contentDescription = toolbarR.string.mozac_browser_toolbar_content_description_site_info,
                      onClick = StartPageActions.SiteInfoClicked,
                      testTag = SITE_INFO_TRACKING_PROTECTION_OFF,
@@ -3134,7 +3135,7 @@ index 0913d08f5422040486757dce8c44b17343987edc..38772948da04bf0a4550f0e1065d73d0
                  )
              val toolbarStore =
                  buildStore(middleware).also {
-@@ -2425,6 +2433,7 @@ class BrowserToolbarMiddlewareTest {
+@@ -2442,6 +2450,7 @@ class BrowserToolbarMiddlewareTest {
                      contentDescription = toolbarR.string.mozac_browser_toolbar_content_description_site_info,
                      onClick = StartPageActions.SiteInfoClicked,
                      testTag = SITE_INFO_SECURE,
@@ -3142,7 +3143,7 @@ index 0913d08f5422040486757dce8c44b17343987edc..38772948da04bf0a4550f0e1065d73d0
                  )
              val expectedInsecureIndicator =
                  ActionButtonRes(
-@@ -2432,6 +2441,7 @@ class BrowserToolbarMiddlewareTest {
+@@ -2449,6 +2458,7 @@ class BrowserToolbarMiddlewareTest {
                      contentDescription = toolbarR.string.mozac_browser_toolbar_content_description_site_info,
                      onClick = StartPageActions.SiteInfoClicked,
                      testTag = SITE_INFO_TRACKING_PROTECTION_OFF,
@@ -3150,7 +3151,7 @@ index 0913d08f5422040486757dce8c44b17343987edc..38772948da04bf0a4550f0e1065d73d0
                  )
              val toolbarStore =
                  buildStore(middleware).also {
-@@ -2858,6 +2868,7 @@ class BrowserToolbarMiddlewareTest {
+@@ -2857,6 +2867,7 @@ class BrowserToolbarMiddlewareTest {
                      contentDescription = toolbarR.string.mozac_browser_toolbar_content_description_site_info,
                      onClick = StartPageActions.SiteInfoClicked,
                      testTag = SITE_INFO_INSECURE_CONNECTION,
@@ -3158,7 +3159,7 @@ index 0913d08f5422040486757dce8c44b17343987edc..38772948da04bf0a4550f0e1065d73d0
                  )
  
              var toolbarPageActions = toolbarStore.state.displayState.pageActionsStart
-@@ -4425,6 +4436,7 @@ class BrowserToolbarMiddlewareTest {
+@@ -4424,6 +4435,7 @@ class BrowserToolbarMiddlewareTest {
              contentDescription = R.string.content_description_menu,
              highlighted = highlighted,
              onClick = MenuClicked(source),
@@ -3167,7 +3168,7 @@ index 0913d08f5422040486757dce8c44b17343987edc..38772948da04bf0a4550f0e1065d73d0
  
      private fun expectedBookmarkButton(source: Source = Source.AddressBar.BrowserEnd) =
 diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/components/toolbar/CustomTabBrowserToolbarMiddlewareTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/components/toolbar/CustomTabBrowserToolbarMiddlewareTest.kt
-index 1642fe9177e562113f58d1345d97ca2ef8832616..d83831c4c5b277d1ae798c60bbc23fe0aac31aef 100644
+index 363fc459a7a1ce3f405bf9730eb06c434d90e625..19599ae003a3fc0df4e0597de92eef7cad2ab5a4 100644
 --- a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/components/toolbar/CustomTabBrowserToolbarMiddlewareTest.kt
 +++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/components/toolbar/CustomTabBrowserToolbarMiddlewareTest.kt
 @@ -36,6 +36,7 @@ import mozilla.components.browser.state.state.createCustomTab
@@ -3178,7 +3179,7 @@ index 1642fe9177e562113f58d1345d97ca2ef8832616..d83831c4c5b277d1ae798c60bbc23fe0
  import mozilla.components.compose.browser.toolbar.concept.Action.ActionButton
  import mozilla.components.compose.browser.toolbar.concept.Action.ActionButtonRes
  import mozilla.components.compose.browser.toolbar.concept.Action.AnimatedPillActionRes
-@@ -141,6 +142,7 @@ class CustomTabBrowserToolbarMiddlewareTest {
+@@ -142,6 +143,7 @@ class CustomTabBrowserToolbarMiddlewareTest {
                  drawable = AppCompatResources.getDrawable(testContext, iconsR.drawable.mozac_ic_cross_24),
                  contentDescription = testContext.getString(customtabsR.string.mozac_feature_customtabs_exit_button),
                  onClick = CloseClicked,
@@ -3186,7 +3187,7 @@ index 1642fe9177e562113f58d1345d97ca2ef8832616..d83831c4c5b277d1ae798c60bbc23fe0
              )
  
          val toolbarStore = buildStore()
-@@ -148,6 +150,7 @@ class CustomTabBrowserToolbarMiddlewareTest {
+@@ -149,6 +151,7 @@ class CustomTabBrowserToolbarMiddlewareTest {
          val toolbarBrowserActions = toolbarStore.state.displayState.browserActionsStart
          assertEquals(1, toolbarBrowserActions.size)
          val closeButton = toolbarBrowserActions[0] as ActionButton
@@ -3194,7 +3195,7 @@ index 1642fe9177e562113f58d1345d97ca2ef8832616..d83831c4c5b277d1ae798c60bbc23fe0
          assertNotNull(closeButton.drawable)
          assertEquals(expectedCloseButton.drawable?.state, closeButton.drawable?.state)
      }
-@@ -162,6 +165,7 @@ class CustomTabBrowserToolbarMiddlewareTest {
+@@ -163,6 +166,7 @@ class CustomTabBrowserToolbarMiddlewareTest {
                  drawable = closeButtonIcon.toDrawable(testContext.resources),
                  contentDescription = testContext.getString(customtabsR.string.mozac_feature_customtabs_exit_button),
                  onClick = CloseClicked,
@@ -3202,7 +3203,7 @@ index 1642fe9177e562113f58d1345d97ca2ef8832616..d83831c4c5b277d1ae798c60bbc23fe0
              )
  
          val toolbarStore = buildStore()
-@@ -169,6 +173,7 @@ class CustomTabBrowserToolbarMiddlewareTest {
+@@ -170,6 +174,7 @@ class CustomTabBrowserToolbarMiddlewareTest {
          val toolbarBrowserActions = toolbarStore.state.displayState.browserActionsStart
          assertEquals(1, toolbarBrowserActions.size)
          val closeButton = toolbarBrowserActions[0] as ActionButton
@@ -3210,7 +3211,7 @@ index 1642fe9177e562113f58d1345d97ca2ef8832616..d83831c4c5b277d1ae798c60bbc23fe0
          assertEquals(expectedCloseButton.contentDescription, closeButton.contentDescription)
          assertEquals(expectedCloseButton.shouldTint, closeButton.shouldTint)
          assertNotNull(closeButton.drawable)
-@@ -1080,6 +1085,7 @@ class CustomTabBrowserToolbarMiddlewareTest {
+@@ -1063,6 +1068,7 @@ class CustomTabBrowserToolbarMiddlewareTest {
                  drawableResId = iconsR.drawable.mozac_ic_ellipsis_vertical_24,
                  contentDescription = R.string.content_description_menu,
                  onClick = MenuClicked,
@@ -3218,7 +3219,7 @@ index 1642fe9177e562113f58d1345d97ca2ef8832616..d83831c4c5b277d1ae798c60bbc23fe0
              )
  
          val toolbarStore = buildStore()
-@@ -1098,6 +1104,7 @@ class CustomTabBrowserToolbarMiddlewareTest {
+@@ -1081,6 +1087,7 @@ class CustomTabBrowserToolbarMiddlewareTest {
                  drawableResId = iconsR.drawable.mozac_ic_ellipsis_vertical_24,
                  contentDescription = R.string.content_description_menu,
                  onClick = MenuClicked,
@@ -3364,7 +3365,7 @@ index 6b008bf19db599e14a4d1f509ffe62a483bb054f..4119ac2d9eacdbb26920043893a3c351
  
      private val expectedBookmarkButton =
 diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/search/BrowserToolbarSearchMiddlewareTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/search/BrowserToolbarSearchMiddlewareTest.kt
-index 6450114b3f396b54d305c52634f54c044ec09323..fa0fd4f82b1dafdca589f728baa633bc53875181 100644
+index 6dc3bcae6b13ac3ef6707a651eca3db7339c6bcd..ae14f15789362ea32a1c5f1654985a49638253de 100644
 --- a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/search/BrowserToolbarSearchMiddlewareTest.kt
 +++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/search/BrowserToolbarSearchMiddlewareTest.kt
 @@ -35,6 +35,7 @@ import mozilla.components.browser.state.store.BrowserStore
@@ -3375,27 +3376,35 @@ index 6450114b3f396b54d305c52634f54c044ec09323..fa0fd4f82b1dafdca589f728baa633bc
  import mozilla.components.compose.browser.toolbar.concept.Action.ActionButton
  import mozilla.components.compose.browser.toolbar.concept.Action.ActionButtonRes
  import mozilla.components.compose.browser.toolbar.concept.Action.SearchSelectorAction
-@@ -1792,6 +1793,7 @@ class BrowserToolbarSearchMiddlewareTest {
+@@ -1848,6 +1849,7 @@ class BrowserToolbarSearchMiddlewareTest {
              contentDescription = qrR.string.mozac_feature_qr_scanner,
              state = ActionButton.State.DEFAULT,
              onClick = QrScannerClicked,
-+            shape = EmbermineShape.Sunny,
++            shape = EmbermineShape.Cookie12Sided,
          )
  
      private val expectedLensButton =
-@@ -1800,6 +1802,7 @@ class BrowserToolbarSearchMiddlewareTest {
+@@ -1856,6 +1858,7 @@ class BrowserToolbarSearchMiddlewareTest {
              contentDescription = R.string.lens_search_content_description,
              state = ActionButton.State.DEFAULT,
              onClick = LensButtonClicked,
-+            shape = EmbermineShape.Sunny,
++            shape = EmbermineShape.Cookie12Sided,
+         )
+ 
+     private val expectedLensQrButton =
+@@ -1864,6 +1867,7 @@ class BrowserToolbarSearchMiddlewareTest {
+             contentDescription = qrR.string.mozac_feature_qr_scanner,
+             state = ActionButton.State.DEFAULT,
+             onClick = LensButtonClicked,
++            shape = EmbermineShape.Cookie12Sided,
          )
  
      private val expectedVoiceSearchButton =
-@@ -1807,6 +1810,7 @@ class BrowserToolbarSearchMiddlewareTest {
+@@ -1871,6 +1875,7 @@ class BrowserToolbarSearchMiddlewareTest {
              drawableResId = iconsR.drawable.mozac_ic_microphone_24,
              contentDescription = R.string.voice_search_content_description,
              onClick = VoiceSearchButtonClicked,
-+            shape = EmbermineShape.Sunny,
++            shape = EmbermineShape.Cookie12Sided,
          )
  
      private fun buildMiddlewareAndAddToStore(

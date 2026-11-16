@@ -44,10 +44,10 @@ index 27295afc9a5f62f0c27355a254496d8554e00295..49201ae1557fc9eba3b2fa0acdbb3201
          }
      }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
-index cd1fb285a4fa0b4d21b0dfd8239188f3b4881dcc..3dc62063aee5a9946aeea48987e73c56d217532e 100644
+index 8727cbba8f93b87055099321eec89ddf1374c8e3..d5a5609a8a9da86de061c4584d481eaa100f6c42 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
-@@ -140,6 +140,7 @@ import org.mozilla.fenix.debugsettings.ui.FenixOverlay
+@@ -138,6 +138,7 @@ import org.mozilla.fenix.debugsettings.ui.FenixOverlay
  import org.mozilla.fenix.downloads.DownloadSnackbar
  import org.mozilla.fenix.e2e.EdgeToEdgeFragmentLifecycleCallbacks
  import org.mozilla.fenix.embermine.settingsBackNavigationShape
@@ -55,7 +55,7 @@ index cd1fb285a4fa0b4d21b0dfd8239188f3b4881dcc..3dc62063aee5a9946aeea48987e73c56
  import org.mozilla.fenix.experiments.ResearchSurfaceDialogFragment
  import org.mozilla.fenix.experiments.UninstallSurveyManager
  import org.mozilla.fenix.ext.alreadyOnDestination
-@@ -842,6 +843,12 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, Crash
+@@ -844,6 +845,12 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, Crash
              }
          }
  
@@ -494,6 +494,28 @@ index 0000000000000000000000000000000000000000..93e27278605897a9ceb7af147826ed22
 +        private const val PNG_QUALITY = 100
 +    }
 +}
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/HomeFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/HomeFragment.kt
+index b912da986ed585fafb071321955b91d294d2d146..4279efbc20c1747d040f5be22f99d8f57af67af3 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/HomeFragment.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/HomeFragment.kt
+@@ -1089,6 +1089,8 @@ class HomeFragment : Fragment(), UserInteractionHandler, OnLongPressedListener {
+         // Tabs will not be shown as selected on the homepage when Homepage as a New Tab is not
+         // enabled.
+         val isSelectDisabled = !requireComponents.settings.enableHomepageAsNewTab
++        val hasOpaqueTopBars =
++            !requireComponents.settings.shouldUseBottomToolbar && requireComponents.settings.shouldShowTabStripAtTop
+         val toolbarState: BrowserToolbarState? = toolbarStore?.observeAsComposableState { it }?.value
+         // Tab strip doesn't show the gradient when displayed over edge to edge wallpaper.
+         val isOverEdgeToEdgeWallpaper =
+@@ -1103,7 +1105,7 @@ class HomeFragment : Fragment(), UserInteractionHandler, OnLongPressedListener {
+                         toolbarState = toolbarState,
+                         browsingModeManager = (requireActivity() as HomeActivity).browsingModeManager,
+                         settings = requireComponents.settings,
+-                        isOverEdgeToEdgeWallpaper = isOverEdgeToEdgeWallpaper,
++                        isOverEdgeToEdgeWallpaper = isOverEdgeToEdgeWallpaper && !hasOpaqueTopBars,
+                     ),
+                 hideWhenKeyboardShown = requireComponents.settings.shouldUseBottomTabStrip,
+                 onAddTabClick = {
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/pocket/ui/StoryCard.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/pocket/ui/StoryCard.kt
 index f9c37913a8f9ce733c26e122e14d206a75f6d2c0..18138236d9764a2a873b2263c9048560b67d5fab 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/pocket/ui/StoryCard.kt
@@ -543,10 +565,10 @@ index c0cf74a2aba5010e3ca65463858a294c41b151f2..9f314f469be6c8ad3ddf24d5e3e79a23
                                  overflow = TextOverflow.Ellipsis,
                                  maxLines = 1,
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/recenttabs/view/RecentTabs.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/recenttabs/view/RecentTabs.kt
-index 7a1e447cefb962acf701dd8da6d598071218a784..8ce067802363765acd0d3aeb9277ea155c030bec 100644
+index 425e957b14b805781e424f87911f6cd02b595a40..95f83c811f92d150be650211a4a9f08d895c7aaa 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/recenttabs/view/RecentTabs.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/recenttabs/view/RecentTabs.kt
-@@ -164,7 +164,7 @@ private fun RecentTabItem(
+@@ -167,7 +167,7 @@ private fun RecentTabItem(
                              testTagsAsResourceId = true
                              testTag = "recent.tab.title"
                          },
@@ -555,7 +577,7 @@ index 7a1e447cefb962acf701dd8da6d598071218a784..8ce067802363765acd0d3aeb9277ea15
                      fontSize = 14.sp,
                      maxLines = 2,
                      overflow = TextOverflow.Ellipsis,
-@@ -187,7 +187,7 @@ private fun RecentTabItem(
+@@ -190,7 +190,7 @@ private fun RecentTabItem(
                                  testTagsAsResourceId = true
                                  testTag = "recent.tab.url"
                              },
@@ -660,7 +682,7 @@ index a9df63d6b47f24cb329b52abf79588c8c9127194..d303030ff722b6c601c0c40fb2d1f6ce
  
          DropdownMenu(
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/HomeToolbarComposable.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/HomeToolbarComposable.kt
-index 1925b43598a0e5238cbce89be9412c19cc21992d..38f1b3e0cd903c94563f185e1b72556ee181bd7f 100644
+index cb29ef96eb515a0d0f0dde5420f3a33196c874f3..277cdad535551e2bba25a3670ec13b46cc4b5a50 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/HomeToolbarComposable.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/HomeToolbarComposable.kt
 @@ -13,6 +13,7 @@ import androidx.compose.animation.core.Easing
@@ -671,7 +693,7 @@ index 1925b43598a0e5238cbce89be9412c19cc21992d..38f1b3e0cd903c94563f185e1b72556e
  import androidx.compose.foundation.layout.Box
  import androidx.compose.foundation.layout.Column
  import androidx.compose.foundation.layout.ColumnScope
-@@ -110,12 +111,15 @@ internal class HomeToolbarComposable(
+@@ -113,12 +114,15 @@ internal class HomeToolbarComposable(
          val currentQuery = toolbarStore.observeAsComposableState { it.editState.query.current }.value
          val isPrivateMode = browsingModeManager.mode.isPrivate
          val isUniversalEdgeToEdge = settings.enableUniversalEdgeToEdgeWallpapers
@@ -688,7 +710,7 @@ index 1925b43598a0e5238cbce89be9412c19cc21992d..38f1b3e0cd903c94563f185e1b72556e
  
          BackInvokedHandler(isSearching) {
              val sourceTabId = appStore.state.searchState.sourceTabId
-@@ -132,7 +136,7 @@ internal class HomeToolbarComposable(
+@@ -135,7 +139,7 @@ internal class HomeToolbarComposable(
                      homepageToolbarColors(
                          isPrivateMode = isPrivateMode,
                          shouldUseEdgeToEdgeColors =
@@ -697,7 +719,7 @@ index 1925b43598a0e5238cbce89be9412c19cc21992d..38f1b3e0cd903c94563f185e1b72556e
                                  if (settings.enableHomepageTrendingRecentSearch) {
                                      !isSearching
                                  } else {
-@@ -140,13 +144,13 @@ internal class HomeToolbarComposable(
+@@ -143,13 +147,13 @@ internal class HomeToolbarComposable(
                                  },
                      )
              ) {
@@ -713,21 +735,21 @@ index 1925b43598a0e5238cbce89be9412c19cc21992d..38f1b3e0cd903c94563f185e1b72556e
          val shouldUseBottomToolbar = remember { settings.shouldUseBottomToolbar }
          val shouldShowTabStrip = remember {
              if (shouldUseBottomToolbar) {
-@@ -168,7 +172,13 @@ internal class HomeToolbarComposable(
-             }
+@@ -173,7 +177,13 @@ internal class HomeToolbarComposable(
  
-             if (shouldShowTabStrip) {
--                tabStripContent()
-+                Box(
-+                    modifier = Modifier.background(
-+                        if (opaqueTabStrip) MaterialTheme.colorScheme.surface else Color.Transparent,
-+                    ),
-+                ) {
-+                    tabStripContent()
-+                }
-             }
+             TopDividerColumn(showDivider = isTabStripAtBottom, modifier = Modifier.fillMaxWidth()) {
+                 if (shouldShowTabStrip) {
+-                    tabStripContent()
++                    Box(
++                        modifier = Modifier.background(
++                            if (opaqueTabStrip) MaterialTheme.colorScheme.surface else Color.Transparent,
++                        ),
++                    ) {
++                        tabStripContent()
++                    }
+                 }
  
-             AddressBar(wallpaperTextColor = wallpaperTextColor)
+                 AddressBar(wallpaperTextColor = wallpaperTextColor)
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/HomepageCard.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/HomepageCard.kt
 index 0c721d2eabc04e98565bf8b74f00bc000659f5e8..b8e9efaf3e197833ffb235a96555bf84b2b3b13d 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/HomepageCard.kt
@@ -835,10 +857,10 @@ index 0cd63fdd858f76f889465cb093f4ab1d7db549c3..7ceeaacc826fabe677a57540042438bc
      }
      val border =
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
-index d57c8223c22b811e56063eb46e07794277f08da3..9224bf2a0e012323884dab98193846954eac130b 100644
+index d064f21d749a4fb6963a05fcd1c89f47296c7c85..d3d84651387142dc560c97cee3260ac6dfb1cadb 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
-@@ -56,6 +56,7 @@ import org.mozilla.fenix.components.toolbar.ToolbarPosition
+@@ -57,6 +57,7 @@ import org.mozilla.fenix.components.toolbar.ToolbarPosition
  import org.mozilla.fenix.crashes.crashReportOption
  import org.mozilla.fenix.debugsettings.addresses.EmptyAddressesDebugRegionRepository
  import org.mozilla.fenix.debugsettings.addresses.SharedPrefsAddressesDebugRegionRepository
@@ -846,7 +868,7 @@ index d57c8223c22b811e56063eb46e07794277f08da3..9224bf2a0e012323884dab9819384695
  import org.mozilla.fenix.ext.TALL_SCREEN_HEIGHT_DP
  import org.mozilla.fenix.ext.WIDE_SCREEN_WIDTH_DP
  import org.mozilla.fenix.ext.components
-@@ -75,7 +76,6 @@ import org.mozilla.fenix.settings.sitepermissions.AUTOPLAY_BLOCK_AUDIBLE
+@@ -76,7 +77,6 @@ import org.mozilla.fenix.settings.sitepermissions.AUTOPLAY_BLOCK_AUDIBLE
  import org.mozilla.fenix.tabstray.DefaultTabManagementFeatureHelper
  import org.mozilla.fenix.termsofuse.TOU_VERSION
  import org.mozilla.fenix.utils.Settings.Companion.LONGFOX_PEEK_ANIMATION_MAX_SHOWS
@@ -854,7 +876,7 @@ index d57c8223c22b811e56063eb46e07794277f08da3..9224bf2a0e012323884dab9819384695
  
  private const val AUTOPLAY_USER_SETTING = "AUTOPLAY_USER_SETTING"
  private const val MAX_ANIMATION_FOREGROUND = 5
-@@ -582,12 +582,7 @@ class Settings(
+@@ -583,12 +583,7 @@ class Settings(
      var currentWallpaperName by
          stringPreference(
              appContext.getPreferenceKey(R.string.pref_key_current_wallpaper),
@@ -868,7 +890,7 @@ index d57c8223c22b811e56063eb46e07794277f08da3..9224bf2a0e012323884dab9819384695
          )
  
      /**
-@@ -638,7 +633,7 @@ class Settings(
+@@ -639,7 +634,7 @@ class Settings(
      var showWallpaperOnboarding by
          booleanPreference(
              key = appContext.getPreferenceKey(R.string.pref_key_wallpapers_onboarding),
@@ -1347,7 +1369,7 @@ index 0000000000000000000000000000000000000000..16f60d3ca75194d1d5aed0ab27ae6e67
 +    }
 +}
 diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/utils/SettingsTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/utils/SettingsTest.kt
-index 80a16738d925e4fadc95efa5575f301932fca2d5..0b3c5627765dd473bd95080fd175b8513d4d6272 100644
+index 0dd948839d5881149a2d1652497f8ac52f913e87..5bb951d668459b7d1d55570c32f69ec4a0c059e7 100644
 --- a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/utils/SettingsTest.kt
 +++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/utils/SettingsTest.kt
 @@ -30,6 +30,7 @@ import org.junit.Test

@@ -84,7 +84,7 @@ index 7a51af95894b44676082b5c10981693946205493..32d63440b92e8bdb17b8d6f109f2ed56
  
          notificationsDelegate.notify(
 diff --git a/mobile/android/fenix/app/nimbus.fml.yaml b/mobile/android/fenix/app/nimbus.fml.yaml
-index 0fb0a2cc86bcfa6f42cbe01ab9ca1bf0eaa18fab..e771bf2c76206e51f94527c291e52879dfa88f9e 100644
+index ce8bf3f67b0f025b0ae62bd3ccc7f9fdf0f0b0f3..1600e035fed72becdff85bc418d0727a897cc9b7 100644
 --- a/mobile/android/fenix/app/nimbus.fml.yaml
 +++ b/mobile/android/fenix/app/nimbus.fml.yaml
 @@ -666,7 +666,7 @@ features:
@@ -106,7 +106,7 @@ index 0fb0a2cc86bcfa6f42cbe01ab9ca1bf0eaa18fab..e771bf2c76206e51f94527c291e52879
        - channel: nightly
          value:
            enabled: true
-@@ -1169,6 +1172,9 @@ features:
+@@ -1178,6 +1181,9 @@ features:
          type: Boolean
          default: false
      defaults:
@@ -431,10 +431,10 @@ index 904191f395544c1e557c5682213cf2eb9b42391d..6665581a92df2b53ec98d53c6f0950fa
  
      companion object {
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
-index 8875fe0f4d4caa287625dc68f778c36389b393a8..d57c8223c22b811e56063eb46e07794277f08da3 100644
+index dbe8fbed3ad185eececd3c454aaf7bb7ae74ebc4..d064f21d749a4fb6963a05fcd1c89f47296c7c85 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
-@@ -2274,6 +2274,12 @@ class Settings(
+@@ -2282,6 +2282,12 @@ class Settings(
                      (isTabStripEligible(appContext) || FxNimbus.features.tabStrip.value().allowOnAllDevices),
          )
  
@@ -550,10 +550,10 @@ index fcce1b96472079f67617c73ab40a0fbe86af461b..84bea931e6c19df1954fbbdebb1de286
 +    <string name="embermine_preference_use_wallpaper_colors_summary" translatable="false">Accent colors follow your wallpaper. Private browsing stays purple.</string>
  </resources>
 diff --git a/mobile/android/fenix/app/src/main/res/values/preference_keys.xml b/mobile/android/fenix/app/src/main/res/values/preference_keys.xml
-index d7b17c8de4a68189a78a4420a0fac51943bf61b5..39c8a45cef3b9ec9bc5e05f2ada5f2254ff5fd81 100644
+index 6f95d22cb4ae93e59909fdc3cfe752f6e3d93def..07a4931399f3526048d9973e8a445b83182d34be 100644
 --- a/mobile/android/fenix/app/src/main/res/values/preference_keys.xml
 +++ b/mobile/android/fenix/app/src/main/res/values/preference_keys.xml
-@@ -420,6 +420,7 @@
+@@ -425,6 +425,7 @@
  
      <!-- Whether the debug menu (secret settings, secret debug info, nimbus experiments, etc.) should be enabled persistently -->
      <string name="pref_key_persistent_debug_menu" translatable="false">pref_key_persistent_debug_menu</string>

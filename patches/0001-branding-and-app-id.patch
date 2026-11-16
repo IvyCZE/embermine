@@ -59,10 +59,10 @@ index 080fa1b5976269e290cf27867f344aa0de18db99..1c2fa2ebdd07b102e26d8e04c82e9929
              }
  
 diff --git a/mobile/android/fenix/app/build.gradle b/mobile/android/fenix/app/build.gradle
-index 4d8cdf341a237422f8311e6b1c42842007eba42c..e81e7e66717484dfa32db9422e7c5d6da72d282f 100644
+index c1b009b85d102f1b7cbba3d16895c92d4765817f..42e43fa73870f3f98adde1d447c48d846da2aed0 100644
 --- a/mobile/android/fenix/app/build.gradle
 +++ b/mobile/android/fenix/app/build.gradle
-@@ -46,7 +46,7 @@ android {
+@@ -47,7 +47,7 @@ android {
              arg("room.schemaLocation", "$projectDir/schemas".toString())
          }
  
@@ -71,7 +71,7 @@ index 4d8cdf341a237422f8311e6b1c42842007eba42c..e81e7e66717484dfa32db9422e7c5d6d
          minSdk config.minSdkVersion
          targetSdk config.targetSdkVersion
          versionCode 1
-@@ -141,18 +141,9 @@ android {
+@@ -143,18 +143,9 @@ android {
          }
          release releaseTemplate >> {
              buildConfigField "boolean", "USE_RELEASE_VERSIONING", "true"
@@ -114,10 +114,10 @@ index 9ec097ffb5cd254654c0b26552dd3fec8d4437d2..705a912be1822fbd2b70c0be9a093adb
              description = "Suggestions from the web (non-sponsored) option",
              scrollDirection = SwipeDirection.UP,
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Core.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Core.kt
-index 37f1465be70213c0883c381ef6aa2cf281edaa74..b1ebab7da8021208088b07e84c7957c0173386ad 100644
+index e3007a552f15771c960e1fd819972184d0d154da..afc2c27e42827ec9acd48d7f11e976b3d08b13f0 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Core.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Core.kt
-@@ -518,7 +518,7 @@ class Core(
+@@ -528,7 +528,7 @@ class Core(
              DefaultSentFromFirefoxManager(
                  snackbarEnabled = showSnackbar,
                  templateMessage = templateMessage,
@@ -308,10 +308,10 @@ index 9a62c3276220877f38f99b7ecaa2fb733a377726..9470dd3a6e94d076fb62a292e5ebe022
                  style = FirefoxTheme.typography.headline7,
              )
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/IPProtectionScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/IPProtectionScreen.kt
-index 6915ed1e4ab288f071c8a4e09515efd737169e8a..8997490e76fc4a2d84c3a4f6bc930393cd35a59f 100644
+index 4cc91bc25fb31669d94edab93321f3fbac5b9dd6..31ecc275d5a4e679fdfa71740cd7af8a98dd3101 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/IPProtectionScreen.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/IPProtectionScreen.kt
-@@ -348,7 +348,7 @@ private fun VpnLocationSection(
+@@ -365,7 +365,7 @@ private fun VpnLocationSection(
                  description =
                      stringResource(
                          R.string.ip_protection_location_fastest_description,
@@ -320,7 +320,7 @@ index 6915ed1e4ab288f071c8a4e09515efd737169e8a..8997490e76fc4a2d84c3a4f6bc930393
                      ),
                  maxDescriptionLines = Int.MAX_VALUE,
                  onClick = onLocationClicked.takeIf { isClickable },
-@@ -466,7 +466,11 @@ private fun VpnPromoCard(
+@@ -483,7 +483,11 @@ private fun VpnPromoCard(
      PromoCard(
          description = null,
          modifier = modifier.fillMaxWidth(),
@@ -366,10 +366,10 @@ index 1a9f9ca087a5a8b42cb46443fdd1a0e7246e4027..f650d7937d4705ab2db92589e143cfc7
              AboutPageItem(
                  AboutItem.ExternalLink(
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/search/SearchEngineFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/search/SearchEngineFragment.kt
-index 2f7cc0a2b9399e6fee9c8001b049cee777221b8f..e28ee2399159a16f26e3cad3345caf2ead259756 100644
+index 6395e76591fafbf8d3e4dd4e4260ab97b8a80b54..e70e92094303c759699722ddbd81e76482f97f99 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/search/SearchEngineFragment.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/search/SearchEngineFragment.kt
-@@ -20,6 +20,7 @@ import mozilla.components.browser.state.state.selectedOrDefaultSearchEngine
+@@ -21,6 +21,7 @@ import mozilla.components.browser.state.state.selectedOrDefaultSearchEngine
  import mozilla.components.support.ktx.android.view.hideKeyboard
  import org.mozilla.fenix.R
  import org.mozilla.fenix.e2e.SystemInsetsPaddedFragment
@@ -377,7 +377,7 @@ index 2f7cc0a2b9399e6fee9c8001b049cee777221b8f..e28ee2399159a16f26e3cad3345caf2e
  import org.mozilla.fenix.ext.components
  import org.mozilla.fenix.ext.getPreferenceKey
  import org.mozilla.fenix.ext.navigateWithBreadcrumb
-@@ -149,7 +150,7 @@ class SearchEngineFragment : PreferenceFragmentCompat(), SystemInsetsPaddedFragm
+@@ -152,7 +153,7 @@ class SearchEngineFragment : PreferenceFragmentCompat(), SystemInsetsPaddedFragm
                  title =
                      getString(
                          R.string.preferences_show_nonsponsored_suggestions,
@@ -596,7 +596,7 @@ index 0000000000000000000000000000000000000000..b8056703002d126d64a5a06c0d85f175
 +    <string name="embermine_mozilla_product_firefox" translatable="false">Firefox</string>
 +</resources>
 diff --git a/mobile/android/fenix/app/src/main/res/values/static_strings.xml b/mobile/android/fenix/app/src/main/res/values/static_strings.xml
-index 876460272967b07c441b70c471cebf6a613e9149..8fc4243ace6a2dbdb4a16e596b80e1953c2e8513 100644
+index c589c97e52b918db3fdf82cd646c8690afa42889..a7673e3daaa801aea3c9abf56b59e23d902a2ae9 100644
 --- a/mobile/android/fenix/app/src/main/res/values/static_strings.xml
 +++ b/mobile/android/fenix/app/src/main/res/values/static_strings.xml
 @@ -4,8 +4,8 @@
@@ -610,7 +610,7 @@ index 876460272967b07c441b70c471cebf6a613e9149..8fc4243ace6a2dbdb4a16e596b80e195
  
      <!-- Preference for developers -->
      <string name="preference_leakcanary" translatable="false">LeakCanary</string>
-@@ -446,7 +446,7 @@
+@@ -451,7 +451,7 @@
      <string name="customize_toggle_weather" translatable="false">Weather</string>
  
      <!--  Firefox brand name  -->
@@ -634,10 +634,10 @@ index 87758782a9d52bad18d758daa7ad5ab9b6b2fb04..161fe29bf39bcd6a99759f5ac96e5fc5
              android:key="@string/pref_key_app_icon" />
      </androidx.preference.PreferenceCategory>
 diff --git a/mobile/android/fenix/app/src/release/AndroidManifest.xml b/mobile/android/fenix/app/src/release/AndroidManifest.xml
-index bd5999c8d4d98200196d48202e1b0b7184714884..01410e9b0d915a2a3c4d1ec12d3151719bcb62ec 100644
+index db7035c70e615cc27da1993550ee171f39a09294..01410e9b0d915a2a3c4d1ec12d3151719bcb62ec 100644
 --- a/mobile/android/fenix/app/src/release/AndroidManifest.xml
 +++ b/mobile/android/fenix/app/src/release/AndroidManifest.xml
-@@ -3,13 +3,6 @@
+@@ -3,15 +3,6 @@
     - License, v. 2.0. If a copy of the MPL was not distributed with this
     - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
  
@@ -649,7 +649,9 @@ index bd5999c8d4d98200196d48202e1b0b7184714884..01410e9b0d915a2a3c4d1ec12d315171
 -                - https://issuetracker.google.com/issues/36905922
 --->
 -<manifest xmlns:android="http://schemas.android.com/apk/res/android"
--    android:sharedUserId="${sharedUserId}">
+-    xmlns:tools="http://schemas.android.com/tools"
+-    android:sharedUserId="${sharedUserId}"
+-    tools:ignore="Deprecated">
 +<!-- Embermine is a separate package and must not share a UID with Firefox. -->
 +<manifest xmlns:android="http://schemas.android.com/apk/res/android">
  </manifest>
@@ -3851,10 +3853,10 @@ index 0000000000000000000000000000000000000000..f3af2f3e7bc69ad8e1704c57eb0bb341
 +    }
 +}
 diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/settings/IPProtectionScreenTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/settings/IPProtectionScreenTest.kt
-index e0f1166df7ab2965ae946c51392bc6eb6f146516..99680a63b0f9f5038d7c107c510e23f2daf9bf04 100644
+index 1d4820b9a9b798cbb0b4bc4fd6f558986f20a026..22d5204bef18aec32e96cb60a9a7b7797e887145 100644
 --- a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/settings/IPProtectionScreenTest.kt
 +++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/settings/IPProtectionScreenTest.kt
-@@ -233,7 +233,12 @@ class IPProtectionScreenTest {
+@@ -279,7 +279,12 @@ class IPProtectionScreenTest {
  }
  
  private fun hasPromoCardTitle() =

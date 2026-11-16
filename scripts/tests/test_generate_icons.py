@@ -121,11 +121,11 @@ class OutputTest(unittest.TestCase):
         self.assertEqual(len(self.outputs), len(icons.TARGETS))
 
     def test_nova_onboarding_illustrations_with_the_fox_are_replaced(self):
-        # The first onboarding page (Terms of Use) and the sync, notification, widget and
+        # The first onboarding page (Terms of Use) and the sync, notification and
         # marketing pages draw the Kit fox; the toolbar mock-ups and background do not.
-        for name in ("tou", "tou_2", "sync", "sync_qr", "notifications", "widget", "marketing"):
+        for name in ("tou", "tou_2", "sync", "sync_qr", "notifications", "marketing"):
             self._output(f"drawable/nova_onboarding_{name}.xml")
-        for name in ("toolbar_top_active", "toolbar_bottom_inactive", "background", "set_to_default"):
+        for name in ("toolbar_top_active", "toolbar_bottom_inactive", "background", "set_to_default", "widget"):
             self.assertFalse(any(rel.endswith(f"nova_onboarding_{name}.xml") for rel in self.outputs), name)
 
     def test_xml_outputs_parse_and_json_outputs_load(self):

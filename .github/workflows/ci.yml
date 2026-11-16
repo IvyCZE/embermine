@@ -248,6 +248,7 @@ jobs:
             --tests "org.mozilla.fenix.components.toolbar.CustomTabBrowserToolbarMiddlewareTest" \
             --tests "org.mozilla.fenix.search.BrowserToolbarSearchMiddlewareTest" \
             :components:compose-base:testDebugUnitTest --tests "mozilla.components.compose.base.embermine.*" \
+            --tests "mozilla.components.compose.base.slider.SliderTest" \
             -PdisableDebugSigning
 
       # A green Gradle run proves nothing when the test filter matched no class.
@@ -266,6 +267,7 @@ jobs:
             --require-class org.mozilla.fenix.embermine.EmbermineAccentSchemeTest \
             --require-class org.mozilla.fenix.embermine.EmbermineWavyProgressTest \
             --require-class mozilla.components.compose.base.embermine.EmbermineShapeTest \
+            --require-class mozilla.components.compose.base.slider.SliderTest \
             --require-class org.mozilla.fenix.embermine.wallpapers.EmbermineWallpaperPaletteTest \
             --require-class org.mozilla.fenix.embermine.wallpapers.EmbermineWallpaperRendererTest \
             --require-class org.mozilla.fenix.embermine.wallpapers.EmbermineWallpapersTest \

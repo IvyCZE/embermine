@@ -449,10 +449,10 @@ index dbe8fbed3ad185eececd3c454aaf7bb7ae74ebc4..d064f21d749a4fb6963a05fcd1c89f47
              appContext.getPreferenceKey(R.string.pref_key_dynamic_toolbar),
 diff --git a/mobile/android/fenix/app/src/main/res/values-night-v31/embermine_accent.xml b/mobile/android/fenix/app/src/main/res/values-night-v31/embermine_accent.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..05774911249171cf42dfec6b607ee735d2392311
+index 0000000000000000000000000000000000000000..366aea4ba91e8fd63fc71716f17fbaadfc3e854b
 --- /dev/null
 +++ b/mobile/android/fenix/app/src/main/res/values-night-v31/embermine_accent.xml
-@@ -0,0 +1,33 @@
+@@ -0,0 +1,27 @@
 +<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 +<!-- This Source Code Form is subject to the terms of the Mozilla Public
 +   - License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -475,23 +475,17 @@ index 0000000000000000000000000000000000000000..05774911249171cf42dfec6b607ee735
 +        <item name="colorControlActivated">@android:color/system_accent1_200</item>
 +        <item name="android:colorControlActivated">@android:color/system_accent1_200</item>
 +        <item name="android:textColorLink">@android:color/system_accent1_200</item>
-+        <item name="selectPromptHeaderTextColor">@android:color/system_accent1_200</item>
-+        <item name="accentUsedOnDarkBackground">@android:color/system_accent1_200</item>
-+        <item name="accent">@android:color/system_accent1_400</item>
-+        <item name="accentBright">@android:color/system_accent1_600</item>
-+        <item name="accentHighContrast">@android:color/system_accent1_500</item>
 +        <item name="android:colorEdgeEffect">@android:color/system_accent1_400</item>
-+        <item name="fillLinkFromClipboard">@android:color/system_accent1_500</item>
 +        <item name="mozacPromptLoginEditTextCursorColor">@android:color/system_accent1_400</item>
 +        <item name="mozacProtectionsDashboardProgressBar">@android:color/system_accent1_500</item>
 +    </style>
 +</resources>
 diff --git a/mobile/android/fenix/app/src/main/res/values-v31/embermine_accent.xml b/mobile/android/fenix/app/src/main/res/values-v31/embermine_accent.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..d89171aa8c90bd1b5efcef9d48087e0f3c5fa2fa
+index 0000000000000000000000000000000000000000..fbc984884ec438e3bffd8fc1803dbd4fd6beae14
 --- /dev/null
 +++ b/mobile/android/fenix/app/src/main/res/values-v31/embermine_accent.xml
-@@ -0,0 +1,33 @@
+@@ -0,0 +1,27 @@
 +<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 +<!-- This Source Code Form is subject to the terms of the Mozilla Public
 +   - License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -514,13 +508,7 @@ index 0000000000000000000000000000000000000000..d89171aa8c90bd1b5efcef9d48087e0f
 +        <item name="colorControlActivated">@android:color/system_accent1_600</item>
 +        <item name="android:colorControlActivated">@android:color/system_accent1_600</item>
 +        <item name="android:textColorLink">@android:color/system_accent1_600</item>
-+        <item name="selectPromptHeaderTextColor">@android:color/system_accent1_600</item>
-+        <item name="accentUsedOnDarkBackground">@android:color/system_accent1_600</item>
-+        <item name="accent">@android:color/system_accent1_700</item>
-+        <item name="accentBright">@android:color/system_accent1_600</item>
-+        <item name="accentHighContrast">@android:color/system_accent1_700</item>
 +        <item name="android:colorEdgeEffect">@android:color/system_accent1_700</item>
-+        <item name="fillLinkFromClipboard">@android:color/system_accent1_700</item>
 +        <item name="mozacPromptLoginEditTextCursorColor">@android:color/system_accent1_700</item>
 +        <item name="mozacProtectionsDashboardProgressBar">@android:color/system_accent1_500</item>
 +    </style>

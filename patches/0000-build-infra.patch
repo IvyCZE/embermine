@@ -60,6 +60,37 @@ index 77f9cc9d6fc0d1e0a614763e9a15b494238c4563..ace370d65f16c4448e59d3e4ef867d6d
  import androidx.compose.material3.ExposedDropdownMenuBoxScope
  import androidx.compose.material3.HorizontalDivider
  import androidx.compose.material3.Icon
+diff --git a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/slider/Slider.kt b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/slider/Slider.kt
+index 531f2c0a24f7b35ea771e8aba11def1aa2db5566..6c861e4b5e06c6f230ac563297292ef978f43ff1 100644
+--- a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/slider/Slider.kt
++++ b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/slider/Slider.kt
+@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
+ import androidx.compose.material3.ExperimentalMaterial3Api
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Slider
++import androidx.compose.material3.SliderState
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.LaunchedEffect
+ import androidx.compose.runtime.getValue
+@@ -56,12 +57,16 @@ fun Slider(
+     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+ ) {
+     val isDragInProgress by interactionSource.collectIsDraggedAsState()
++    val sliderState = remember(start, end) {
++        SliderState(value = value, trackRange = start..end)
++    }
++    sliderState.value = value
++
+     Slider(
+-        value = value,
++        state = sliderState,
+         onValueChange = { newInput ->
+             onValueChange(newInput)
+         },
+-        valueRange = start..end,
+         modifier = modifier.alpha(if (isEnabled) 1f else DISABLED_ALPHA),
+         enabled = isEnabled,
+         onValueChangeFinished = {
 diff --git a/mobile/android/android-components/components/feature/summarize/src/main/java/mozilla/components/feature/summarize/settings/ShakeSensitivitySlider.kt b/mobile/android/android-components/components/feature/summarize/src/main/java/mozilla/components/feature/summarize/settings/ShakeSensitivitySlider.kt
 index e6368976f1c6a87519bdfdcf1de9e137d29b20da..902b103d257991fab4799c46116b372c24de2ec2 100644
 --- a/mobile/android/android-components/components/feature/summarize/src/main/java/mozilla/components/feature/summarize/settings/ShakeSensitivitySlider.kt

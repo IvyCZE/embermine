@@ -68,7 +68,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-boot-timeout: 900
-          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -tcpdump /tmp/em.pcap
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -tcpdump /tmp/em.pcap -verbose -show-kernel
           script: python3 -m scripts.emulator.run --variant ${{ matrix.variant }} --accent ${{ matrix.accent }} --apk-dir apk --out shots --debug debug
 
       - name: Network hosts

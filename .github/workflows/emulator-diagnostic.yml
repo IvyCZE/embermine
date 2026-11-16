@@ -1,0 +1,89 @@
+name: emulator-diagnostic
+
+on:
+  push:
+    branches: ["diagnose/firefox160-emulator-20261116"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - candidate: released-159
+            run: 43761933056
+            ram: ""
+            swap: false
+          - candidate: candidate-160
+            run: 43874201816
+            ram: ""
+            swap: false
+          - candidate: candidate-160-swap
+            run: 43874201816
+            ram: 4096M
+            swap: true
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: embermine-build
+          path: apk
+          github-token: ${{ github.token }}
+          run-id: ${{ matrix.run }}
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          mkdir -p debug shots
+          free -m
+
+      - name: Add swap for the resource comparison
+        if: ${{ matrix.swap }}
+        run: |
+          sudo fallocate -l 8G /swapfile-emulator
+          sudo chmod 600 /swapfile-emulator
+          sudo mkswap /swapfile-emulator >/dev/null
+          sudo swapon /swapfile-emulator
+          free -m
+
+      - name: Compare installation, onboarding and browsing
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          ram-size: ${{ matrix.ram }}
+          disable-animations: true
+          emulator-boot-timeout: 900
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -tcpdump /tmp/em.pcap
+          script: bash scripts/emulator/diagnostic.sh
+
+      - name: Host diagnostics
+        if: ${{ always() }}
+        run: |
+          free -m > debug/host-memory-final.txt
+          ps -eo pid,ppid,rss,comm --sort=-rss > debug/host-processes-final.txt
+          sudo dmesg --ctime > debug/host-kernel.txt
+          cp /tmp/em.pcap debug/ || true
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ always() }}
+        with:
+          name: diagnostic-${{ matrix.candidate }}
+          path: |
+            debug
+            shots
+          retention-days: 7

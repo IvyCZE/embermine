@@ -37,10 +37,21 @@ index d98dbc2a84c517f9ded7c8bf5558c5106dc39867..68bd63a2494fe9fa869df091dea08c8a
  # Google other
  accompanist-drawablepainter = { module = "com.google.accompanist:accompanist-drawablepainter", version.ref = "accompanist" }
 diff --git a/mobile/android/android-components/components/compose/base/build.gradle b/mobile/android/android-components/components/compose/base/build.gradle
-index 6a1a80b2f882575d1a2ad79b6e54e4f10b4ddd85..db246719ac69c9e46cf51c00605cb5def7f27459 100644
+index 6a1a80b2f882575d1a2ad79b6e54e4f10b4ddd85..f9aa053cf931522b2a267e52710121fd6df0a9fc 100644
 --- a/mobile/android/android-components/components/compose/base/build.gradle
 +++ b/mobile/android/android-components/components/compose/base/build.gradle
-@@ -33,6 +33,7 @@ dependencies {
+@@ -14,6 +14,10 @@ android {
+     }
+ 
+     namespace = 'mozilla.components.compose.base'
++
++    testOptions {
++        unitTests.includeAndroidResources = true
++    }
+ }
+ 
+ dependencies {
+@@ -33,10 +37,11 @@ dependencies {
      implementation libs.androidx.compose.material3.windowsizeclass
      implementation libs.androidx.compose.ui
      implementation libs.androidx.compose.ui.tooling.preview
@@ -48,6 +59,11 @@ index 6a1a80b2f882575d1a2ad79b6e54e4f10b4ddd85..db246719ac69c9e46cf51c00605cb5de
      implementation libs.androidx.navigation.compose
  
      debugImplementation libs.androidx.compose.ui.tooling
+-    testImplementation libs.androidx.compose.ui.test.manifest
++    debugImplementation libs.androidx.compose.ui.test.manifest
+ 
+     testImplementation project(':components:support-test')
+ 
 diff --git a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/menu/DropdownMenu.kt b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/menu/DropdownMenu.kt
 index 77f9cc9d6fc0d1e0a614763e9a15b494238c4563..ace370d65f16c4448e59d3e4ef867d6d9040e959 100644
 --- a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/menu/DropdownMenu.kt

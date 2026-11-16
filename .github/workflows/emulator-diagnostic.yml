@@ -17,18 +17,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - candidate: released-159
-            run: 43761933056
-            ram: ""
-            swap: false
-          - candidate: candidate-160
-            run: 43874201816
-            ram: ""
-            swap: false
-          - candidate: candidate-160-swap
+          - candidate: candidate-160-4gb
             run: 43874201816
             ram: 4096M
-            swap: true
+            swap: false
+            graphics: ""
+          - candidate: candidate-160-no-vulkan
+            run: 43874201816
+            ram: ""
+            swap: false
+            graphics: -feature -Vulkan
     steps:
       - uses: actions/checkout@v7
         with:
@@ -68,7 +66,8 @@ jobs:
           ram-size: ${{ matrix.ram }}
           disable-animations: true
           emulator-boot-timeout: 900
-          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -tcpdump /tmp/em.pcap
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -tcpdump /tmp/em.pcap ${{ matrix.graphics }}
+          pre-emulator-launch-script: cat "$ANDROID_AVD_HOME/test.avd/config.ini" > debug/avd-config.ini
           script: bash scripts/emulator/diagnostic.sh
 
       - name: Host diagnostics
@@ -78,6 +77,7 @@ jobs:
           ps -eo pid,ppid,rss,comm --sort=-rss > debug/host-processes-final.txt
           sudo dmesg --ctime > debug/host-kernel.txt
           cp /tmp/em.pcap debug/ || true
+          cp -a /tmp/android-runner/emu-crash-* debug/ || true
 
       - uses: actions/upload-artifact@v7
         if: ${{ always() }}

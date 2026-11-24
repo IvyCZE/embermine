@@ -26,10 +26,10 @@ index 6b0618ff1073da2e865b2ea60cb701cceceee501..4d9ca982437decc22bf04e7ab428d29f
  
  # Python Byte-compiled / optimized / DLL files
 diff --git a/mobile/android/fenix/app/build.gradle b/mobile/android/fenix/app/build.gradle
-index e81e7e66717484dfa32db9422e7c5d6da72d282f..0066fe7e17e1bce3812f19a53d31c7b9f367d615 100644
+index a377a14b3ce6c7a166e6868b44702e887c4e57b3..bdc5c753154005cd0238f6ba233a01952ca74127 100644
 --- a/mobile/android/fenix/app/build.gradle
 +++ b/mobile/android/fenix/app/build.gradle
-@@ -337,8 +337,8 @@ androidComponents {
+@@ -341,8 +341,8 @@ androidComponents {
  // -------------------------------------------------------------------------------------------------
  
  android.defaultConfig.with {
@@ -40,7 +40,7 @@ index e81e7e66717484dfa32db9422e7c5d6da72d282f..0066fe7e17e1bce3812f19a53d31c7b9
  
      // Reading the sentry token from a local file (if it exists). In a release task on taskcluster it will be available.
      buildConfigField 'String', 'SENTRY_TOKEN', 'null'
-@@ -402,6 +402,13 @@ android.defaultConfig.with {
+@@ -406,6 +406,13 @@ android.defaultConfig.with {
      } catch (FileNotFoundException ignored) {
          buildConfigField 'String', 'WALLPAPER_URL', '""'
      }
@@ -55,7 +55,7 @@ index e81e7e66717484dfa32db9422e7c5d6da72d282f..0066fe7e17e1bce3812f19a53d31c7b9
  }
  
 diff --git a/mobile/android/fenix/app/onboarding.fml.yaml b/mobile/android/fenix/app/onboarding.fml.yaml
-index 73b46a4a7e609d19b1bae5684a70348fc5c3dd52..6806dba760c25346903cfd31a8eeb8c556c22101 100644
+index 3666e564b73cc68d06cb1a2c14d2987d7bd867e2..d092caca7bc6a3808cb90f29865d8f6835015f79 100644
 --- a/mobile/android/fenix/app/onboarding.fml.yaml
 +++ b/mobile/android/fenix/app/onboarding.fml.yaml
 @@ -34,7 +34,7 @@ features:
@@ -68,10 +68,10 @@ index 73b46a4a7e609d19b1bae5684a70348fc5c3dd52..6806dba760c25346903cfd31a8eeb8c5
  
              default-browser:
 diff --git a/mobile/android/fenix/app/src/androidTest/java/org/mozilla/fenix/ui/robots/HomeScreenRobot.kt b/mobile/android/fenix/app/src/androidTest/java/org/mozilla/fenix/ui/robots/HomeScreenRobot.kt
-index bc6c3b88da79dc7a0676eb14e3fe6a704340befb..aec11bd810bf2a76051753346293274396edb721 100644
+index 396cc371e94bb479ffd646aa0ef0dd634a0c4680..afa2b504c28136b645620bea5e68c54e8112785b 100644
 --- a/mobile/android/fenix/app/src/androidTest/java/org/mozilla/fenix/ui/robots/HomeScreenRobot.kt
 +++ b/mobile/android/fenix/app/src/androidTest/java/org/mozilla/fenix/ui/robots/HomeScreenRobot.kt
-@@ -571,7 +571,7 @@ class HomeScreenRobot(private val composeTestRule: ComposeTestRule) {
+@@ -573,7 +573,7 @@ class HomeScreenRobot(private val composeTestRule: ComposeTestRule) {
          composeTestRule
              .onNodeWithContentDescription(
                  getStringResource(
@@ -81,10 +81,10 @@ index bc6c3b88da79dc7a0676eb14e3fe6a704340befb..aec11bd810bf2a760517533462932743
                  ) + " " + getStringResource(composeBaseR.string.mozac_compose_base_link_text_links_available),
                  useUnmergedTree = true,
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/FenixApplication.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/FenixApplication.kt
-index 1b30426f6452e43a4ccdd9395877706674745b3b..cf7aea1ef40f145ebe0758099acf4d35e320f8fb 100644
+index eefee04e17db1ec639d12864fdd9c60670c543b2..8f9aff06af883aa3c3a33c31d4415b65cf1936a3 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/FenixApplication.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/FenixApplication.kt
-@@ -663,7 +663,9 @@ open class FenixApplication : Application(), Provider, ThemeProvider {
+@@ -657,7 +657,9 @@ open class FenixApplication : Application(), Provider, ThemeProvider {
          runOnVisualCompleteness(queue) {
              components.nimbus.geckoPrefHandler.start()
              applicationScope.launch(ioDispatcher) {
@@ -96,10 +96,10 @@ index 1b30426f6452e43a4ccdd9395877706674745b3b..cf7aea1ef40f145ebe0758099acf4d35
              }
          }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
-index cc25d9e578e4e428013dda3b2b8eb8f2d5c66a90..e8a75d9438e517211cb5ef75f530e0d5b4b175ed 100644
+index f18cbc660d6bdd68a5c926729743854816274a7d..eadd7f4c740f1858d05b95e3237e8702504ece39 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
-@@ -291,6 +291,7 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, Crash
+@@ -300,6 +300,7 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, Crash
              settings = components.settings,
              resources = resources,
              crashReporter = components.analytics.crashReporter,
@@ -108,10 +108,10 @@ index cc25d9e578e4e428013dda3b2b8eb8f2d5c66a90..e8a75d9438e517211cb5ef75f530e0d5
      }
  
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Analytics.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Analytics.kt
-index 6774a4eb6ce418a839cbde29581abc2df655a8fc..9b03a3a080dd4d8a026e481311d389fb3a7e1b6f 100644
+index e72e6b933cf3e1fbabca0cd49d8b6d724d6abeb3..f51af1150f85b4fabb477ca737c71da4ef00bab6 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Analytics.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Analytics.kt
-@@ -89,17 +89,19 @@ class Analytics(
+@@ -92,17 +92,19 @@ class Analytics(
              services.add(sentryService)
          }
  
@@ -142,7 +142,7 @@ index 6774a4eb6ce418a839cbde29581abc2df655a8fc..9b03a3a080dd4d8a026e481311d389fb
  
          val intent =
              Intent(context, HomeActivity::class.java).apply {
-@@ -197,7 +199,7 @@ class Analytics(
+@@ -201,7 +203,7 @@ class Analytics(
      }
  }
  
@@ -152,7 +152,7 @@ index 6774a4eb6ce418a839cbde29581abc2df655a8fc..9b03a3a080dd4d8a026e481311d389fb
  private fun getSentryProjectUrl(): String? {
      val baseUrl = "https://sentry.io/organizations/mozilla/issues"
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Core.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Core.kt
-index b1ebab7da8021208088b07e84c7957c0173386ad..6122d45cf9b531c158ab7e7ba420ee72a8e2b689 100644
+index 0b628fb81f7a08f59933c80392b99e9d88771b50..63fdbe9907dcd8686c9602dd3e1e06e83bbdb5c9 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Core.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/Core.kt
 @@ -122,6 +122,7 @@ import org.mozilla.fenix.components.search.ApplicationSearchMiddleware
@@ -163,7 +163,7 @@ index b1ebab7da8021208088b07e84c7957c0173386ad..6122d45cf9b531c158ab7e7ba420ee72
  import org.mozilla.fenix.ext.components
  import org.mozilla.fenix.ext.isLargeWindow
  import org.mozilla.fenix.gecko.GeckoProvider
-@@ -265,6 +266,7 @@ class Core(
+@@ -263,6 +264,7 @@ class Core(
              )
              .also {
                  WebCompatFeature.install(it)
@@ -172,10 +172,10 @@ index b1ebab7da8021208088b07e84c7957c0173386ad..6122d45cf9b531c158ab7e7ba420ee72
      }
  
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/metrics/MetricController.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/metrics/MetricController.kt
-index 8c4cddd22adb0b6e60f5a5983d102b5fb4001ada..22dd448659f45ef2d4a172c1156954119d878fc3 100644
+index c372cbd7dc2abb96b047e66deb2ab3d614457b03..20cb6a2fb079930982deb4edac4d7390b448c02b 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/metrics/MetricController.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/metrics/MetricController.kt
-@@ -72,6 +72,7 @@ import org.mozilla.fenix.GleanMetrics.Sync
+@@ -74,6 +74,7 @@ import org.mozilla.fenix.GleanMetrics.Sync
  import org.mozilla.fenix.GleanMetrics.SyncedTabs
  import org.mozilla.fenix.GleanMetrics.TrackingProtection
  import org.mozilla.fenix.components.share.ShareSource
@@ -183,7 +183,7 @@ index 8c4cddd22adb0b6e60f5a5983d102b5fb4001ada..22dd448659f45ef2d4a172c115695411
  import org.mozilla.fenix.utils.Settings
  
  interface MetricController {
-@@ -83,8 +84,8 @@ interface MetricController {
+@@ -85,8 +86,8 @@ interface MetricController {
  
      companion object {
          /**
@@ -194,7 +194,7 @@ index 8c4cddd22adb0b6e60f5a5983d102b5fb4001ada..22dd448659f45ef2d4a172c115695411
           *
           * @param services the list of available services to start
           * @param isDataTelemetryEnabled has data telemetry been enabled?
-@@ -108,7 +109,11 @@ interface MetricController {
+@@ -110,7 +111,11 @@ interface MetricController {
                      settings,
                  )
              } else {
@@ -423,18 +423,18 @@ index da844a25147f713c8c3358df64515604667828b4..f82d04dc64687c7f3fd0eb834b0bfdfa
          }
  
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/OnboardingFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/OnboardingFragment.kt
-index 587faae07ca57058b2ec6566e790c91a5c802c8b..703b9dbdc2cea649eba1dc05d85ea9e82a3c0ed1 100644
+index 998824ba25f816d0163ff6393bc9fd35df08c280..f4a4367c19dd02a3984fa8c88dedf86c60818a09 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/OnboardingFragment.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/OnboardingFragment.kt
-@@ -35,7 +35,6 @@ import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
+@@ -28,7 +28,6 @@ import mozilla.components.service.nimbus.messaging.use
+ import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
  import mozilla.components.support.base.log.logger.Logger
  import mozilla.components.support.utils.Browsers
- import mozilla.components.support.utils.BuildManufacturerChecker
 -import org.mozilla.fenix.GleanMetrics.Pings
  import org.mozilla.fenix.R
  import org.mozilla.fenix.components.accounts.FenixFxAEntryPoint
  import org.mozilla.fenix.components.appstate.AppAction
-@@ -366,11 +365,6 @@ class OnboardingFragment : Fragment() {
+@@ -320,11 +319,6 @@ class OnboardingFragment : Fragment() {
              )
          }
  
@@ -446,11 +446,20 @@ index 587faae07ca57058b2ec6566e790c91a5c802c8b..703b9dbdc2cea649eba1dc05d85ea9e8
          rtamoAttributionHandler.handleReferrer(InstallReferrerHandlingService.response)
  
          // The marketing telemetry may be enabled after finishing onboarding.
+@@ -351,7 +345,7 @@ class OnboardingFragment : Fragment() {
+ 
+         val settings = requireComponents.settings
+ 
+-        // Telemetry and daily usage ping get enabled after ToU acceptance.
++        // Keep telemetry and daily usage pings disabled after ToU acceptance.
+         startMetricsIfEnabled(
+             logger = logger,
+             analytics = requireComponents.analytics,
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/view/OnboardingScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/view/OnboardingScreen.kt
-index 8e36d42a548f2a4ffba0a7cec571d16654368a95..5683e548203b155b7f135385387a35c8950788e0 100644
+index 32524db8f9f235813aa1bdbfe4d74a823e34d5e2..7ea62b8db385323c3f31e0391d6dfbadacd89c00 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/view/OnboardingScreen.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/view/OnboardingScreen.kt
-@@ -719,7 +719,7 @@ private fun touPageUIData() =
+@@ -662,7 +662,7 @@ private fun touPageUIData() =
                  lineTwoText = stringResource(id = R.string.nova_onboarding_tou_body_line_2),
                  lineTwoLinkText = stringResource(id = R.string.nova_onboarding_tou_body_line_2_link_text),
                  lineTwoLinkUrl = "URL",
@@ -460,10 +469,10 @@ index 8e36d42a548f2a4ffba0a7cec571d16654368a95..5683e548203b155b7f135385387a35c8
              ),
          imageRes = R.drawable.nova_onboarding_tou,
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/view/TermsOfServiceOnboardingPage.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/view/TermsOfServiceOnboardingPage.kt
-index ed369fc7c139cfb3caaf464644ee7e100619f465..36b3d632fcc51183a0bf6ebe94deb2c65bd43c22 100644
+index 820ca8fc454b85e1cc71e3552b7bb5485f7b674a..696a6fe38fabe19aae55a37880359e2186f46611 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/view/TermsOfServiceOnboardingPage.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/onboarding/view/TermsOfServiceOnboardingPage.kt
-@@ -274,7 +274,7 @@ private fun OnboardingPagePreview() {
+@@ -271,7 +271,7 @@ private fun OnboardingPagePreview() {
                              lineTwoText = stringResource(id = R.string.nova_onboarding_tou_body_line_2),
                              lineTwoLinkText = stringResource(id = R.string.nova_onboarding_tou_body_line_2_link_text),
                              lineTwoLinkUrl = "URL",
@@ -511,10 +520,10 @@ index d342ee0b2ada83a6d3c159676c9bafbe201cf125..a99b6005902cef51d3fd7f31fce5f3a6
      val itemToScrollTo: String? = null,
  ) : State
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
-index 00e5b4bb8b9e0b7b4e00dda7a29336a7c6fb0e23..8875fe0f4d4caa287625dc68f778c36389b393a8 100644
+index 787e37cd3dce7d0c4d5153dd30fa1229ec19efd2..ef96fab6d52807bb1249bbcdd3918606e58fc6c6 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
-@@ -88,7 +88,6 @@ private const val MAX_ANIMATION_FOREGROUND = 5
+@@ -88,7 +88,6 @@ private const val AUTOPLAY_USER_SETTING = "AUTOPLAY_USER_SETTING"
   * @param packageManagerCompatHelper Helper for accessing [android.content.pm.PackageManager] methods.
   * @param isBenchmarkBuild Boolean that will be true only when the app is built for Baseline Profile or Macrobenchmark.
   * @param currentTimeMillis provider for the current time in milliseconds, injectable for testing.
@@ -557,7 +566,7 @@ index 00e5b4bb8b9e0b7b4e00dda7a29336a7c6fb0e23..8875fe0f4d4caa287625dc68f778c363
              featureFlag = ContentRecommendationsFeatureHelper.isPocketSponsoredStoriesFeatureEnabled(appContext),
          )
  
-@@ -713,7 +711,7 @@ class Settings(
+@@ -692,7 +690,7 @@ class Settings(
      var crashReportChoice by
          stringPreference(
              appContext.getPreferenceKey(R.string.pref_key_crash_reporting_choice),
@@ -566,7 +575,7 @@ index 00e5b4bb8b9e0b7b4e00dda7a29336a7c6fb0e23..8875fe0f4d4caa287625dc68f778c363
          )
  
      val isRemoteDebuggingEnabled by
-@@ -725,7 +723,7 @@ class Settings(
+@@ -704,7 +702,7 @@ class Settings(
      var isTelemetryEnabled by
          booleanPreference(
              appContext.getPreferenceKey(R.string.pref_key_telemetry),
@@ -575,7 +584,7 @@ index 00e5b4bb8b9e0b7b4e00dda7a29336a7c6fb0e23..8875fe0f4d4caa287625dc68f778c363
          )
  
      var isMarketingTelemetryEnabled by
-@@ -2372,7 +2370,7 @@ class Settings(
+@@ -2395,7 +2393,7 @@ class Settings(
      var showContileFeature by
          booleanPreference(
              key = appContext.getPreferenceKey(R.string.pref_key_enable_contile),
@@ -910,10 +919,10 @@ index 2ba6927b9b0ceeb6f2dd3269353979126475ef9b..4c5e152d19be28518ef5f66131a36387
  
          nimbusSdk.isTelemetryIdReset = false
 diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/utils/SettingsTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/utils/SettingsTest.kt
-index a9cb61b462b14a32c85b0321d94a21b83dce6ebb..80a16738d925e4fadc95efa5575f301932fca2d5 100644
+index c762698673b640dc294c511431dcd9e3ed868f45..f01ed3b70c366ca735af3997cdc10ccd31704326 100644
 --- a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/utils/SettingsTest.kt
 +++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/utils/SettingsTest.kt
-@@ -197,7 +197,18 @@ class SettingsTest {
+@@ -187,7 +187,18 @@ class SettingsTest {
      fun isTelemetryEnabled() {
          // When just created
          // Then

@@ -246,7 +246,9 @@ jobs:
             --continue \
             :app:testDebugUnitTest --tests "org.mozilla.fenix.embermine.*" \
             --tests "org.mozilla.fenix.components.toolbar.CustomTabBrowserToolbarMiddlewareTest" \
+            --tests "org.mozilla.fenix.search.BrowserToolbarSearchMiddlewareTest" \
             :components:compose-base:testDebugUnitTest --tests "mozilla.components.compose.base.embermine.*" \
+            --tests "mozilla.components.compose.base.slider.SliderTest" \
             -PdisableDebugSigning
 
       # A green Gradle run proves nothing when the test filter matched no class.
@@ -259,11 +261,13 @@ jobs:
           python3 scripts/junit_summary.py unit-test-results \
             --require-class org.mozilla.fenix.embermine.EmbermineVersionTest \
             --require-class org.mozilla.fenix.components.toolbar.CustomTabBrowserToolbarMiddlewareTest \
+            --require-class org.mozilla.fenix.search.BrowserToolbarSearchMiddlewareTest \
             --require-class org.mozilla.fenix.embermine.EmbermineNameArgsTest \
             --require-class org.mozilla.fenix.embermine.EmbermineMetricControllerTest \
             --require-class org.mozilla.fenix.embermine.EmbermineAccentSchemeTest \
             --require-class org.mozilla.fenix.embermine.EmbermineWavyProgressTest \
             --require-class mozilla.components.compose.base.embermine.EmbermineShapeTest \
+            --require-class mozilla.components.compose.base.slider.SliderTest \
             --require-class org.mozilla.fenix.embermine.wallpapers.EmbermineWallpaperPaletteTest \
             --require-class org.mozilla.fenix.embermine.wallpapers.EmbermineWallpaperRendererTest \
             --require-class org.mozilla.fenix.embermine.wallpapers.EmbermineWallpapersTest \

@@ -44,10 +44,10 @@ index 27295afc9a5f62f0c27355a254496d8554e00295..49201ae1557fc9eba3b2fa0acdbb3201
          }
      }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
-index cd1fb285a4fa0b4d21b0dfd8239188f3b4881dcc..3dc62063aee5a9946aeea48987e73c56d217532e 100644
+index 1b9594db6fe01700516aecbc138655eeb694b959..8f600f42563bf3f9d83438d4dc96560d43ceacd6 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
-@@ -140,6 +140,7 @@ import org.mozilla.fenix.debugsettings.ui.FenixOverlay
+@@ -142,6 +142,7 @@ import org.mozilla.fenix.debugsettings.ui.FenixOverlay
  import org.mozilla.fenix.downloads.DownloadSnackbar
  import org.mozilla.fenix.e2e.EdgeToEdgeFragmentLifecycleCallbacks
  import org.mozilla.fenix.embermine.settingsBackNavigationShape
@@ -55,7 +55,7 @@ index cd1fb285a4fa0b4d21b0dfd8239188f3b4881dcc..3dc62063aee5a9946aeea48987e73c56
  import org.mozilla.fenix.experiments.ResearchSurfaceDialogFragment
  import org.mozilla.fenix.experiments.UninstallSurveyManager
  import org.mozilla.fenix.ext.alreadyOnDestination
-@@ -842,6 +843,12 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, Crash
+@@ -854,6 +855,12 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, Crash
              }
          }
  
@@ -69,7 +69,7 @@ index cd1fb285a4fa0b4d21b0dfd8239188f3b4881dcc..3dc62063aee5a9946aeea48987e73c56
              if (components.settings.checkIfFenixIsDefaultBrowserOnAppResume()) {
                  if (components.appStore.state.wasNativeDefaultBrowserPromptShown) {
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/UseCases.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/UseCases.kt
-index 54d7a3475e22e7744ec198e1c810033e4c1a0e34..8c0d666a49d05b212003a31606b8952aa359e04b 100644
+index 1e2eaefce7eb8b32f534bea6e17f651f2aceaf05..6d8f51af263eb0f2d77ebea9337589365a704b2b 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/UseCases.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/components/UseCases.kt
 @@ -42,6 +42,7 @@ import org.mozilla.fenix.components.share.DefaultShareSheetLauncher
@@ -80,7 +80,7 @@ index 54d7a3475e22e7744ec198e1c810033e4c1a0e34..8c0d666a49d05b212003a31606b8952a
  import org.mozilla.fenix.ext.components
  import org.mozilla.fenix.home.mars.MARSUseCases
  import org.mozilla.fenix.pbmlock.PrivateBrowsingLockUseCases
-@@ -145,6 +146,12 @@ class UseCases(
+@@ -144,6 +145,12 @@ class UseCases(
              rootStorageDirectory,
              currentLocale,
              getDisplaySize = { displaySize(context) },
@@ -120,7 +120,7 @@ index 63f22c96213d4adfefb2e929574fadc724def0dc..2855024f87e9855d377a3b3d623ac215
              return MessageCardState(
                  messageText = message.text,
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/list/ListItem.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/list/ListItem.kt
-index 8bcd414a14fe96d3d696621fa8c88400359c9326..adb9565974addd5c956c98e301704134aa1d3c6c 100644
+index 1c919a6c173b1d5e8b284dd33e01995e2c4923a7..5dd8728206c17c9f805c10c66542b880fcd93189 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/list/ListItem.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/list/ListItem.kt
 @@ -164,6 +164,7 @@ fun TextListItem(
@@ -494,6 +494,28 @@ index 0000000000000000000000000000000000000000..93e27278605897a9ceb7af147826ed22
 +        private const val PNG_QUALITY = 100
 +    }
 +}
+diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/HomeFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/HomeFragment.kt
+index e0188e39be22569076e600ef3370ca535e0bcf5b..5fbbecd19f1151d65a4aadbbb8f110e99744cb34 100644
+--- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/HomeFragment.kt
++++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/HomeFragment.kt
+@@ -1086,6 +1086,8 @@ class HomeFragment : Fragment(), UserInteractionHandler, OnLongPressedListener {
+         // Tabs will not be shown as selected on the homepage when Homepage as a New Tab is not
+         // enabled.
+         val isSelectDisabled = !requireComponents.settings.enableHomepageAsNewTab
++        val hasOpaqueTopBars =
++            !requireComponents.settings.shouldUseBottomToolbar && requireComponents.settings.shouldShowTabStripAtTop
+         // Tab strip doesn't show its background when displayed over edge to edge wallpaper.
+         val isOverEdgeToEdgeWallpaper =
+             requireComponents.appStore.observeAsComposableState { isOverUniversalEdgeToEdgeWallpaper(it) }.value
+@@ -1094,7 +1096,7 @@ class HomeFragment : Fragment(), UserInteractionHandler, OnLongPressedListener {
+             TabStrip(
+                 isSelectDisabled = isSelectDisabled,
+                 showTabCounterButton = false,
+-                tabStripColors = TabStripColors.build(isOverEdgeToEdgeWallpaper = isOverEdgeToEdgeWallpaper),
++                tabStripColors = TabStripColors.build(isOverEdgeToEdgeWallpaper = isOverEdgeToEdgeWallpaper && !hasOpaqueTopBars),
+                 hideWhenKeyboardShown = requireComponents.settings.shouldUseBottomTabStrip,
+                 onAddTabClick = {
+                     if (requireComponents.settings.enableHomepageAsNewTab) {
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/pocket/ui/StoryCard.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/pocket/ui/StoryCard.kt
 index f9c37913a8f9ce733c26e122e14d206a75f6d2c0..18138236d9764a2a873b2263c9048560b67d5fab 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/pocket/ui/StoryCard.kt
@@ -543,10 +565,10 @@ index c0cf74a2aba5010e3ca65463858a294c41b151f2..9f314f469be6c8ad3ddf24d5e3e79a23
                                  overflow = TextOverflow.Ellipsis,
                                  maxLines = 1,
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/recenttabs/view/RecentTabs.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/recenttabs/view/RecentTabs.kt
-index 7a1e447cefb962acf701dd8da6d598071218a784..8ce067802363765acd0d3aeb9277ea155c030bec 100644
+index 425e957b14b805781e424f87911f6cd02b595a40..95f83c811f92d150be650211a4a9f08d895c7aaa 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/recenttabs/view/RecentTabs.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/recenttabs/view/RecentTabs.kt
-@@ -164,7 +164,7 @@ private fun RecentTabItem(
+@@ -167,7 +167,7 @@ private fun RecentTabItem(
                              testTagsAsResourceId = true
                              testTag = "recent.tab.title"
                          },
@@ -555,7 +577,7 @@ index 7a1e447cefb962acf701dd8da6d598071218a784..8ce067802363765acd0d3aeb9277ea15
                      fontSize = 14.sp,
                      maxLines = 2,
                      overflow = TextOverflow.Ellipsis,
-@@ -187,7 +187,7 @@ private fun RecentTabItem(
+@@ -190,7 +190,7 @@ private fun RecentTabItem(
                                  testTagsAsResourceId = true
                                  testTag = "recent.tab.url"
                              },
@@ -660,7 +682,7 @@ index a9df63d6b47f24cb329b52abf79588c8c9127194..d303030ff722b6c601c0c40fb2d1f6ce
  
          DropdownMenu(
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/HomeToolbarComposable.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/HomeToolbarComposable.kt
-index 1925b43598a0e5238cbce89be9412c19cc21992d..38f1b3e0cd903c94563f185e1b72556ee181bd7f 100644
+index f5cd496dca085f547d751251fb2c1f2c854c4589..b591af1c6a27eb0aea581ab0988aefc6bf59fdfb 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/HomeToolbarComposable.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/toolbar/HomeToolbarComposable.kt
 @@ -13,6 +13,7 @@ import androidx.compose.animation.core.Easing
@@ -671,40 +693,48 @@ index 1925b43598a0e5238cbce89be9412c19cc21992d..38f1b3e0cd903c94563f185e1b72556e
  import androidx.compose.foundation.layout.Box
  import androidx.compose.foundation.layout.Column
  import androidx.compose.foundation.layout.ColumnScope
-@@ -110,12 +111,15 @@ internal class HomeToolbarComposable(
-         val currentQuery = toolbarStore.observeAsComposableState { it.editState.query.current }.value
+@@ -107,10 +108,11 @@ internal class HomeToolbarComposable(
+         val isSearching = toolbarStore.observeAsComposableState { it.isEditMode() }.value
+         val isSearchActive = appStore.observeAsComposableState { it.searchState.isSearchActive }.value
          val isPrivateMode = browsingModeManager.mode.isPrivate
-         val isUniversalEdgeToEdge = settings.enableUniversalEdgeToEdgeWallpapers
 +        val hasOpaqueTopBars = !settings.shouldUseBottomToolbar && settings.shouldShowTabStripAtTop
-         val hasWallpaperBackground =
-             hasWallpaperBackground(appStore = appStore, settings = settings, isPrivateMode = isPrivateMode)
          // Tint the browser action icons outside the address bar (tab counter, menu) with the
          // wallpaper's text color. The page actions inside the address bar (e.g. voice search) keep
-         // the default color so they stay legible on the address bar background. Universal only.
--        val wallpaperTextColor = WallpaperTheme.onWallpaper.takeIf { isUniversalEdgeToEdge && hasWallpaperBackground }
-+        val wallpaperTextColor = WallpaperTheme.onWallpaper.takeIf {
-+            isUniversalEdgeToEdge && hasWallpaperBackground && !hasOpaqueTopBars
-+        }
+         // the default color so they stay legible on the address bar background.
+-        val wallpaperTextColor = WallpaperTheme.onWallpaper.takeIf { !isPrivateMode }
++        val wallpaperTextColor = WallpaperTheme.onWallpaper.takeIf { !isPrivateMode && !hasOpaqueTopBars }
  
          BackInvokedHandler(isSearching) {
              val sourceTabId = appStore.state.searchState.sourceTabId
-@@ -132,7 +136,7 @@ internal class HomeToolbarComposable(
-                     homepageToolbarColors(
-                         isPrivateMode = isPrivateMode,
-                         shouldUseEdgeToEdgeColors =
--                            hasWallpaperBackground &&
-+                            !hasOpaqueTopBars && hasWallpaperBackground &&
-                                 if (settings.enableHomepageTrendingRecentSearch) {
-                                     !isSearching
-                                 } else {
-@@ -140,13 +144,13 @@ internal class HomeToolbarComposable(
-                                 },
-                     )
-             ) {
+@@ -123,7 +125,7 @@ internal class HomeToolbarComposable(
+ 
+         FirefoxTheme {
+             MaterialTheme(colorScheme = toolbarColors(isSearching = isSearchActive)) {
 -                ToolbarContent(wallpaperTextColor = wallpaperTextColor)
 +                ToolbarContent(wallpaperTextColor = wallpaperTextColor, opaqueTabStrip = hasOpaqueTopBars)
              }
          }
+     }
+@@ -138,19 +140,21 @@ internal class HomeToolbarComposable(
+                 }
+                 .value
+         val currentQuery = toolbarStore.observeAsComposableState { it.editState.query.current }.value
++        val hasOpaqueTopBars = !settings.shouldUseBottomToolbar && settings.shouldShowTabStripAtTop
+         return homepageToolbarColors(
+             isPrivateMode = browsingModeManager.mode.isPrivate,
+             shouldUseEdgeToEdgeColors =
+-                if (settings.enableHomepageTrendingRecentSearch) {
+-                    !isSearching
+-                } else {
+-                    !isSearching || (currentQuery.isEmpty() && !queryWasPrefilled)
+-                },
++                !hasOpaqueTopBars &&
++                    if (settings.enableHomepageTrendingRecentSearch) {
++                        !isSearching
++                    } else {
++                        !isSearching || (currentQuery.isEmpty() && !queryWasPrefilled)
++                    },
+         )
      }
  
      @Composable
@@ -713,21 +743,21 @@ index 1925b43598a0e5238cbce89be9412c19cc21992d..38f1b3e0cd903c94563f185e1b72556e
          val shouldUseBottomToolbar = remember { settings.shouldUseBottomToolbar }
          val shouldShowTabStrip = remember {
              if (shouldUseBottomToolbar) {
-@@ -168,7 +172,13 @@ internal class HomeToolbarComposable(
-             }
+@@ -176,7 +180,13 @@ internal class HomeToolbarComposable(
  
-             if (shouldShowTabStrip) {
--                tabStripContent()
-+                Box(
-+                    modifier = Modifier.background(
-+                        if (opaqueTabStrip) MaterialTheme.colorScheme.surface else Color.Transparent,
-+                    ),
-+                ) {
-+                    tabStripContent()
-+                }
-             }
+             TopDividerColumn(showDivider = isTabStripAtBottom, modifier = Modifier.fillMaxWidth()) {
+                 if (shouldShowTabStrip) {
+-                    tabStripContent()
++                    Box(
++                        modifier = Modifier.background(
++                            if (opaqueTabStrip) MaterialTheme.colorScheme.surface else Color.Transparent,
++                        ),
++                    ) {
++                        tabStripContent()
++                    }
+                 }
  
-             AddressBar(wallpaperTextColor = wallpaperTextColor)
+                 AddressBar(wallpaperTextColor = wallpaperTextColor)
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/HomepageCard.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/HomepageCard.kt
 index 0c721d2eabc04e98565bf8b74f00bc000659f5e8..b8e9efaf3e197833ffb235a96555bf84b2b3b13d 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/topsites/ui/HomepageCard.kt
@@ -786,10 +816,10 @@ index 0c721d2eabc04e98565bf8b74f00bc000659f5e8..b8e9efaf3e197833ffb235a96555bf84
  ) {
      Card(
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/ui/WallpaperBackground.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/ui/WallpaperBackground.kt
-index 663da26892208a3f9d07964b24532cebf220ca48..e09bbc5d240af8f5b7572a2153fc3e570da108c9 100644
+index 412063b6556903b4096a85fd38d29b51f6593a1a..8b77cd81061a713a7bfc341be8b82f45b99b4faf 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/ui/WallpaperBackground.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/home/ui/WallpaperBackground.kt
-@@ -36,7 +36,7 @@ fun WallpaperBackground(
+@@ -48,7 +48,7 @@ fun WallpaperBackground(
      val orientation = LocalConfiguration.current.orientation
      var bitmap by remember { mutableStateOf<Bitmap?>(null) }
  
@@ -835,10 +865,10 @@ index 0cd63fdd858f76f889465cb093f4ab1d7db549c3..7ceeaacc826fabe677a57540042438bc
      }
      val border =
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
-index d57c8223c22b811e56063eb46e07794277f08da3..9224bf2a0e012323884dab98193846954eac130b 100644
+index 9cbe20624eb289f8fc1b3dfa6400351c90f53a3b..0ec48796c372df3f1476835d6335f54713abf9a6 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt
-@@ -56,6 +56,7 @@ import org.mozilla.fenix.components.toolbar.ToolbarPosition
+@@ -57,6 +57,7 @@ import org.mozilla.fenix.components.toolbar.ToolbarPosition
  import org.mozilla.fenix.crashes.crashReportOption
  import org.mozilla.fenix.debugsettings.addresses.EmptyAddressesDebugRegionRepository
  import org.mozilla.fenix.debugsettings.addresses.SharedPrefsAddressesDebugRegionRepository
@@ -846,29 +876,24 @@ index d57c8223c22b811e56063eb46e07794277f08da3..9224bf2a0e012323884dab9819384695
  import org.mozilla.fenix.ext.TALL_SCREEN_HEIGHT_DP
  import org.mozilla.fenix.ext.WIDE_SCREEN_WIDTH_DP
  import org.mozilla.fenix.ext.components
-@@ -75,7 +76,6 @@ import org.mozilla.fenix.settings.sitepermissions.AUTOPLAY_BLOCK_AUDIBLE
+@@ -76,7 +77,6 @@ import org.mozilla.fenix.settings.sitepermissions.AUTOPLAY_BLOCK_ALL
+ import org.mozilla.fenix.settings.sitepermissions.AUTOPLAY_BLOCK_AUDIBLE
  import org.mozilla.fenix.tabstray.DefaultTabManagementFeatureHelper
  import org.mozilla.fenix.termsofuse.TOU_VERSION
- import org.mozilla.fenix.utils.Settings.Companion.LONGFOX_PEEK_ANIMATION_MAX_SHOWS
 -import org.mozilla.fenix.wallpapers.Wallpaper
  
  private const val AUTOPLAY_USER_SETTING = "AUTOPLAY_USER_SETTING"
- private const val MAX_ANIMATION_FOREGROUND = 5
-@@ -582,12 +582,7 @@ class Settings(
+ 
+@@ -566,7 +566,7 @@ class Settings(
      var currentWallpaperName by
          stringPreference(
              appContext.getPreferenceKey(R.string.pref_key_current_wallpaper),
--            default =
--                if (enableHomepageEdgeToEdgeBackgroundFeature) {
--                    Wallpaper.EdgeToEdge.name
--                } else {
--                    Wallpaper.Default.name
--                },
+-            default = Wallpaper.EdgeToEdge.name,
 +            default = EmbermineWallpapers.DEFAULT_NAME,
          )
  
      /**
-@@ -638,7 +633,7 @@ class Settings(
+@@ -617,7 +617,7 @@ class Settings(
      var showWallpaperOnboarding by
          booleanPreference(
              key = appContext.getPreferenceKey(R.string.pref_key_wallpapers_onboarding),
@@ -939,7 +964,7 @@ index 1c8e716ccc98305de370ca54aa1f5affada0b3ae..7b35dce05aa382c649e53345e991a54c
      val buttonBackgroundColor: Color
          @Composable get() = LocalWallpaperState.current.buttonBackgroundColor
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpapersUseCases.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpapersUseCases.kt
-index 05d84c3d2f1fa87d1047ea5915e15f22ec7a7fa0..101dc628e724499a90d57be285ea21a84cb39cfa 100644
+index 5bc14c458c8ee44f01e9749ed76e80041fabfa41..17252f6e5412b335900cd1a7f331d0bd24d2b5c3 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpapersUseCases.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/wallpapers/WallpapersUseCases.kt
 @@ -17,6 +17,8 @@ import mozilla.components.concept.fetch.Client
@@ -1082,7 +1107,7 @@ index 05d84c3d2f1fa87d1047ea5915e15f22ec7a7fa0..101dc628e724499a90d57be285ea21a8
              appStore.dispatch(AppAction.WallpaperAction.UpdateAvailableWallpapers(defaultIncluded))
          }
  
-@@ -301,7 +360,9 @@ class WallpapersUseCases(
+@@ -296,7 +355,9 @@ class WallpapersUseCases(
           */
          override suspend fun invoke(wallpaper: Wallpaper): Wallpaper.ImageFileState {
              return if (
@@ -1347,18 +1372,18 @@ index 0000000000000000000000000000000000000000..16f60d3ca75194d1d5aed0ab27ae6e67
 +    }
 +}
 diff --git a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/utils/SettingsTest.kt b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/utils/SettingsTest.kt
-index 80a16738d925e4fadc95efa5575f301932fca2d5..0b3c5627765dd473bd95080fd175b8513d4d6272 100644
+index f01ed3b70c366ca735af3997cdc10ccd31704326..d3f654ba0e1e5d8e8c2e2c9ff33e8969a8f3220d 100644
 --- a/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/utils/SettingsTest.kt
 +++ b/mobile/android/fenix/app/src/test/java/org/mozilla/fenix/utils/SettingsTest.kt
-@@ -30,6 +30,7 @@ import org.junit.Test
- import org.junit.runner.RunWith
+@@ -32,6 +32,7 @@ import org.junit.runner.RunWith
+ import org.mozilla.fenix.R
  import org.mozilla.fenix.browser.browsingmode.BrowsingMode
  import org.mozilla.fenix.components.toolbar.ToolbarPosition
 +import org.mozilla.fenix.embermine.wallpapers.EmbermineWallpapers
+ import org.mozilla.fenix.nimbus.AutomotiveSensitiveData
  import org.mozilla.fenix.nimbus.DefaultBrowserPrompt
  import org.mozilla.fenix.nimbus.FakeNimbusEventStore
- import org.mozilla.fenix.nimbus.FxNimbus
-@@ -37,7 +38,6 @@ import org.mozilla.fenix.nimbus.HomescreenEdgeToEdgeBackground
+@@ -39,7 +40,6 @@ import org.mozilla.fenix.nimbus.FxNimbus
  import org.mozilla.fenix.settings.PhoneFeature
  import org.mozilla.fenix.settings.ShortcutType
  import org.mozilla.fenix.settings.deletebrowsingdata.DeleteBrowsingDataOnQuitType
@@ -1366,30 +1391,16 @@ index 80a16738d925e4fadc95efa5575f301932fca2d5..0b3c5627765dd473bd95080fd175b851
  import org.robolectric.RobolectricTestRunner
  import org.robolectric.Shadows.shadowOf
  
-@@ -153,23 +153,23 @@ class SettingsTest {
+@@ -155,11 +155,11 @@ class SettingsTest {
      }
  
      @Test
--    fun defaultWallpaperIsEdgeToEdgeWhenEdgeToEdgeFeatureEnabled() {
-+    fun defaultWallpaperIsBloomWhenEdgeToEdgeFeatureEnabled() {
-         FxNimbus.features.homescreenEdgeToEdgeBackground.withCachedValue(HomescreenEdgeToEdgeBackground(enabled = true))
+-    fun defaultWallpaperIsEdgeToEdge() {
++    fun defaultWallpaperIsBloom() {
          val settings = Settings(testContext)
  
          // Then
 -        assertEquals(Wallpaper.EdgeToEdge.name, settings.currentWallpaperName)
-+        assertEquals(EmbermineWallpapers.DEFAULT_NAME, settings.currentWallpaperName)
-     }
- 
-     @Test
--    fun defaultWallpaperIsDefaultWhenEdgeToEdgeDisabled() {
-+    fun defaultWallpaperIsBloomWhenEdgeToEdgeDisabled() {
-         FxNimbus.features.homescreenEdgeToEdgeBackground.withCachedValue(
-             HomescreenEdgeToEdgeBackground(enabled = false)
-         )
-         val settings = Settings(testContext)
- 
-         // Then
--        assertEquals(Wallpaper.Default.name, settings.currentWallpaperName)
 +        assertEquals(EmbermineWallpapers.DEFAULT_NAME, settings.currentWallpaperName)
      }
  

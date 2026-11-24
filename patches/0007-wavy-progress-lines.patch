@@ -145,7 +145,7 @@ index 0000000000000000000000000000000000000000..130f2babf982149f3304e069217f1b3b
 +    }
 +}
 diff --git a/mobile/android/android-components/components/compose/browser-toolbar/src/main/java/mozilla/components/compose/browser/toolbar/ui/FullDisplayToolbar.kt b/mobile/android/android-components/components/compose/browser-toolbar/src/main/java/mozilla/components/compose/browser/toolbar/ui/FullDisplayToolbar.kt
-index 06487da225db8e6a53ae37f2b9f1292d7d2e55de..c09de4ee64a406061ecedc4e32651a32a0709edd 100644
+index ed2126284020691f8facf7f37513eb8b5d675ba8..79e731b4bc65f8f1cd9307ce56afc8fad3a164d1 100644
 --- a/mobile/android/android-components/components/compose/browser-toolbar/src/main/java/mozilla/components/compose/browser/toolbar/ui/FullDisplayToolbar.kt
 +++ b/mobile/android/android-components/components/compose/browser-toolbar/src/main/java/mozilla/components/compose/browser/toolbar/ui/FullDisplayToolbar.kt
 @@ -29,7 +29,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -157,8 +157,8 @@ index 06487da225db8e6a53ae37f2b9f1292d7d2e55de..c09de4ee64a406061ecedc4e32651a32
  import mozilla.components.compose.base.theme.AcornTheme
  import mozilla.components.compose.base.theme.acornPrivateColorScheme
  import mozilla.components.compose.base.theme.privateColorPalette
-@@ -184,10 +184,9 @@ internal fun FullDisplayToolbar(
-             )
+@@ -189,10 +189,9 @@ internal fun FullDisplayToolbar(
+             }
  
              if (progressBarConfig != null) {
 -                AnimatedProgressBar(
@@ -170,7 +170,7 @@ index 06487da225db8e6a53ae37f2b9f1292d7d2e55de..c09de4ee64a406061ecedc4e32651a32
                          Modifier.semantics {
                                  testTag = ADDRESSBAR_PROGRESSBAR
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/downloads/listscreen/ui/FileListItem.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/downloads/listscreen/ui/FileListItem.kt
-index b1abe8c8f3d1355ec3811f3d547f905ac74c695e..7e72073ad2b1d7aa6ca5a6583108f1d4925f4a80 100644
+index 64679db556143bcb1754f150e202f50142fcaf32..46968f246ea5b62b91014ade1504960ecf098340 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/downloads/listscreen/ui/FileListItem.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/downloads/listscreen/ui/FileListItem.kt
 @@ -9,12 +9,12 @@ import androidx.compose.foundation.background

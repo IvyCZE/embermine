@@ -16,10 +16,10 @@ Port ShakeSensitivitySlider and FontSizeSlider to the SliderState overload of
 Slider: material3 1.5 hid the value/thumb/track overload.
 
 diff --git a/gradle/libs.versions.toml b/gradle/libs.versions.toml
-index fd0aba7a9e1d38d794081747c5b656c5c6b45619..28607d535c30456415d9b7d6f9c01f147792bcae 100644
+index ca2d0f4a7b4f8bd892e2a3f18474d770f1fe162f..78d3ca5e674f1d0d4e64ae91183c50dc74c0a9f8 100644
 --- a/gradle/libs.versions.toml
 +++ b/gradle/libs.versions.toml
-@@ -214,7 +214,7 @@ androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref =
+@@ -216,7 +216,7 @@ androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref =
  androidx-compose-animation = { module = "androidx.compose.animation:animation" }
  androidx-compose-foundation = { module = "androidx.compose.foundation:foundation" }
  androidx-compose-material-icons = { module = "androidx.compose.material:material-icons-core" }
@@ -28,7 +28,7 @@ index fd0aba7a9e1d38d794081747c5b656c5c6b45619..28607d535c30456415d9b7d6f9c01f14
  androidx-compose-material3-adaptive = { module = "androidx.compose.material3.adaptive:adaptive" }
  androidx-compose-material3-adaptivelayout = { module = "androidx.compose.material3.adaptive:adaptive-layout" }
  androidx-compose-material3-adaptivenavigation = { module = "androidx.compose.material3.adaptive:adaptive-navigation" }
-@@ -229,6 +229,7 @@ androidx-compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-mani
+@@ -231,6 +231,7 @@ androidx-compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-mani
  androidx-compose-ui-text-android = { module = "androidx.compose.ui:ui-text-android" }
  androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
  androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
@@ -37,10 +37,21 @@ index fd0aba7a9e1d38d794081747c5b656c5c6b45619..28607d535c30456415d9b7d6f9c01f14
  # Google other
  accompanist-drawablepainter = { module = "com.google.accompanist:accompanist-drawablepainter", version.ref = "accompanist" }
 diff --git a/mobile/android/android-components/components/compose/base/build.gradle b/mobile/android/android-components/components/compose/base/build.gradle
-index 6a1a80b2f882575d1a2ad79b6e54e4f10b4ddd85..db246719ac69c9e46cf51c00605cb5def7f27459 100644
+index 6a1a80b2f882575d1a2ad79b6e54e4f10b4ddd85..f9aa053cf931522b2a267e52710121fd6df0a9fc 100644
 --- a/mobile/android/android-components/components/compose/base/build.gradle
 +++ b/mobile/android/android-components/components/compose/base/build.gradle
-@@ -33,6 +33,7 @@ dependencies {
+@@ -14,6 +14,10 @@ android {
+     }
+ 
+     namespace = 'mozilla.components.compose.base'
++
++    testOptions {
++        unitTests.includeAndroidResources = true
++    }
+ }
+ 
+ dependencies {
+@@ -33,10 +37,11 @@ dependencies {
      implementation libs.androidx.compose.material3.windowsizeclass
      implementation libs.androidx.compose.ui
      implementation libs.androidx.compose.ui.tooling.preview
@@ -48,8 +59,13 @@ index 6a1a80b2f882575d1a2ad79b6e54e4f10b4ddd85..db246719ac69c9e46cf51c00605cb5de
      implementation libs.androidx.navigation.compose
  
      debugImplementation libs.androidx.compose.ui.tooling
+-    testImplementation libs.androidx.compose.ui.test.manifest
++    debugImplementation libs.androidx.compose.ui.test.manifest
+ 
+     testImplementation project(':components:support-test')
+ 
 diff --git a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/menu/DropdownMenu.kt b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/menu/DropdownMenu.kt
-index 77f9cc9d6fc0d1e0a614763e9a15b494238c4563..ace370d65f16c4448e59d3e4ef867d6d9040e959 100644
+index 9a641a36602bc6b917973cf43436ff850ffc2e5d..8b680655be8dc187a106251a87944a7f027d1829 100644
 --- a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/menu/DropdownMenu.kt
 +++ b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/menu/DropdownMenu.kt
 @@ -25,6 +25,7 @@ import androidx.compose.foundation.verticalScroll
@@ -60,6 +76,37 @@ index 77f9cc9d6fc0d1e0a614763e9a15b494238c4563..ace370d65f16c4448e59d3e4ef867d6d
  import androidx.compose.material3.ExposedDropdownMenuBoxScope
  import androidx.compose.material3.HorizontalDivider
  import androidx.compose.material3.Icon
+diff --git a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/slider/Slider.kt b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/slider/Slider.kt
+index 531f2c0a24f7b35ea771e8aba11def1aa2db5566..6c861e4b5e06c6f230ac563297292ef978f43ff1 100644
+--- a/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/slider/Slider.kt
++++ b/mobile/android/android-components/components/compose/base/src/main/java/mozilla/components/compose/base/slider/Slider.kt
+@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
+ import androidx.compose.material3.ExperimentalMaterial3Api
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Slider
++import androidx.compose.material3.SliderState
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.LaunchedEffect
+ import androidx.compose.runtime.getValue
+@@ -56,12 +57,16 @@ fun Slider(
+     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+ ) {
+     val isDragInProgress by interactionSource.collectIsDraggedAsState()
++    val sliderState = remember(start, end) {
++        SliderState(value = value, trackRange = start..end)
++    }
++    sliderState.value = value
++
+     Slider(
+-        value = value,
++        state = sliderState,
+         onValueChange = { newInput ->
+             onValueChange(newInput)
+         },
+-        valueRange = start..end,
+         modifier = modifier.alpha(if (isEnabled) 1f else DISABLED_ALPHA),
+         enabled = isEnabled,
+         onValueChangeFinished = {
 diff --git a/mobile/android/android-components/components/feature/summarize/src/main/java/mozilla/components/feature/summarize/settings/ShakeSensitivitySlider.kt b/mobile/android/android-components/components/feature/summarize/src/main/java/mozilla/components/feature/summarize/settings/ShakeSensitivitySlider.kt
 index e6368976f1c6a87519bdfdcf1de9e137d29b20da..902b103d257991fab4799c46116b372c24de2ec2 100644
 --- a/mobile/android/android-components/components/feature/summarize/src/main/java/mozilla/components/feature/summarize/settings/ShakeSensitivitySlider.kt
@@ -97,10 +144,10 @@ index e6368976f1c6a87519bdfdcf1de9e137d29b20da..902b103d257991fab4799c46116b372c
              Modifier.fillMaxWidth().semantics {
                  contentDescription = sliderContentDescription
 diff --git a/mobile/android/fenix/app/build.gradle b/mobile/android/fenix/app/build.gradle
-index e8032b0120463613dd5c1e03660a60536f98a801..4d8cdf341a237422f8311e6b1c42842007eba42c 100644
+index 09fbed05d1c1817ae0607bfd418a94d6a012a83a..0e9b65ad03ca103180fbdc18dc71fd61f3dadc3b 100644
 --- a/mobile/android/fenix/app/build.gradle
 +++ b/mobile/android/fenix/app/build.gradle
-@@ -75,6 +75,8 @@ android {
+@@ -76,6 +76,8 @@ android {
  
          buildConfigField "String[]", "SUPPORTED_LOCALE_ARRAY", getSupportedLocales()
          buildConfigField "boolean", "IS_BENCHMARK_BUILD", "false"
@@ -109,7 +156,7 @@ index e8032b0120463613dd5c1e03660a60536f98a801..4d8cdf341a237422f8311e6b1c428420
      }
  
      def releaseTemplate = {
-@@ -242,10 +244,8 @@ android {
+@@ -246,10 +248,8 @@ android {
              if (project.hasProperty("benchmarkTest")) {
                  include "arm64-v8a"
              } else {
@@ -122,7 +169,7 @@ index e8032b0120463613dd5c1e03660a60536f98a801..4d8cdf341a237422f8311e6b1c428420
              }
          }
      }
-@@ -286,6 +286,8 @@ android {
+@@ -290,6 +290,8 @@ android {
  androidComponents {
      onVariants(selector().all()) { variant ->
          def buildType = variant.buildType
@@ -131,7 +178,7 @@ index e8032b0120463613dd5c1e03660a60536f98a801..4d8cdf341a237422f8311e6b1c428420
  
          project.logger.debug("----------------------------------------------")
          project.logger.debug("Variant name:      " + variant.name)
-@@ -297,19 +299,20 @@ androidComponents {
+@@ -301,19 +303,20 @@ androidComponents {
          // object so we could read the flag directly; onVariants only gives us the build type name, so
          // we gate on the names instead.
          if (buildType in ['nightly', 'beta', 'release', 'benchmark']) {
@@ -267,18 +314,18 @@ index 0000000000000000000000000000000000000000..167d46a7c1b46f1a6405b8a4f7954696
 +    }
 +}
 diff --git a/mobile/android/gradle/plugins/conventions/src/main/java/org/mozilla/conventions/ProjectPlugin.kt b/mobile/android/gradle/plugins/conventions/src/main/java/org/mozilla/conventions/ProjectPlugin.kt
-index 20a42d6eabb471a159f7c2bf38133a45d352e62a..d03fd22090944aea7f6c98d79a7aa4d69ece08b7 100644
+index 4dae93c707b198f44eeee552b65d50af6ce2eba0..260965c3371a5014e589d9210f88250bbb779635 100644
 --- a/mobile/android/gradle/plugins/conventions/src/main/java/org/mozilla/conventions/ProjectPlugin.kt
 +++ b/mobile/android/gradle/plugins/conventions/src/main/java/org/mozilla/conventions/ProjectPlugin.kt
-@@ -346,7 +346,7 @@ class ProjectPlugin : Plugin<Project> {
+@@ -343,7 +343,7 @@ class ProjectPlugin : Plugin<Project> {
+     private fun configureKotlinWarningsAsErrors(project: Project) {
+         project.tasks.withType<KotlinCompile>().configureEach {
+             compilerOptions {
+-                allWarningsAsErrors.set(true)
++                allWarningsAsErrors.set(false)
              }
-             val compilerOptions = this::class.java.getMethod("getCompilerOptions").invoke(this)
-             val allWarningsAsErrors = compilerOptions::class.java.getMethod("getAllWarningsAsErrors").invoke(compilerOptions)
--            allWarningsAsErrors::class.java.getMethod("set", Any::class.java).invoke(allWarningsAsErrors, true)
-+            allWarningsAsErrors::class.java.getMethod("set", Any::class.java).invoke(allWarningsAsErrors, false)
          }
      }
- 
 diff --git a/mobile/android/gradle/plugins/conventions/src/main/java/org/mozilla/conventions/SettingsPlugin.kt b/mobile/android/gradle/plugins/conventions/src/main/java/org/mozilla/conventions/SettingsPlugin.kt
 index 35563c1a00e34d692b0ba87c14560b92dbe8ebe7..2226ea61f150ad5410317c561d2cb1468eb94f87 100644
 --- a/mobile/android/gradle/plugins/conventions/src/main/java/org/mozilla/conventions/SettingsPlugin.kt

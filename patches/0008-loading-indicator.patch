@@ -110,7 +110,7 @@ index 22d15715e28560802b834a3999e521f22de67482..1454c874d4a180f419a8996fea1abb5b
          title = {
              Text(
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bookmarks/BookmarksScreen.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bookmarks/BookmarksScreen.kt
-index 8b89f9131590bf42d8271e7b1be907b26efc82ee..b8c14d6c97dd8bb86d7acb0822ff38b778b80b86 100644
+index c7a9683ae0cdf1b43fd2458da8caafa132b8f203..448f2a3fb5e597f9a8736c1b1854f50ce2f1eda6 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bookmarks/BookmarksScreen.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/bookmarks/BookmarksScreen.kt
 @@ -30,7 +30,6 @@ import androidx.compose.foundation.lazy.LazyListScope
@@ -129,7 +129,7 @@ index 8b89f9131590bf42d8271e7b1be907b26efc82ee..b8c14d6c97dd8bb86d7acb0822ff38b7
  import mozilla.components.compose.base.menu.DropdownMenu
  import mozilla.components.compose.base.menu.MenuItem
  import mozilla.components.compose.base.searchbar.TopSearchBar
-@@ -317,7 +317,7 @@ private fun BookmarksList(store: BookmarksStore) {
+@@ -318,7 +318,7 @@ private fun BookmarksList(store: BookmarksStore) {
          when {
              state.isLoading -> {
                  Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -229,10 +229,10 @@ index 2abebcabaf8f06fc0b8db810c3bdeb4dbc3ffe67..9ea1c86fd29188bca7214ee9d6a22aab
              return@Scaffold
          }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/BaseBrowserFragment.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/BaseBrowserFragment.kt
-index ed334079e8101613de078bc55577be9a48fd07bb..44acf8beee96c2465a3450450db44297fd538838 100644
+index 0cb09f2070561f853ec0c7fa9a46cd4cbe3a70fa..8d5010e34f4f42b6497e8dc29172967c23f8d2be 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/BaseBrowserFragment.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/browser/BaseBrowserFragment.kt
-@@ -211,6 +211,7 @@ import org.mozilla.fenix.databinding.FragmentBrowserBinding
+@@ -217,6 +217,7 @@ import org.mozilla.fenix.databinding.FragmentBrowserBinding
  import org.mozilla.fenix.downloads.DownloadService
  import org.mozilla.fenix.downloads.RenameAndChangeLocationDialogFragment
  import org.mozilla.fenix.downloads.dialog.createDownloadAppDialog
@@ -240,7 +240,7 @@ index ed334079e8101613de078bc55577be9a48fd07bb..44acf8beee96c2465a3450450db44297
  import org.mozilla.fenix.ext.accessibilityManager
  import org.mozilla.fenix.ext.breadcrumb
  import org.mozilla.fenix.ext.components
-@@ -1457,6 +1458,7 @@ abstract class BaseBrowserFragment :
+@@ -1505,6 +1506,7 @@ abstract class BaseBrowserFragment :
                  view = view,
              )
          }
@@ -349,7 +349,7 @@ index b5f7e996cebd4a900c329b1891420d10dbc5a8fa..87c18e92b72f9e8b897626bc60a5d17a
                  Modifier.align(Alignment.CenterHorizontally).padding(vertical = FirefoxTheme.layout.space.static500)
          )
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/list/ListItem.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/list/ListItem.kt
-index 1699bc1b94ba93b54912f0cc29bff8cf4f2731a3..8bcd414a14fe96d3d696621fa8c88400359c9326 100644
+index 0cb1358bcb110a36db75a5a267b697d9ef145080..1c919a6c173b1d5e8b284dd33e01995e2c4923a7 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/list/ListItem.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/compose/list/ListItem.kt
 @@ -67,6 +67,7 @@ import mozilla.components.compose.base.badge.BADGE_SIZE_SMALL
@@ -769,7 +769,7 @@ index 07cf5413c8e39fd0a8096ca568562036aabb085f..54cd4e1ada44a6e6e521cf7d85caa5d6
  }
  
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/fab/TabManagerFloatingToolbar.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/fab/TabManagerFloatingToolbar.kt
-index 38dc9a0112993a7e0be1490e72ff2fa9aec8fa08..85dadfb13f90df5ee050cf8d952dfb3f0d85c90e 100644
+index f4d53564507f0fb6a5ef0e4f47b9df52a310e0b6..1d81fe949a1549fd09aa853a5334dadf49bba13c 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/fab/TabManagerFloatingToolbar.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/tabstray/ui/fab/TabManagerFloatingToolbar.kt
 @@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
@@ -842,7 +842,7 @@ index 38dc9a0112993a7e0be1490e72ff2fa9aec8fa08..85dadfb13f90df5ee050cf8d952dfb3f
          colors = colors,
          elevation = elevation,
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/DownloadIndicator.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/DownloadIndicator.kt
-index 6cd774609c8275206512c54fd04a4b27e672d675..2c106fd41ae3154dc8220b01b814b588c8ab6307 100644
+index 7ad3d0d45f6fcaba280938635ee9ad2e95468a2b..7bdd13330fd38aeefbd0f21afee8b9aa4fcef5e6 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/DownloadIndicator.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/DownloadIndicator.kt
 @@ -5,61 +5,53 @@
@@ -850,12 +850,12 @@ index 6cd774609c8275206512c54fd04a4b27e672d675..2c106fd41ae3154dc8220b01b814b588
  
  import androidx.compose.foundation.layout.Box
 +import androidx.compose.foundation.layout.Spacer
+ import androidx.compose.foundation.layout.fillMaxWidth
  import androidx.compose.foundation.layout.padding
  import androidx.compose.foundation.layout.size
-+import androidx.compose.foundation.layout.width
- import androidx.compose.foundation.layout.wrapContentSize
 -import androidx.compose.material3.ButtonDefaults
 -import androidx.compose.material3.CircularProgressIndicator
++import androidx.compose.foundation.layout.width
 +import androidx.compose.material3.CircularWavyProgressIndicator
  import androidx.compose.material3.Icon
 +import androidx.compose.material3.LocalContentColor
@@ -905,7 +905,7 @@ index 6cd774609c8275206512c54fd04a4b27e672d675..2c106fd41ae3154dc8220b01b814b588
 + * @param modifier [Modifier] to be applied to the indicator layout.
   */
  @Composable
--fun DownloadIconIndicator(
+-internal fun DownloadIconIndicator(
 -    icon: Painter,
 -    modifier: Modifier = Modifier,
 -    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -917,12 +917,12 @@ index 6cd774609c8275206512c54fd04a4b27e672d675..2c106fd41ae3154dc8220b01b814b588
 -        contentDescription = contentDescription,
 -        tint = tint,
 -    )
-+fun DownloadIconIndicator(modifier: Modifier = Modifier) {
++internal fun DownloadIconIndicator(modifier: Modifier = Modifier) {
 +    EmbermineLoadingIndicator(modifier = modifier.size(24.dp))
  }
  
  /**
-@@ -77,6 +69,8 @@ fun DownloadInProgressIndicator(
+@@ -77,6 +69,8 @@ internal fun DownloadInProgressIndicator(
      tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
      contentDescription: String? = null,
  ) {
@@ -931,7 +931,7 @@ index 6cd774609c8275206512c54fd04a4b27e672d675..2c106fd41ae3154dc8220b01b814b588
      Box(contentAlignment = Alignment.Center) {
          Icon(
              modifier = modifier.size(8.dp),
-@@ -84,11 +78,11 @@ fun DownloadInProgressIndicator(
+@@ -84,11 +78,11 @@ internal fun DownloadInProgressIndicator(
              contentDescription = contentDescription,
              tint = tint,
          )
@@ -946,14 +946,14 @@ index 6cd774609c8275206512c54fd04a4b27e672d675..2c106fd41ae3154dc8220b01b814b588
          )
      }
  }
-@@ -99,17 +93,15 @@ fun DownloadInProgressIndicator(
+@@ -99,17 +93,15 @@ internal fun DownloadInProgressIndicator(
   * @param text The button text to be displayed.
   * @param modifier [Modifier] to be applied to the layout.
   * @param contentDescription Content description to be applied to the button.
 - * @param icon Optional [Painter] used to display an [Icon] before the button text.
   */
  @Composable
- fun DownloadIndicator(
+ internal fun DownloadIndicator(
      text: String,
      modifier: Modifier = Modifier,
      contentDescription: String? = null,
@@ -965,9 +965,9 @@ index 6cd774609c8275206512c54fd04a4b27e672d675..2c106fd41ae3154dc8220b01b814b588
          modifier =
              modifier.then(
                  Modifier.clearAndSetSemantics {
-@@ -118,12 +110,19 @@ fun DownloadIndicator(
+@@ -118,12 +110,19 @@ internal fun DownloadIndicator(
                      }
-                     .wrapContentSize()
+                     .fillMaxWidth()
              ),
 -        icon = icon,
 -        iconModifier =
@@ -991,7 +991,7 @@ index 6cd774609c8275206512c54fd04a4b27e672d675..2c106fd41ae3154dc8220b01b814b588
  }
  
  @Preview
-@@ -131,10 +130,7 @@ fun DownloadIndicator(
+@@ -131,10 +130,7 @@ internal fun DownloadIndicator(
  private fun DownloadIconIndicatorPreview(@PreviewParameter(PreviewThemeProvider::class) theme: Theme) {
      FirefoxTheme(theme) {
          Surface {
@@ -1012,10 +1012,10 @@ index 6cd774609c8275206512c54fd04a4b27e672d675..2c106fd41ae3154dc8220b01b814b588
          }
      }
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/TranslationsDialogBottomSheet.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/TranslationsDialogBottomSheet.kt
-index 0d7145b10ce8ac4f93eb54b242b2d9f8ff073274..338184aeead6557574bf17a7748c491b612881c2 100644
+index cd4a1af9ed961e5b0074d6178febdbe238a26f44..95eefcdaeb7f43a8c2504f2dbb0ceac694d99bb5 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/TranslationsDialogBottomSheet.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/translations/TranslationsDialogBottomSheet.kt
-@@ -635,7 +635,6 @@ private fun TranslationsDialogActionButtons(
+@@ -581,7 +581,6 @@ private fun TranslationsDialogActionButtons(
                          stringResource(
                              id = R.string.translations_bottom_sheet_translating_in_progress_content_description
                          ),
@@ -1036,19 +1036,6 @@ index dc0859b853e9cd80fcda7c8ce35720db2742a3db..176e605d4f2308c9699a609652fb013c
          }
      }
  }
-diff --git a/mobile/android/fenix/app/src/main/res/layout/activity_lens_search.xml b/mobile/android/fenix/app/src/main/res/layout/activity_lens_search.xml
-index f9f9d0ad1603c13bfe40bae7cebf369d41409b6b..f80a7c6b8dbe975a9fe31755498cc03dec67a2d5 100644
---- a/mobile/android/fenix/app/src/main/res/layout/activity_lens_search.xml
-+++ b/mobile/android/fenix/app/src/main/res/layout/activity_lens_search.xml
-@@ -4,7 +4,7 @@
-    - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
- <merge xmlns:android="http://schemas.android.com/apk/res/android">
- 
--    <ProgressBar
-+    <org.mozilla.fenix.embermine.EmbermineLoadingIndicatorView
-         android:id="@+id/lens_search_progress"
-         android:layout_width="wrap_content"
-         android:layout_height="wrap_content"
 diff --git a/mobile/android/fenix/app/src/main/res/layout/fragment_add_ons_management.xml b/mobile/android/fenix/app/src/main/res/layout/fragment_add_ons_management.xml
 index f9f51423e26f5aa9a58d575dbbb94dd40836d300..ae8b0bc96ddc7a2103e9d0e6e055f3b45a000bdf 100644
 --- a/mobile/android/fenix/app/src/main/res/layout/fragment_add_ons_management.xml
@@ -1063,7 +1050,7 @@ index f9f51423e26f5aa9a58d575dbbb94dd40836d300..ae8b0bc96ddc7a2103e9d0e6e055f3b4
          android:layout_width="wrap_content"
          android:layout_height="wrap_content"
 diff --git a/mobile/android/fenix/app/src/main/res/layout/fragment_installed_add_on_details.xml b/mobile/android/fenix/app/src/main/res/layout/fragment_installed_add_on_details.xml
-index 33579b2b86ea3c3f856d187b2027eae38b043c91..de700cf5d80745a9e61a519be226a1cbb0c56885 100644
+index de5189c0c934a8d85ca04f73dd854c1086fa4515..baf3a8e5e84b6a9e1295627f479af1b2fa72bee2 100644
 --- a/mobile/android/fenix/app/src/main/res/layout/fragment_installed_add_on_details.xml
 +++ b/mobile/android/fenix/app/src/main/res/layout/fragment_installed_add_on_details.xml
 @@ -120,7 +120,7 @@

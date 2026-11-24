@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.emulator import flows_browse
+from scripts.emulator import flows_browse, run
 from scripts.emulator.device import MIN_PNG_BYTES, Device
 from scripts.emulator.naming import ScreenIndex
 from scripts.emulator.session import LaunchError, Session
@@ -105,6 +105,14 @@ class LaunchFromLauncherTests(unittest.TestCase):
         with self.assertRaisesRegex(LaunchError, "exit code 1"):
             self.launch(adb)
         self.assertEqual(adb.monkeys, 0)
+
+    def test_device_loss_stops_the_walk_before_running_another_flow(self) -> None:
+        adb = LaunchAdb(wait_result=subprocess.TimeoutExpired(["adb"], 15))
+        session = make_session(adb, self.clock, self.out)
+        flow = run.Flow("settings", lambda _: self.fail("ran a flow without a device"), [])
+
+        with self.assertRaisesRegex(LaunchError, "did not see the device within 15 s"):
+            run.run_flow(session, flow, deadline=float("inf"))
 
 
 class OnboardingFirstScreenTests(unittest.TestCase):

@@ -21,7 +21,7 @@ FOCUS_TIMEOUT_SECONDS = 60
 
 
 class LaunchError(RuntimeError):
-    """The app could not be installed or started. This one fails the whole job."""
+    """The app could not start or the test lost its device. This fails the whole job."""
 
 
 class Shot:

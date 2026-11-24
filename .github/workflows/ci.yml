@@ -23,7 +23,7 @@ jobs:
   # Walks the x86_64 APK on an API 34 emulator and uploads screenshots plus reports (screens-index.md,
   # network-hosts.txt, coinstall.txt, logcat-crash.txt). Each light and dark walk runs twice: accent on (the
   # default switch state) and accent off (the switch is turned off before the walk). Screens are fail-soft;
-  # install and launch failures fail the job.
+  # install, launch and device connection failures fail the job.
   emulator:
     needs: build
     runs-on: ubuntu-latest
@@ -66,10 +66,18 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: pixel_6
+          ram-size: 4096M
           disable-animations: true
           emulator-boot-timeout: 900
-          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -tcpdump /tmp/em.pcap
+          emulator-options: -no-snapshot -no-window -gpu swiftshader -feature -Vulkan -noaudio -no-boot-anim -tcpdump /tmp/em.pcap
           script: python3 -m scripts.emulator.run --variant ${{ matrix.variant }} --accent ${{ matrix.accent }} --apk-dir apk --out shots --debug debug
+
+      - name: Collect emulator crash diagnostics
+        if: ${{ failure() && !cancelled() }}
+        run: |
+          mkdir -p debug
+          sudo dmesg --ctime | tee debug/host-kernel.txt >/dev/null
+          cp -a /tmp/android-runner/emu-crash-* debug/ || true
 
       - name: Network hosts
         if: ${{ !cancelled() }}
@@ -167,8 +175,9 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  # JVM tests of the Embermine Kotlin classes. Runs next to the build, so it prepares its own tree.
+  # The build warms the Firefox toolchain cache before the JVM job prepares its own tree.
   unit-tests:
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 50
     steps:
@@ -231,6 +240,7 @@ jobs:
         run: bash scripts/configure-tree.sh fx "$BUILDID"
 
       - name: Gradle unit tests (org.mozilla.fenix.embermine, compose-base embermine)
+        id: gradle-tests
         working-directory: fx/mobile/android/fenix
         run: |
           set -euo pipefail
@@ -253,7 +263,7 @@ jobs:
 
       # A green Gradle run proves nothing when the test filter matched no class.
       - name: Check that the tests really ran
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.gradle-tests.outcome != 'skipped' }}
         run: |
           mkdir -p unit-test-results
           find fx/obj-embermine/gradle/build/mobile/android -name 'TEST-*.xml' -path '*test-results*' \

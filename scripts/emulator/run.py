@@ -5,8 +5,8 @@ usage: python3 -m scripts.emulator.run --variant light|dark|legacy [--accent on|
 --accent on is the default switch state (Use wallpaper colors on); the walk ends with the switch toggle captures.
 --accent off turns the switch off in Customize right after onboarding, so every capture after onboarding is dynamic-off.
 
-Install and launch failures end the run with a non-zero exit code. Every capture after that is fail-soft:
-a screen that cannot be reached is listed as MISSING (with the reason) in screens-index.md.
+Install, launch and device connection failures end the run with a non-zero exit code. Individual
+screens that cannot be reached are listed as MISSING (with the reason) in screens-index.md.
 """
 from __future__ import annotations
 
@@ -37,6 +37,7 @@ from scripts.emulator.session import LaunchError, Session
 from scripts.emulator.testserver import WalkServer
 
 SERVER_PORT = 8765
+DEVICE_RECONNECT_SECONDS = 15
 # Flows that start after this many seconds of walk are recorded MISSING. The accent-on walk was about 38 min before
 # the switch-state groups were added (estimated +7 min for them); the emulator job has a 90 min limit that also
 # covers the boot, the install and the upload.
@@ -194,6 +195,7 @@ def flow_list(variant: str = "light", accent: str = "on") -> list[Flow]:
 
 def run_flow(s: Session, flow: Flow, deadline: float) -> None:
     s.log(f"=== flow: {flow.name}")
+    s.wait_for_device(timeout=DEVICE_RECONNECT_SECONDS)
     reason = "flow did not reach this capture"
     if time.monotonic() > deadline:
         reason = "run time budget exhausted before this flow started"
@@ -226,7 +228,10 @@ def run_flow(s: Session, flow: Flow, deadline: float) -> None:
 
 
 def write_logcat_report(s: Session, out: Path) -> int:
-    raw = s.dev.adb.run("logcat", "-d", "-v", "threadtime", timeout=120).stdout.decode("utf-8", errors="replace")
+    proc = s.dev.adb.run("logcat", "-d", "-v", "threadtime", timeout=30)
+    if proc.returncode:
+        raise StepError(proc.stderr.decode("utf-8", errors="replace").strip())
+    raw = proc.stdout.decode("utf-8", errors="replace")
     (s.debug / "logcat-full.txt").write_text(raw, encoding="utf-8")
     text, ours = logcat_scan.report(raw, s.package)
     (out / "logcat-crash.txt").write_text(text, encoding="utf-8")
@@ -334,14 +339,16 @@ def main(argv: list[str] | None = None) -> int:
         deadline = time.monotonic() + FLOW_BUDGET_SECONDS
         for flow in flow_list(args.variant, args.accent):
             run_flow(session, flow, deadline)
+        session.wait_for_device(timeout=DEVICE_RECONNECT_SECONDS)
         if not legacy:
             final = devsetup.settle_palette(adb, time.sleep, log=log)
             index.header.append("Palette at the end of the walk: " + "; ".join(final.overlay_lines()) + f"; {devsetup.describe_state(final)}")
             launcher.themed_icon_capture(session, app_label)
             launcher.plain_icon_capture(session, app_label)
+            session.wait_for_device(timeout=DEVICE_RECONNECT_SECONDS)
             if not final.accepted:
                 raise LaunchError("the forced palette was lost during the walk: " + "; ".join(final.problems()))
-    except LaunchError as exc:
+    except (LaunchError, StepError) as exc:
         log(f"FATAL: {exc}")
         index.header.append(f"RUN ABORTED: {exc}")
         exit_code = 1

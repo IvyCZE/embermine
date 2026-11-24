@@ -146,6 +146,7 @@ class WallpaperColorsToggleFlowTests(unittest.TestCase):
             theme="light",
             dynamic=True,
             log=lambda _: None,
+            wait_for_device=lambda *, timeout: None,
             ensure_normal=lambda: None,
             dev=SimpleNamespace(sweep_dialogs=lambda: []),
         )

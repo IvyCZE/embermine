@@ -66,6 +66,11 @@ class CiWorkflowTests(unittest.TestCase):
             self.assertIn(needle, ci)
         self.assertIn("org.mozilla.fenix.embermine.EmbermineVersionTest", ci)
 
+    def test_unit_tests_wait_for_the_build_to_warm_the_toolchain_cache(self) -> None:
+        ci = text("ci.yml").split("  unit-tests:\n", 1)[1]
+        self.assertIn("    needs: build\n", ci)
+        self.assertIn("uses: actions/cache/restore@v6", ci)
+
     def test_unit_tests_require_the_wallpaper_test_classes(self) -> None:
         ci = text("ci.yml")
         for name in ("EmbermineWallpaperPaletteTest", "EmbermineWallpaperRendererTest", "EmbermineWallpapersTest"):

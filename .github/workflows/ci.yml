@@ -26,7 +26,8 @@ jobs:
   # install, launch and device connection failures fail the job.
   emulator:
     needs: build
-    runs-on: ubuntu-latest
+    # Use the host image that passed the Android 14 browser checks with the current emulator.
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
     strategy:
       fail-fast: false

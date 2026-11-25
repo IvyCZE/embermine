@@ -871,10 +871,10 @@ index 9318dbe31c7c0c4bf12b10e98d9e69aa743e6fc4..0dfff9591346277300245cff14cdd033
 +    }
 +}
 diff --git a/mobile/android/android-components/components/compose/menu/src/main/java/mozilla/components/compose/menu/ui/MenuListItemCommon.kt b/mobile/android/android-components/components/compose/menu/src/main/java/mozilla/components/compose/menu/ui/MenuListItemCommon.kt
-index 9a4217e9d4b9561adba9fd41a1eeefdff261a97b..2b51530a4b88e7a4e0bde3c16ab7252b14e11588 100644
+index 9a4217e9d4b9561adba9fd41a1eeefdff261a97b..0a555694d469f087c2bab16381b8c18637a235da 100644
 --- a/mobile/android/android-components/components/compose/menu/src/main/java/mozilla/components/compose/menu/ui/MenuListItemCommon.kt
 +++ b/mobile/android/android-components/components/compose/menu/src/main/java/mozilla/components/compose/menu/ui/MenuListItemCommon.kt
-@@ -33,9 +33,8 @@ import androidx.compose.ui.semantics.semantics
+@@ -33,13 +33,11 @@ import androidx.compose.ui.semantics.semantics
  import androidx.compose.ui.text.style.Hyphens
  import androidx.compose.ui.text.style.TextAlign
  import androidx.compose.ui.text.style.TextOverflow
@@ -885,7 +885,11 @@ index 9a4217e9d4b9561adba9fd41a1eeefdff261a97b..2b51530a4b88e7a4e0bde3c16ab7252b
  import mozilla.components.compose.base.modifier.debouncedClickable
  import mozilla.components.compose.base.text.value
  import mozilla.components.compose.base.theme.AcornTheme
-@@ -147,20 +146,14 @@ internal fun MenuListItemIcon(
+-import mozilla.components.compose.base.theme.information
+ import mozilla.components.compose.menu.R
+ import mozilla.components.compose.menu.data.MenuItemBadge
+ import mozilla.components.compose.menu.data.MenuItemSummary
+@@ -147,20 +145,14 @@ internal fun MenuListItemIcon(
      state: MenuItemState,
  ) {
      if (icon != null) {

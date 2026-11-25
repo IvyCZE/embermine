@@ -90,7 +90,8 @@ class NotesTests(unittest.TestCase):
         self.assertIn("# Embermine 159.0-r2", text)
         self.assertIn("rebuild", text.lower())
         self.assertIn("-r2", text)
-        self.assertIn("same Firefox", text)
+        self.assertIn("for Firefox 159.0", text)
+        self.assertIn("higher Android version code", text)
         self.assertIn("embermine-159.0-r2-arm64-v8a.apk", text)
 
     def test_release_notes_need_at_least_one_change(self) -> None:

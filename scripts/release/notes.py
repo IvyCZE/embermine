@@ -100,8 +100,8 @@ def render_notes(
     ]
     if rebuild is not None:
         lines += [
-            f"This is rebuild `-r{rebuild}` of Firefox {firefox_version}. It uses the same Firefox source and the "
-            "same Embermine patches; only the build changed, so the Firefox version stays the same.",
+            f"This is Embermine rebuild `-r{rebuild}` for Firefox {firefox_version}. "
+            "It has a higher Android version code than the previous build for this Firefox version.",
             "",
         ]
     lines += ["## Embermine changes", ""]

@@ -5,8 +5,12 @@ Subject: [PATCH] Embermine: 0006-material-shapes
 
 Add shared MaterialShapes containers for Compose icons and View toolbars,
 using 40 dp primaryContainer backgrounds and onPrimaryContainer icons.
+Restore circles and clamshells in the Firefox 161 drawer and circles for
+connection and site-data controls in the site protection panel.
 
-The main drawer commands, including expanded submenus, use Circle by default.
+Both browser drawer renderers use Circle for commands, including expanded
+submenus, and ClamShell for the library and navigation grids. Connection and
+clear-site-data icons in the site protection panel use Circle.
 Custom-tab drawer navigation uses ClamShell, and its toolbar menu and close
 actions use Sunny, including caller-provided close-button artwork. Its library and navigation rows use
 ClamShell, as do the four tab-tray selectors. Homepage shortcuts use Circle;
@@ -762,6 +766,152 @@ index a8c3408aaa69b5941ad94c463c5dceb72972712c..45687e100d07ce951279f95569ba7844
                              showMenu = false
                              onInteraction(event)
                          }
+diff --git a/mobile/android/android-components/components/compose/menu/src/main/java/mozilla/components/compose/menu/ui/MenuGridItemCommon.kt b/mobile/android/android-components/components/compose/menu/src/main/java/mozilla/components/compose/menu/ui/MenuGridItemCommon.kt
+index 40fd54538153b6102cfd15c083304c3b65ff93a4..190162264684f33f3a1b98225fedbe9d6382d52c 100644
+--- a/mobile/android/android-components/components/compose/menu/src/main/java/mozilla/components/compose/menu/ui/MenuGridItemCommon.kt
++++ b/mobile/android/android-components/components/compose/menu/src/main/java/mozilla/components/compose/menu/ui/MenuGridItemCommon.kt
+@@ -6,7 +6,6 @@ package mozilla.components.compose.menu.ui
+ 
+ import androidx.compose.foundation.layout.Spacer
+ import androidx.compose.foundation.layout.height
+-import androidx.compose.foundation.layout.size
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Text
+ import androidx.compose.runtime.Composable
+@@ -23,12 +22,10 @@ import androidx.compose.ui.semantics.role
+ import androidx.compose.ui.semantics.semantics
+ import androidx.compose.ui.text.style.Hyphens
+ import androidx.compose.ui.text.style.TextAlign
+-import mozilla.components.compose.base.badge.BADGE_SIZE_SMALL
+-import mozilla.components.compose.base.badge.BadgedIcon
++import mozilla.components.compose.base.embermine.EmbermineShape
+ import mozilla.components.compose.base.text.Text
+ import mozilla.components.compose.base.text.value
+ import mozilla.components.compose.base.theme.AcornTheme
+-import mozilla.components.compose.base.theme.information
+ import mozilla.components.compose.menu.data.BannerMenuItem
+ import mozilla.components.compose.menu.data.MenuItem
+ import mozilla.components.compose.menu.store.MenuEvent
+@@ -46,15 +43,7 @@ internal fun MenuGridItemContent(
+     icon: MenuItemIcon,
+     state: MenuItemState,
+ ) {
+-    BadgedIcon(
+-        painter = icon.painter,
+-        isHighlighted = icon.isHighlighted,
+-        modifier = Modifier.size(AcornTheme.layout.size.static300),
+-        size = BADGE_SIZE_SMALL,
+-        contentDescription = null,
+-        containerColor = MaterialTheme.colorScheme.information,
+-        tint = state.secondaryContentColor,
+-    )
++    ShapedMenuItemIcon(icon = icon, state = state, shape = EmbermineShape.ClamShell)
+ 
+     if (title.value.isNotEmpty()) {
+         Spacer(modifier = Modifier.height(AcornTheme.layout.space.static50))
+diff --git a/mobile/android/android-components/components/compose/menu/src/main/java/mozilla/components/compose/menu/ui/MenuItemIcon.kt b/mobile/android/android-components/components/compose/menu/src/main/java/mozilla/components/compose/menu/ui/MenuItemIcon.kt
+index 9318dbe31c7c0c4bf12b10e98d9e69aa743e6fc4..0dfff9591346277300245cff14cdd033d0e81245 100644
+--- a/mobile/android/android-components/components/compose/menu/src/main/java/mozilla/components/compose/menu/ui/MenuItemIcon.kt
++++ b/mobile/android/android-components/components/compose/menu/src/main/java/mozilla/components/compose/menu/ui/MenuItemIcon.kt
+@@ -7,13 +7,26 @@ package mozilla.components.compose.menu.ui
+ import android.graphics.Bitmap
+ import android.graphics.drawable.Drawable
+ import androidx.annotation.DrawableRes
++import androidx.compose.foundation.layout.size
++import androidx.compose.material3.MaterialTheme
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.remember
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.graphics.asImageBitmap
+ import androidx.compose.ui.graphics.painter.BitmapPainter
+ import androidx.compose.ui.graphics.painter.Painter
+ import androidx.compose.ui.res.painterResource
++import androidx.compose.ui.unit.dp
+ import com.google.accompanist.drawablepainter.rememberDrawablePainter
++import mozilla.components.compose.base.badge.BADGE_SIZE_SMALL
++import mozilla.components.compose.base.badge.BadgedIcon
++import mozilla.components.compose.base.embermine.EmbermineShape
++import mozilla.components.compose.base.embermine.ShapedIconBackground
++import mozilla.components.compose.base.theme.AcornTheme
++import mozilla.components.compose.base.theme.information
++
++internal val MENU_ICON_CONTAINER_SIZE = 40.dp
+ 
+ /**
+  * Menu item icon.
+@@ -64,3 +77,29 @@ internal val MenuItemIcon.painter
+             is MenuItemIconDrawable -> rememberDrawablePainter(icon)
+             is MenuItemIconBitmap -> remember(icon) { BitmapPainter(icon.asImageBitmap()) }
+         }
++
++@Composable
++internal fun ShapedMenuItemIcon(
++    icon: MenuItemIcon,
++    state: MenuItemState,
++    shape: EmbermineShape,
++    tint: Color = state.secondaryContentColor,
++) {
++    ShapedIconBackground(
++        shape = shape,
++        defaultContentColor = tint,
++        modifier = Modifier.size(MENU_ICON_CONTAINER_SIZE),
++        enabled = state != MenuItemState.DISABLED,
++        containerSize = MENU_ICON_CONTAINER_SIZE,
++    ) { contentColor ->
++        BadgedIcon(
++            painter = icon.painter,
++            isHighlighted = icon.isHighlighted,
++            modifier = Modifier.size(AcornTheme.layout.size.static300),
++            size = BADGE_SIZE_SMALL,
++            contentDescription = null,
++            containerColor = MaterialTheme.colorScheme.information,
++            tint = if (tint == Color.Unspecified) Color.Unspecified else contentColor,
++        )
++    }
++}
+diff --git a/mobile/android/android-components/components/compose/menu/src/main/java/mozilla/components/compose/menu/ui/MenuListItemCommon.kt b/mobile/android/android-components/components/compose/menu/src/main/java/mozilla/components/compose/menu/ui/MenuListItemCommon.kt
+index 9a4217e9d4b9561adba9fd41a1eeefdff261a97b..2b51530a4b88e7a4e0bde3c16ab7252b14e11588 100644
+--- a/mobile/android/android-components/components/compose/menu/src/main/java/mozilla/components/compose/menu/ui/MenuListItemCommon.kt
++++ b/mobile/android/android-components/components/compose/menu/src/main/java/mozilla/components/compose/menu/ui/MenuListItemCommon.kt
+@@ -33,9 +33,8 @@ import androidx.compose.ui.semantics.semantics
+ import androidx.compose.ui.text.style.Hyphens
+ import androidx.compose.ui.text.style.TextAlign
+ import androidx.compose.ui.text.style.TextOverflow
+-import mozilla.components.compose.base.badge.BADGE_SIZE_SMALL
+-import mozilla.components.compose.base.badge.BadgedIcon
+ import mozilla.components.compose.base.badge.StatusBadge
++import mozilla.components.compose.base.embermine.EmbermineShape
+ import mozilla.components.compose.base.modifier.debouncedClickable
+ import mozilla.components.compose.base.text.value
+ import mozilla.components.compose.base.theme.AcornTheme
+@@ -147,20 +146,14 @@ internal fun MenuListItemIcon(
+     state: MenuItemState,
+ ) {
+     if (icon != null) {
+-        BadgedIcon(
+-            painter = icon.painter,
+-            isHighlighted = icon.isHighlighted,
+-            modifier = Modifier.size(AcornTheme.layout.size.static300),
+-            size = BADGE_SIZE_SMALL,
+-            contentDescription = null,
+-            containerColor = MaterialTheme.colorScheme.information,
+-            tint =
+-                if (icon is MenuItemIconRes) {
+-                    state.secondaryContentColor
+-                } else Color.Unspecified,
++        ShapedMenuItemIcon(
++            icon = icon,
++            state = state,
++            shape = EmbermineShape.Circle,
++            tint = if (icon is MenuItemIconRes) state.secondaryContentColor else Color.Unspecified,
+         )
+     } else {
+-        Spacer(Modifier.size(AcornTheme.layout.size.static300))
++        Spacer(Modifier.size(MENU_ICON_CONTAINER_SIZE))
+     }
+ }
+ 
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
 index eadd7f4c740f1858d05b95e3237e8702504ece39..1b9594db6fe01700516aecbc138655eeb694b959 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/HomeActivity.kt
@@ -2667,7 +2817,7 @@ index 72bde9927f23109324a6652237205f7ee32af8e0..a6f7630186ad8705d1d96ed59d1ac484
          super.onDestroyView()
          _binding = null
 diff --git a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/trustpanel/ui/ProtectionPanel.kt b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/trustpanel/ui/ProtectionPanel.kt
-index 0db33ca5971ceb1b7058c0eed11006d8532dadc4..38a6ab30c983ddf6ec78432fae184f0c462e4f46 100644
+index 0db33ca5971ceb1b7058c0eed11006d8532dadc4..522990777a3bf5a79bb6cc246f7e98d8dec92622 100644
 --- a/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/trustpanel/ui/ProtectionPanel.kt
 +++ b/mobile/android/fenix/app/src/main/java/org/mozilla/fenix/settings/trustpanel/ui/ProtectionPanel.kt
 @@ -38,6 +38,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -2682,7 +2832,7 @@ index 0db33ca5971ceb1b7058c0eed11006d8532dadc4..38a6ab30c983ddf6ec78432fae184f0c
                      label = stringResource(id = R.string.clear_site_data),
                      onClick = onClearSiteDataMenuClick,
                      beforeIconPainter = painterResource(id = iconsR.drawable.mozac_ic_delete_24),
-+                    beforeIconShape = EmbermineShape.Cookie12Sided,
++                    beforeIconShape = EmbermineShape.Circle,
                  )
              }
          }
@@ -2690,7 +2840,7 @@ index 0db33ca5971ceb1b7058c0eed11006d8532dadc4..38a6ab30c983ddf6ec78432fae184f0c
              MenuItem(
                  label = stringResource(id = R.string.connection_security_panel_secure),
                  beforeIconPainter = painterResource(id = iconsR.drawable.mozac_ic_lock_24),
-+                beforeIconShape = EmbermineShape.Cookie12Sided,
++                beforeIconShape = EmbermineShape.Circle,
                  description =
                      stringResource(
                          id = R.string.connection_security_panel_verified_by,
@@ -2698,7 +2848,7 @@ index 0db33ca5971ceb1b7058c0eed11006d8532dadc4..38a6ab30c983ddf6ec78432fae184f0c
              MenuItem(
                  label = stringResource(id = R.string.connection_security_panel_not_secure),
                  beforeIconPainter = painterResource(id = iconsR.drawable.mozac_ic_lock_slash_multicolor_24),
-+                beforeIconShape = EmbermineShape.Cookie12Sided,
++                beforeIconShape = EmbermineShape.Circle,
                  state = MenuItemState.CRITICAL,
              )
          }
